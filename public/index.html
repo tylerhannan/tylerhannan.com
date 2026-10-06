@@ -8,90 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
-<style>
-/* Layout: one column "query console" — a header, then each section is a query and its result set. */
-:root{
-  --bg:#11151a; --panel:#181d24; --line:#27303a; --fg:#e4e9ef; --muted:#8a96a3;
-  --accent:#6ccad6; --kw:#e09bd8; --str:#a6d49a; --num:#9db8ff; --on-accent:#08262b;
-  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
-  --body:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  color-scheme:dark;
-}
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
-  --bg:#f5f7f9; --panel:#eaeef2; --line:#d5dce3; --fg:#18202a; --muted:#5d6977;
-  --accent:#0d6f7c; --kw:#a3369a; --str:#2f7a2a; --num:#2f55b8; --on-accent:#f2fbfc; color-scheme:light}}
-:root[data-theme="light"]{
-  --bg:#f5f7f9; --panel:#eaeef2; --line:#d5dce3; --fg:#18202a; --muted:#5d6977;
-  --accent:#0d6f7c; --kw:#a3369a; --str:#2f7a2a; --num:#2f55b8; --on-accent:#f2fbfc; color-scheme:light}
-
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 var(--body);-webkit-font-smoothing:antialiased}
-.wrap{max-width:880px;margin:0 auto;padding-inline:20px;padding-block:40px 64px}
-a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:3px}
-a:hover{color:var(--accent)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
-.mono{font-family:var(--mono)}
-
-header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px 24px;padding-bottom:28px;border-bottom:1px solid var(--line)}
-h1{font:700 clamp(40px,8vw,64px)/1 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
-h1 .cur{display:inline-block;width:.45em;height:.85em;margin-left:.08em;background:var(--accent);vertical-align:-.05em;animation:blink 1.1s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
-@media (prefers-reduced-motion:reduce){h1 .cur{animation:none}}
-.tag{margin:10px 0 0;color:var(--muted);max-width:46ch}
-nav{display:flex;gap:4px 18px;flex-wrap:wrap;font:14px var(--mono)}
-nav a{text-decoration:none;color:var(--muted)}
-nav a:hover{color:var(--accent)}
-
-section{padding-top:48px}
-.label{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
-.query{font:14px/1.7 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
-.query .p{color:var(--accent);user-select:none}
-.kw{color:var(--kw)} .s{color:var(--str)} .n{color:var(--num)}
-
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}
-.chip{font:13px var(--mono);background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer}
-.chip:hover{color:var(--fg);border-color:var(--muted)}
-.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-
-.tbl{overflow-x:auto;border-top:1px solid var(--line)}
-table{width:100%;border-collapse:collapse;font:14px var(--mono);font-variant-numeric:tabular-nums}
-th{text-align:left;font-weight:400;color:var(--muted);padding:8px 10px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
-td.d{color:var(--muted);white-space:nowrap;width:5.5em}
-td.e{color:var(--muted);min-width:9em}
-td.v{width:2.5em;text-align:right;padding-right:0}
-.t{all:unset;cursor:pointer;color:var(--fg);font-family:var(--body);font-size:15px}
-.t:hover{color:var(--accent)}
-.t:focus-visible{outline:2px solid var(--accent)}
-.k{display:inline-block;margin-left:8px;font:11px var(--mono);color:var(--accent);border:1px solid var(--line);border-radius:4px;padding:0 5px;vertical-align:2px}
-.play{text-decoration:none;color:var(--accent);font-size:13px}
-tr.x td{padding:4px 0 18px;color:var(--muted);font-family:var(--body);font-size:14px}
-tr.x .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px;font-family:var(--mono);font-size:13px}
-.embed{position:relative;aspect-ratio:16/9;max-width:100%;margin-top:12px;border-radius:8px;overflow:hidden;background:var(--panel)}
-.embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-.foot{font:12px var(--mono);color:var(--muted);margin-top:10px}
-
-.vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:16px}
-.vid{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:var(--fg);min-width:0}
-.thumb{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center}
-.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.thumb .ph{font:12px var(--mono);color:var(--muted);padding:12px;text-align:center}
-.thumb .btn{position:relative;width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:16px}
-.vid:hover .thumb{border-color:var(--accent)}
-.vid .vt{font-size:15px;line-height:1.35}
-.vid .vm{font:12px var(--mono);color:var(--muted)}
-
-.desc{width:100%;border-collapse:collapse;font:14px var(--mono);margin-top:4px}
-.desc td{padding:8px 12px 8px 0;border-bottom:1px solid var(--line)}
-.desc td:first-child{color:var(--muted);width:9em;white-space:nowrap}
-.bio{max-width:62ch;margin:20px 0 0;font-size:17px}
-
-.contact{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;font:15px var(--mono);margin-top:4px}
-.copy{font:12px var(--mono);background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 9px;cursor:pointer;margin-left:8px}
-.copy:hover{color:var(--fg)}
-footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font:12px var(--mono);color:var(--muted)}
-</style>
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
@@ -101,7 +18,7 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font:12
       <h1>Tyler Hannan<span class="cur" aria-hidden="true"></span></h1>
       <p class="tag">Two decades of databases, distributed systems and developer communities. These are the talks, videos and things I've said out loud.</p>
     </div>
-    <nav aria-label="Sections"><a href="#talks">talks</a><a href="#videos">videos</a><a href="#about">about</a><a href="#contact">contact</a></nav>
+    <nav aria-label="Sections"><a href="#talks">talks</a><a href="#videos">videos</a><a href="#photos">photos</a><a href="#about">about</a><a href="#contact">contact</a></nav>
   </header>
 
   <section id="talks" aria-labelledby="talks-h">
@@ -119,6 +36,13 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font:12
     <p class="label" id="videos-h">Videos</p>
     <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> * <span class="kw">FROM</span> talks <span class="kw">WHERE</span> youtube <span class="kw">IS NOT NULL</span></div>
     <div class="vids" id="vids"></div>
+  </section>
+
+  <section id="photos" aria-labelledby="photos-h">
+    <p class="label" id="photos-h">Photos</p>
+    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> * <span class="kw">FROM</span> photos <span class="kw">ORDER BY</span> date <span class="kw">DESC</span></div>
+    <div class="photos" id="photo-grid"></div>
+    <p class="foot" id="photo-foot"></p>
   </section>
 
   <section id="about" aria-labelledby="about-h">
@@ -142,8 +66,13 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font:12
     </div>
   </section>
 
-  <footer>tylerhannan.com · built from a single talks.json</footer>
+  <footer><span>tylerhannan.com</span><a href="/archive/">writing archive</a></footer>
 </div>
+
+<dialog id="lightbox" aria-label="Photo">
+  <figure><img id="lb-img" alt=""><figcaption id="lb-cap"></figcaption></figure>
+  <button type="button" class="copy" id="lb-close">close</button>
+</dialog>
 
 <script>
 (function(){
@@ -223,6 +152,34 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font:12
     try{ navigator.clipboard.writeText(txt).then(done,function(){sel()}); }catch(_){ sel(); }
     function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('email'));var s=getSelection();s.removeAllRanges();s.addRange(r);}
   });
+
+  function photos(list){
+    var sec=document.getElementById('photos'), grid=document.getElementById('photo-grid');
+    if(!list.length){ sec.hidden=true; document.querySelector('nav a[href="#photos"]').hidden=true; return; }
+    list.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
+    grid.innerHTML=list.map(function(p,i){
+      var meta=[p.place,p.date&&ym(p.date)].filter(Boolean).map(esc).join(' · ');
+      var inner=p.file?'<img src="photos/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy">':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
+      return '<button type="button" class="photo'+(p.file?'':' empty')+'" data-i="'+i+'"'+(p.file?'':' disabled')+'>'+inner+'<span class="pc"><span class="vt">'+esc(p.title)+'</span><span class="vm">'+meta+'</span></span></button>';
+    }).join('');
+    var real=list.filter(function(p){return p.file}).length;
+    document.getElementById('photo-foot').textContent=list.length+' rows in set'+(real<list.length?' ('+(list.length-real)+' example)':'')+'.';
+    photos.list=list;
+  }
+
+  var lb=document.getElementById('lightbox');
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('.photo'); if(!b||b.disabled) return;
+    var p=photos.list[+b.dataset.i];
+    document.getElementById('lb-img').src='photos/'+p.file;
+    document.getElementById('lb-img').alt=p.alt||p.title;
+    document.getElementById('lb-cap').textContent=[p.title,p.place,p.date,p.camera].filter(Boolean).join(' · ');
+    if(lb.showModal) lb.showModal();
+  });
+  document.getElementById('lb-close').addEventListener('click',function(){lb.close()});
+  lb.addEventListener('click',function(e){ if(e.target===lb) lb.close(); });
+
+  fetch('photos.json').then(function(r){return r.json()}).then(function(d){photos(d.photos||[])}).catch(function(){photos([])});
 
   fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();})
     .catch(function(){document.getElementById('rows').innerHTML='<tr><td colspan="4" class="d">Couldn\'t load talks.json. Check that it sits next to index.html.</td></tr>';});

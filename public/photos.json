@@ -1,0 +1,7 @@
+{
+  "photos": [
+    { "file": null, "title": "Example: replace me", "place": "Somewhere", "date": "2026-09", "camera": "", "alt": "", "example": true },
+    { "file": null, "title": "Example: replace me", "place": "Somewhere else", "date": "2026-06", "camera": "", "alt": "", "example": true },
+    { "file": null, "title": "Example: replace me", "place": "Another place", "date": "2026-03", "camera": "", "alt": "", "example": true }
+  ]
+}

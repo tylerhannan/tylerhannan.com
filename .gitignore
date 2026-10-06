@@ -1,1 +1,6 @@
 .DS_Store
+# WordPress export: contains password hashes and emails. Never commit.
+backup/
+*.sql
+*.sql.gz
+__pycache__/

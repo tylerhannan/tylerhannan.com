@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Writing Archive · Tyler Hannan</title>
+<meta name="description" content="Older blog posts by Tyler Hannan, kept for the record.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← tylerhannan.com</a>
+  <section style="padding-top:24px">
+    <p class="label">Writing archive</p>
+    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> date, title <span class="kw">FROM</span> posts <span class="kw">ORDER BY</span> date <span class="kw">DESC</span></div>
+    <p class="tag" style="margin-top:16px">Older posts from the WordPress years, kept so the links still work. Some of it has aged better than the rest.</p>
+    <div id="list"></div>
+    <p class="foot" id="foot"></p>
+  </section>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+<script>
+(function(){
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var list=document.getElementById('list');
+  fetch('/archive/posts.json').then(function(r){return r.json()}).then(function(d){
+    var posts=(d.posts||[]).sort(function(a,b){return b.date.localeCompare(a.date)});
+    if(!posts.length){
+      list.innerHTML='<div class="empty-state">0 rows in set. Posts appear here after running <code>python3 scripts/import_wordpress.py backup/wordpress.sql</code>.</div>';
+      return;
+    }
+    var html='', year='';
+    posts.forEach(function(p){
+      var y=p.date.slice(0,4);
+      if(y!==year){ if(year) html+='</ul>'; html+='<p class="year">'+y+'</p><ul class="posts">'; year=y; }
+      html+='<li><span class="d">'+esc(p.date.slice(0,10).slice(5))+'</span><a href="'+esc(p.path)+'">'+esc(p.title)+'</a></li>';
+    });
+    list.innerHTML=html+'</ul>';
+    document.getElementById('foot').textContent=posts.length+' rows in set.';
+  }).catch(function(){ list.innerHTML='<div class="empty-state">Couldn\'t load posts.json.</div>'; });
+})();
+</script>
+</body>
+</html>
