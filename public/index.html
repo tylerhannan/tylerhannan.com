@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tyler Hannan</title>
+<meta name="description" content="Talks, videos and writing from Tyler Hannan.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: one column "query console" — a header, then each section is a query and its result set. */
+:root{
+  --bg:#11151a; --panel:#181d24; --line:#27303a; --fg:#e4e9ef; --muted:#8a96a3;
+  --accent:#6ccad6; --kw:#e09bd8; --str:#a6d49a; --num:#9db8ff; --on-accent:#08262b;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f5f7f9; --panel:#eaeef2; --line:#d5dce3; --fg:#18202a; --muted:#5d6977;
+  --accent:#0d6f7c; --kw:#a3369a; --str:#2f7a2a; --num:#2f55b8; --on-accent:#f2fbfc; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#f5f7f9; --panel:#eaeef2; --line:#d5dce3; --fg:#18202a; --muted:#5d6977;
+  --accent:#0d6f7c; --kw:#a3369a; --str:#2f7a2a; --num:#2f55b8; --on-accent:#f2fbfc; color-scheme:light}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 var(--body);-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding-inline:20px;padding-block:40px 64px}
+a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:3px}
+a:hover{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.mono{font-family:var(--mono)}
+
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px 24px;padding-bottom:28px;border-bottom:1px solid var(--line)}
+h1{font:700 clamp(40px,8vw,64px)/1 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
+h1 .cur{display:inline-block;width:.45em;height:.85em;margin-left:.08em;background:var(--accent);vertical-align:-.05em;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){h1 .cur{animation:none}}
+.tag{margin:10px 0 0;color:var(--muted);max-width:46ch}
+nav{display:flex;gap:4px 18px;flex-wrap:wrap;font:14px var(--mono)}
+nav a{text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--accent)}
+
+section{padding-top:48px}
+.label{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.query{font:14px/1.7 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.query .p{color:var(--accent);user-select:none}
+.kw{color:var(--kw)} .s{color:var(--str)} .n{color:var(--num)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}
+.chip{font:13px var(--mono);background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer}
+.chip:hover{color:var(--fg);border-color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
+.tbl{overflow-x:auto;border-top:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font:14px var(--mono);font-variant-numeric:tabular-nums}
+th{text-align:left;font-weight:400;color:var(--muted);padding:8px 10px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td.d{color:var(--muted);white-space:nowrap;width:5.5em}
+td.e{color:var(--muted);min-width:9em}
+td.v{width:2.5em;text-align:right;padding-right:0}
+.t{all:unset;cursor:pointer;color:var(--fg);font-family:var(--body);font-size:15px}
+.t:hover{color:var(--accent)}
+.t:focus-visible{outline:2px solid var(--accent)}
+.k{display:inline-block;margin-left:8px;font:11px var(--mono);color:var(--accent);border:1px solid var(--line);border-radius:4px;padding:0 5px;vertical-align:2px}
+.play{text-decoration:none;color:var(--accent);font-size:13px}
+tr.x td{padding:4px 0 18px;color:var(--muted);font-family:var(--body);font-size:14px}
+tr.x .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px;font-family:var(--mono);font-size:13px}
+.embed{position:relative;aspect-ratio:16/9;max-width:100%;margin-top:12px;border-radius:8px;overflow:hidden;background:var(--panel)}
+.embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.foot{font:12px var(--mono);color:var(--muted);margin-top:10px}
+
+.vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:16px}
+.vid{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:var(--fg);min-width:0}
+.thumb{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.thumb .ph{font:12px var(--mono);color:var(--muted);padding:12px;text-align:center}
+.thumb .btn{position:relative;width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:16px}
+.vid:hover .thumb{border-color:var(--accent)}
+.vid .vt{font-size:15px;line-height:1.35}
+.vid .vm{font:12px var(--mono);color:var(--muted)}
+
+.desc{width:100%;border-collapse:collapse;font:14px var(--mono);margin-top:4px}
+.desc td{padding:8px 12px 8px 0;border-bottom:1px solid var(--line)}
+.desc td:first-child{color:var(--muted);width:9em;white-space:nowrap}
+.bio{max-width:62ch;margin:20px 0 0;font-size:17px}
+
+.contact{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;font:15px var(--mono);margin-top:4px}
+.copy{font:12px var(--mono);background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 9px;cursor:pointer;margin-left:8px}
+.copy:hover{color:var(--fg)}
+footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font:12px var(--mono);color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Tyler Hannan<span class="cur" aria-hidden="true"></span></h1>
+      <p class="tag">Two decades of databases, distributed systems and developer communities. These are the talks, videos and things I've said out loud.</p>
+    </div>
+    <nav aria-label="Sections"><a href="#talks">talks</a><a href="#videos">videos</a><a href="#about">about</a><a href="#contact">contact</a></nav>
+  </header>
+
+  <section id="talks" aria-labelledby="talks-h">
+    <p class="label" id="talks-h">Talks and events</p>
+    <div class="query" id="sql" aria-live="polite"></div>
+    <div class="chips" id="chips" role="group" aria-label="Filter talks"></div>
+    <div class="tbl"><table>
+      <thead><tr><th>date</th><th>title</th><th>event</th><th class="v"><span class="sr" aria-label="video">▶</span></th></tr></thead>
+      <tbody id="rows"><tr><td colspan="4" class="d">Loading…</td></tr></tbody>
+    </table></div>
+    <p class="foot" id="foot"></p>
+  </section>
+
+  <section id="videos" aria-labelledby="videos-h">
+    <p class="label" id="videos-h">Videos</p>
+    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> * <span class="kw">FROM</span> talks <span class="kw">WHERE</span> youtube <span class="kw">IS NOT NULL</span></div>
+    <div class="vids" id="vids"></div>
+  </section>
+
+  <section id="about" aria-labelledby="about-h">
+    <p class="label" id="about-h">About</p>
+    <div class="query"><span class="p">:) </span><span class="kw">DESCRIBE</span> tyler</div>
+    <table class="desc">
+      <tr><td>now</td><td>Developer advocacy at ClickHouse</td></tr>
+      <tr><td>previously</td><td>Hasura · Fauna · Elastic · Basho</td></tr>
+      <tr><td>focus</td><td>databases, distributed systems, community</td></tr>
+      <tr><td>speaks_at</td><td>conferences, meetups, release calls</td></tr>
+    </table>
+    <p class="bio">I've spent my career where databases meet the people who use them: building developer communities, telling product stories, and explaining why the internals matter. I've led community at Hasura, product and community marketing at Elastic, and marketing at Basho, the company behind Riak.</p>
+  </section>
+
+  <section id="contact" aria-labelledby="contact-h">
+    <p class="label" id="contact-h">Contact</p>
+    <div class="contact">
+      <span><span id="email">tyler@tylerhannan.com</span><button class="copy" id="copy" type="button">copy</button></span>
+      <a href="https://www.linkedin.com/in/tylerhannan/">linkedin</a>
+      <a href="https://twitter.com/tylerhannan">x / twitter</a>
+    </div>
+  </section>
+
+  <footer>tylerhannan.com · built from a single talks.json</footer>
+</div>
+
+<script>
+(function(){
+  var framed = window.self !== window.top;
+  var state = {type:'all', video:false};
+  var talks = [];
+  var esc = function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var ym = function(d){return String(d).slice(0,7)};
+  var yt = function(id){return 'https://www.youtube.com/watch?v='+id};
+
+  function sql(){
+    var w=[];
+    if(state.type!=='all') w.push('type = <span class="s">\''+esc(state.type)+'\'</span>');
+    if(state.video) w.push('youtube <span class="kw">IS NOT NULL</span>');
+    return '<span class="p">:) </span><span class="kw">SELECT</span> date, title, event <span class="kw">FROM</span> talks'+
+      (w.length?' <span class="kw">WHERE</span> '+w.join(' <span class="kw">AND</span> '):'')+
+      ' <span class="kw">ORDER BY</span> date <span class="kw">DESC</span>';
+  }
+
+  function chips(){
+    var types=['all'].concat(Array.from(new Set(talks.map(function(t){return t.type}))).sort());
+    var el=document.getElementById('chips');
+    el.innerHTML=types.map(function(t){return '<button type="button" class="chip" data-type="'+esc(t)+'" aria-pressed="'+(state.type===t)+'">'+esc(t)+'</button>'}).join('')+
+      '<button type="button" class="chip" data-video="1" aria-pressed="'+state.video+'">▶ has video</button>';
+  }
+
+  function embed(id){return '<div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/'+esc(id)+'?autoplay=1&rel=0" title="Video" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>'}
+
+  function render(){
+    var t0=performance.now();
+    var rows=talks.filter(function(t){return (state.type==='all'||t.type===state.type)&&(!state.video||t.youtube)})
+      .sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
+    document.getElementById('sql').innerHTML=sql();
+    document.getElementById('rows').innerHTML=rows.map(function(t,i){
+      var kind=t.type==='keynote'?'<span class="k">keynote</span>':'';
+      var play=t.youtube?'<a class="play" href="'+yt(t.youtube)+'" data-i="'+i+'" aria-label="Watch '+esc(t.title)+'">▶</a>':'';
+      return '<tr><td class="d">'+esc(ym(t.date))+'</td><td><button class="t" type="button" data-i="'+i+'" aria-expanded="false">'+esc(t.title)+'</button>'+kind+'</td><td class="e">'+esc(t.event)+'</td><td class="v">'+play+'</td></tr>';
+    }).join('')||'<tr><td colspan="4" class="d">0 rows. Try another filter.</td></tr>';
+    var ms=Math.max(0.001,(performance.now()-t0)/1000);
+    document.getElementById('foot').textContent=rows.length+' row'+(rows.length===1?'':'s')+' in set. Elapsed: '+ms.toFixed(3)+' sec.';
+    render.rows=rows; chips();
+  }
+
+  function toggle(i, withVideo){
+    var btn=document.querySelector('.t[data-i="'+i+'"]'); if(!btn) return;
+    var tr=btn.closest('tr'), next=tr.nextElementSibling, t=render.rows[i];
+    if(next&&next.classList.contains('x')){
+      if(withVideo&&t.youtube&&!next.querySelector('iframe')&&!framed){next.querySelector('td').insertAdjacentHTML('beforeend',embed(t.youtube));return}
+      next.remove(); btn.setAttribute('aria-expanded','false'); return;
+    }
+    var links=[];
+    if(t.youtube) links.push('<a href="'+yt(t.youtube)+'">watch on youtube ↗</a>');
+    if(t.url&&(!t.youtube||t.url.indexOf(t.youtube)<0)) links.push('<a href="'+esc(t.url)+'">event page ↗</a>');
+    var meta=[t.event,t.location,t.type].filter(Boolean).map(esc).join(' · ');
+    var html='<tr class="x"><td></td><td colspan="3">'+meta+(t.note?'<br>'+esc(t.note):'')+'<div class="links">'+links.join('')+'</div>'+(withVideo&&t.youtube&&!framed?embed(t.youtube):'')+'</td></tr>';
+    tr.insertAdjacentHTML('afterend',html); btn.setAttribute('aria-expanded','true');
+  }
+
+  function vids(){
+    var v=talks.filter(function(t){return t.youtube}).sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
+    document.getElementById('vids').innerHTML=v.map(function(t){
+      return '<a class="vid" href="'+yt(t.youtube)+'" data-id="'+esc(t.youtube)+'"><div class="thumb"><span class="ph">'+esc(t.event)+'</span><img alt="" loading="lazy" src="https://i.ytimg.com/vi/'+esc(t.youtube)+'/hqdefault.jpg" onerror="this.remove()"><span class="btn" aria-hidden="true">▶</span></div><span class="vt">'+esc(t.title)+'</span><span class="vm">'+esc(ym(t.date))+' · '+esc(t.event)+'</span></a>';
+    }).join('');
+  }
+
+  document.addEventListener('click',function(e){
+    var c=e.target.closest('.chip');
+    if(c){ if(c.dataset.video) state.video=!state.video; else state.type=c.dataset.type; render(); return; }
+    var t=e.target.closest('.t'); if(t){ toggle(+t.dataset.i,false); return; }
+    var p=e.target.closest('.play'); if(p&&!framed){ e.preventDefault(); toggle(+p.dataset.i,true); return; }
+    var v=e.target.closest('.vid'); if(v&&!framed){ e.preventDefault(); var th=v.querySelector('.thumb'); th.outerHTML=embed(v.dataset.id); return; }
+  });
+
+  document.getElementById('copy').addEventListener('click',function(){
+    var b=this, txt=document.getElementById('email').textContent;
+    var done=function(){b.textContent='copied';setTimeout(function(){b.textContent='copy'},1500)};
+    try{ navigator.clipboard.writeText(txt).then(done,function(){sel()}); }catch(_){ sel(); }
+    function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('email'));var s=getSelection();s.removeAllRanges();s.addRange(r);}
+  });
+
+  fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();})
+    .catch(function(){document.getElementById('rows').innerHTML='<tr><td colspan="4" class="d">Couldn\'t load talks.json. Check that it sits next to index.html.</td></tr>';});
+})();
+</script>
+</body>
+</html>
