@@ -36,10 +36,12 @@
   </section>
 
   <section id="videos" aria-labelledby="videos-h">
-    <p class="label" id="videos-h">Videos</p>
+    <p class="label" id="videos-h">Highlighted videos</p>
     <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> *
    <span class="kw">FROM</span> talks
-   <span class="kw">WHERE</span> youtube <span class="kw">IS NOT NULL</span>;</div>
+   <span class="kw">WHERE</span> highlight <span class="kw">IS NOT NULL</span>
+   <span class="kw">ORDER BY</span> highlight
+   <span class="kw">LIMIT</span> <span class="n">6</span>;</div>
     <div class="vids" id="vids"></div>
   </section>
 
@@ -145,7 +147,8 @@
   }
 
   function vids(){
-    var v=talks.filter(function(t){return t.youtube}).sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
+    // Hand-picked: talks.json entries with "highlight": 1-6 (and a youtube ID), shown in that order.
+    var v=talks.filter(function(t){return t.youtube&&t.highlight}).sort(function(a,b){return a.highlight-b.highlight}).slice(0,6);
     document.getElementById('vids').innerHTML=v.map(function(t){
       return '<a class="vid" href="'+yt(t.youtube)+'" data-id="'+esc(t.youtube)+'"><div class="thumb"><span class="ph">'+esc(t.event)+'</span><img alt="" loading="lazy" src="https://i.ytimg.com/vi/'+esc(t.youtube)+'/hqdefault.jpg" onerror="this.remove()"><span class="btn" aria-hidden="true">▶</span></div><span class="vt">'+esc(t.title)+'</span><span class="vm">'+esc(ym(t.date))+' · '+esc(t.event)+'</span></a>';
     }).join('');
