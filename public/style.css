@@ -33,7 +33,7 @@ nav a:hover{color:var(--accent)}
 
 section{padding-top:48px}
 .label{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
-.query{font:14px/1.7 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.query{font:14px/1.7 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre}
 .query .p{color:var(--accent);user-select:none}
 .kw{color:var(--kw)} .s{color:var(--str)} .n{color:var(--num)}
 
@@ -41,6 +41,15 @@ section{padding-top:48px}
 .chip{font:13px var(--mono);background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer}
 .chip:hover{color:var(--fg);border-color:var(--muted)}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.chips+.chips{margin-top:-8px}
+.chips-l{font:12px var(--mono);color:var(--muted);align-self:center;margin-right:4px;text-transform:uppercase;letter-spacing:.08em}
+tr.g th{padding:22px 0 6px;font:500 13px var(--mono);color:var(--fg);text-align:left;border-bottom:1px solid var(--muted)}
+tr.g th span{color:var(--muted);font-weight:400;margin-left:12px}
+tbody tr.g:first-child th{padding-top:10px}
+.stats{display:flex;flex-wrap:wrap;gap:1px;margin-top:16px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stat{flex:1 1 110px;background:var(--bg);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.stat .sv{font:700 clamp(28px,5vw,40px)/1.1 var(--display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .sl{font:12px var(--mono);color:var(--muted)}
 
 .tbl{overflow-x:auto;border-top:1px solid var(--line)}
 table{width:100%;border-collapse:collapse;font:14px var(--mono);font-variant-numeric:tabular-nums}
