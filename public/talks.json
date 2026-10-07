@@ -12,8 +12,7 @@
     { "date": "2023-07-05", "title": "What Is ClickHouse?", "event": "ClickHouse YouTube", "type": "video", "url": "https://www.youtube.com/watch?v=FtoWGT7kS-c", "youtube": "FtoWGT7kS-c" },
     { "date": "2021-06-24", "title": "Closing Keynote", "event": "HasuraCon 2021", "type": "keynote", "url": "https://hasura.io/events/hasura-con-2021/speakers/tyler-hannan", "youtube": null },
     { "date": "2020", "title": "When Worlds Collide: Frontend vs Database", "event": "JSNation Live 2020", "type": "talk", "url": "https://gitnation.com/contents/when-worlds-collide-frontend-vs-database", "youtube": null },
-    { "date": "2013-10", "title": "Medieval Art, Collective Intelligence, and Language Abuse: The Ethos of Distributed Systems", "event": "Monktoberfest 2013", "location": "Portland, ME, US", "type": "talk", "url": "https://www.youtube.com/watch?v=MboWxOKP4-Y", "youtube": "MboWxOKP4-Y" },
-    { "date": "2013", "title": "Interview with O'Reilly (Basho Technologies)", "event": "Strata Santa Clara 2013", "type": "interview", "url": "https://www.youtube.com/watch?v=P4KXpKV3FfM", "youtube": "P4KXpKV3FfM" }
+    { "date": "2013-10", "title": "Medieval Art, Collective Intelligence, and Language Abuse: The Ethos of Distributed Systems", "event": "Monktoberfest 2013", "location": "Portland, ME, US", "type": "talk", "url": "https://www.youtube.com/watch?v=MboWxOKP4-Y", "youtube": "MboWxOKP4-Y" }
   ],
   "writing": [
     { "outlet": "Elastic blog", "url": "https://www.elastic.co/blog/author/tyler-hannan" },
