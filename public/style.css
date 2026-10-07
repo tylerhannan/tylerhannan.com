@@ -48,7 +48,7 @@ th{text-align:left;font-weight:400;color:var(--muted);padding:8px 10px 8px 0;bor
 td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
 td.d{color:var(--muted);white-space:nowrap;width:5.5em}
 td.e{color:var(--muted);min-width:9em}
-td.v{width:2.5em;text-align:right;padding-right:0}
+th.v,td.v{width:2.5em;text-align:right;padding-right:0}
 .t{all:unset;cursor:pointer;color:var(--fg);font-family:var(--body);font-size:15px}
 .t:hover{color:var(--accent)}
 .t:focus-visible{outline:2px solid var(--accent)}
