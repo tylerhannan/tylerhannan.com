@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payment Security:  Square vs. Verifone vs. Magtek vs. ... · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>Payment Security:  Square vs. Verifone vs. Magtek vs. ...</h1>
+    <p class="meta">2009-12-14</p>
+    <div class="content">
+<p>If you have been following news in the payments industry over the last week, you have (undoubtedly) heard of the announcements surrounding card acceptance from a mobile device.</p>
+<p>In particular, there has been substantive industry buzz around the launch of the acceptance methodology offered by <a href="https://squareup.com/">Square</a>.  There is already a wealth of content created that discusses the offering and its business model in great detail...so I will forego that commentary.</p>
+<p>What is most intriguing is the discussion/turmoil regarding the security of the Square solution...</p>
+<p><!--more--></p>
+<p>You can track a fair amount of the commentary on <a href="http://pymnts.com">pymnts.com</a>, but there are two items, in specific that I encourage you to peruse.</p>
+<p>The first <a href="http://pymnts.com/iphone-payments-smackdown-square-vs-verifone/?tsc"><em>iPhone Payments Smackdown: Square vs. Verifone</em></a> will provide you with the commentary and a glimpse into the discussion, but I encourage you to watch the video interview with <a href="http://www.linkedin.com/in/mimihart">Mimi Hart</a>, Preisdent & CEO at Magtek* discussing the offering with <a href="http://www.linkedin.com/pub/jonathan-summey/6/b48/647">Jonathan Summey</a> of the Pymnts team.   Near the end of the interview, there is a quote that I find extraordinarily compelling.**</p>
+<blockquote>Jonathan Summey - 
+"For a final question...If you're at your local coffee shop, or you're maybe buying a hot dog on the corner, and someone presented you with this as a payment device, would be eager to use it?  Or, maybe, be a little skeptical?  What would your initial feelings be?
+<p>Mimi Hart - <br>
+"Well, I'm an educated consumer so I'm not really probably the right person to ask the question [of].  But, at the end of the day, for me, to invest...to put my credentials and card data into a device like this that I know doesn't really have good security at the reader level for the convenience of paying for a 4 dollar cup of coffee and having also been through the process of of what you have to do when somebody has compromised your credit card and you have to write endless letters and have endless telephone calls to get it all squared away, i'm not sure as a consumer if I'd risk it.</blockquote></p>
+<p>"Credentials."</p>
+<p><a href="http://www.thefreedictionary.com/credentials">Credentials</a> is defined as "evidence or testimonials concerning one's right to credit, confidence, or authority"</p>
+<p>I freely acknowledge that I have spent substantial time as of late discussing concepts of Federated Security and Federated Identity (including things such as <a href="http://commercelab.ipcommerce.com/Compliance/Commerce_Safe/Federated_Identity.aspx">transaction originator authentication & authorization</a>)...but this couldn't have been a more timely statement.</p>
+<p>How many of us truly treat our signature and card as credentials?  I live/breathe/eat/sleep payments and technology...and yet, in my day-to-day life, I tend to treat my credit card as nothing more than a piece of plastic.  However, the card (and, in some acceptance modalities the signature) are processed by a merchant and, when an authorization is returned, evidence my "right" to credit for that merchants goods or services.</p>
+<p>It is an important concept.  And it is one that is easily ignored.</p>
+<p>This is the context that is important when considering the ongoing debate regarding the security of solutions offered by Square and others.  In Jack Dorsey's words (from his discussion with Mike Arrington regarding the Verifone offering):</p>
+<blockquote>"From the outside it looks like we haven't done the work to actually verify everything, but we are heavily regulated just like Verifone, and we're doing the compliance and managing the fraud and the risk and all those aspects that comes along with this business."</blockquote>
+<p>There is also, in my opinion, one other small piece of the discussion that is being overlooked.  I understand those who say that they fear compromise of a phone as an acceptance device, and yet the problem of loss of card data is not limited to such a platform....</p>
+<p>According to comScore (via <a href="http://brainstormtech.blogs.fortune.cnn.com/2009/11/04/33-of-u-s-touchscreens-are-iphones/">CNN Money</a>) there are 7.8M iPhone users in the US.  AT&T in contrast, indicates 8.3M activations through June of 2009.  Let's use a number between the two for some comparative analysis...8M iPhones in the US.</p>
+<p>The numbers that I use below are solely illustrative, but indicate my thought process.  They are by no means an accurate comparison as there is no concrete numbers to utilize.  But, even with being generous, they tell an interesting story...</p>
+<p>So, if usage of the Square capability was to grow to 5% of iPhone owners in the first year, they would have 400k users of the solution in the United States.  Now if those merchants ran, on average, 250 transactions monthly (and we assume a 30.42 day month) then square would be handling approximately 3.3M transactions daily.</p>
+<p>According to a <a href="http://www.sans.org/reading_room/whitepapers/threats/skimming_and_its_side_effects_1342">SANS Institute</a> whitepaper entitled <em>Skimming and its Side Efects</em> there are 365K ATMs in the United States that generate more than 41M transactions daily.  Half of these ATMs are bank-owned, the other half are merchant owned.</p>
+<p>Is one inherently more attractive as a target for breach than another solely due to the hardware on which it resides?  No.  Ease of hardware breach is a contributing factor...but usage of, and volume of, transactions is equally important.</p>
+<p>The reaction to the Square announcement is understandable.  Questions regarding the security of the solution are justified and seem as if they are, at present, being answered by the Square team.  As I've discussed elsewhere, PCI Compliance (even as a Level 1 Service Provider) is only one component of the security equation...so it is refreshing to hear that the Square team is addressing "fraud and risk"*** that comes along with enabling card acceptance.  I do find it intriguing that Square has opted to add the capability of a photo being displayed for the merchant on the phone.  But that is, perhaps, better left to a discussion of the meaning of authentication at a later date.</p>
+<p>Is Square secure?  Would you trust it with your credentials?<br>
+Is your grocer secure?  Can you verify that?  <br>
+Is your ATM secure?  Can you ensure that?</p>
+<p>Risk is inherent in the world of payment processing...the goal is to minimize that risk (as a consumer, as a developer, as a payment processor, etc.)</p>
+<p>Finally, the decision of presenting a card as tender, at least to me, is not binary.  The decision is not driven solely by the acceptance device (although that is an element of the equation), the decision is driven by a combination of factors such as familiarity with the acceptance device, familiarity with the merchant (either personally or professionally), and above all else...convenience.  I pay with my card because I prefer it to carrying cash.</p>
+<p>Consumer preference will, ultimately, determine the breadth of adoption of offerings such as Square.</p>
+<p>What's your perspective? Agree? Disagree? Anything to add? Critiques? The comment form is below...</p>
+<p>* Whom I respect greatly.<br>
+** NOTE:  I have transcribed this manually from the interview, please forgive any errors...<br>
+*** Yes, I recognize that (in context) that statement is specifically focused on the reference to Square allowing a wide range of customers to process...but, my impression (and nothing more) is that the statement was intentionally delivered in a broad fashion.</p>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2009-12-14.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

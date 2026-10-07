@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax Highlight:  a test · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>Syntax Highlight:  a test</h1>
+    <p class="meta">2010-07-03</p>
+    <div class="content">
+<p>When testing new functionality on the blog, I (typically) obscure the actual process of testing.  However, there are a few circumstances where this isn't tenable.</p>
+<p>Syntax highlighting is just such a circumstance.  It is not sufficient to see how the javascript/plugin solution I'm leveraging works on the blog itself...instead I must also see how it is rendered in RSS feeds and on other sites that syndicate this content.</p>
+<p>You may ask why I'm installing a syntax highlighting solution on the blog.  The answer is simple.  There is a wealth of sample code and unique solutions that I've accumulated over the the years of interacting with Software Companies who built commerce solutions leveraging the <a href="http://www.ipcommerce.com/Products/Commerce_APIs.aspx">IP Commerce APIs</a>.</p>
+<p>It is, now, time to share this information.</p>
+<p>If you are interested in doing something similar to your site, or blog, I'm using a combination of the open source <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a> javascript client side code and a WordPress plugin called <a href="http://www.viper007bond.com/wordpress-plugins/syntaxhighlighter/">SyntaxHighlighter Evolved</a>.  I have chosen this set of solutions, not only due to appearance, but also as it should allow for viewing source, copying to clipboard, and printing simply by clicking on the code box as rendered.</p>
+<p>Below are a few tests of the syntax highlighting feature...please excuse the testing.<br>
+<!--more--><br>
+<strong>UPDATE:  I should note that I don't expect the code to render in the same fashion via a feed as it does on this page...this is due to the nature of deployment of the solution.</strong></p>
+<p>A bit of php/html perhaps?<br>
+<pre><code>&lt;!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"&gt;
+&lt;html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"&gt;
+&lt;head&gt;
+	&lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /&gt;
+	&lt;title&gt;PHP Code Example&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+	&lt;h1&gt;PHP Code Example&lt;/h1&gt;
+
+	&lt;p&gt;&lt;?php echo 'Hello World!'; ?&gt;&lt;/p&gt;
+
+	&lt;p&gt;This line is highlighted.&lt;/p&gt;
+
+	&lt;div class="foobar"&gt;
+		This	is	an
+		example	of	smart
+		tabs.
+	&lt;/div&gt;
+
+	&lt;p&gt;&lt;a href="http://wordpress.org/"&gt;WordPress&lt;/a&gt;&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre></p>
+<p>Some Java?<br>
+<pre><code>package helloworldapp;
+
+/**
+ * The HelloWorldApp class implements an application that
+ * simply prints "Hello World!" to standard output.
+ */
+public class HelloWorldApp {
+    
+    /** Creates a new instance of HelloWorldApp */
+    public HelloWorldApp() {
+    }
+    
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String[] args) {
+        System.out.println("Hello World!"); // Display the string.
+    }
+    
+}</code></pre></p>
+<p>Perhaps some C#?<br>
+<pre><code>// Hello2.cs
+using System;
+
+public class Hello2
+{
+   public static void Main()
+   {
+      Console.WriteLine("Hello, World!");
+   }
+}</code></pre></p>
+<p>And, finally, a rather lengthy sample of an authorization transaction using the <a href="http://commercelab.ipcommerce.com/Web_Services.aspx">Commerce Web Services REST</a> interfaces that should be collapsed by default requiring a click to expand (at least on this page).<br>
+<pre><code>&lt;AuthorizeAndCaptureTransaction xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard/Rest"&gt;
+     &lt;ApplicationProfileId&gt;#APPID#&lt;/ApplicationProfileId&gt;
+     &lt;MerchantProfileId&gt;#MERCHID#&lt;/MerchantProfileId&gt;
+     &lt;ReportingData xmlns:d2p1="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" i:nil="true"/&gt;
+     &lt;Transaction xmlns:d2p1="http://schemas.ipcommerce.com/CWS/v2.0/Transactions" xmlns:d2p2="http://schemas.ipcommerce.com/CWS/v2.0/Transactions/Bankcard" i:type="d2p2:BankcardTransaction"&gt;
+          &lt;d2p1:CustomerData&gt;
+               &lt;d2p1:BillingData&gt;
+                    &lt;d2p1:Name i:nil="true"/&gt;
+                    &lt;d2p1:Address&gt;
+                         &lt;d2p1:Street1&gt;1400 16th Street&lt;/d2p1:Street1&gt;
+                         &lt;d2p1:Street2 i:nil="true"/&gt;
+                         &lt;d2p1:City&gt;Denver&lt;/d2p1:City&gt;
+                         &lt;d2p1:StateProvince&gt;CO&lt;/d2p1:StateProvince&gt;
+                         &lt;d2p1:PostalCode&gt;80202&lt;/d2p1:PostalCode&gt;
+                         &lt;d2p1:CountryCode&gt;USA&lt;/d2p1:CountryCode&gt;
+                    &lt;/d2p1:Address&gt;
+                    &lt;d2p1:BusinessName&gt;AcmeInc&lt;/d2p1:BusinessName&gt;
+                    &lt;d2p1:Phone i:nil="true"/&gt;
+                    &lt;d2p1:Fax i:nil="true"/&gt;
+                    &lt;d2p1:Email i:nil="true"/&gt;
+               &lt;/d2p1:BillingData&gt;
+               &lt;d2p1:CustomerId&gt;cust123x&lt;/d2p1:CustomerId&gt;
+               &lt;d2p1:CustomerTaxId i:nil="true"/&gt;
+               &lt;d2p1:ShippingData i:nil="true"/&gt;
+          &lt;/d2p1:CustomerData&gt;
+          &lt;d2p1:ReportingData&gt;
+               &lt;d2p1:Comment&gt;COMMENT&lt;/d2p1:Comment&gt;
+               &lt;d2p1:Description&gt;DESCRIPTION&lt;/d2p1:Description&gt;
+               &lt;d2p1:Reference&gt;REFERENCE&lt;/d2p1:Reference&gt;
+          &lt;/d2p1:ReportingData&gt;
+          &lt;d2p1:Addendum i:nil="true"/&gt;
+          &lt;d2p2:ApplicationConfigurationData i:nil="true"/&gt;
+          &lt;d2p2:TenderData&gt;
+               &lt;d2p1:PaymentAccountDataToken i:nil="true"/&gt;
+               &lt;d2p1:SecurePaymentAccountData i:nil="true"/&gt;
+               &lt;d2p2:CardData&gt;
+                    &lt;d2p2:CardType&gt;Visa&lt;/d2p2:CardType&gt;
+                    &lt;d2p2:CardholderName&gt;John Doe&lt;/d2p2:CardholderName&gt;
+                    &lt;d2p2:PAN&gt;4012000033330026&lt;/d2p2:PAN&gt;
+                    &lt;d2p2:Expire&gt;0409&lt;/d2p2:Expire&gt;
+                    &lt;d2p2:Track1Data i:nil="true"/&gt;
+                    &lt;d2p2:Track2Data&gt;4111111111111111=09041011000012345678&lt;/d2p2:Track2Data&gt;
+               &lt;/d2p2:CardData&gt;
+               &lt;d2p2:CardSecurityData&gt;
+                    &lt;d2p2:AVSData&gt;
+                         &lt;d2p2:CardholderName&gt;Test Cardholder&lt;/d2p2:CardholderName&gt;
+                         &lt;d2p2:Street&gt;1400 16th Street&lt;/d2p2:Street&gt;
+                         &lt;d2p2:City&gt;Denver&lt;/d2p2:City&gt;
+                         &lt;d2p2:StateProvince&gt;CO&lt;/d2p2:StateProvince&gt;
+                         &lt;d2p2:PostalCode&gt;80203&lt;/d2p2:PostalCode&gt;
+                         &lt;d2p2:Country&gt;USA&lt;/d2p2:Country&gt;
+                         &lt;d2p2:Phone i:nil="true"/&gt;
+                    &lt;/d2p2:AVSData&gt;
+                    &lt;d2p2:CVDataProvided&gt;NotSet&lt;/d2p2:CVDataProvided&gt;
+                    &lt;d2p2:CVData i:nil="true"/&gt;
+                    &lt;d2p2:KeySerialNumber i:nil="true"/&gt;
+                    &lt;d2p2:PIN i:nil="true"/&gt;
+               &lt;/d2p2:CardSecurityData&gt;
+          &lt;/d2p2:TenderData&gt;
+          &lt;d2p2:TransactionData&gt;
+               &lt;d2p1:Amount&gt;11.00&lt;/d2p1:Amount&gt;
+               &lt;d2p1:CurrencyCode&gt;USD&lt;/d2p1:CurrencyCode&gt;
+               &lt;d2p2:AccountType&gt;NotSet&lt;/d2p2:AccountType&gt;
+               &lt;d2p2:AlternativeMerchantData i:nil="true"/&gt;
+               &lt;d2p2:ApprovalCode i:nil="true"/&gt;
+               &lt;d2p2:CashBackAmount&gt;0&lt;/d2p2:CashBackAmount&gt;
+               &lt;d2p2:CustomerPresent&gt;Present&lt;/d2p2:CustomerPresent&gt;
+               &lt;d2p2:EmployeeId&gt;49&lt;/d2p2:EmployeeId&gt;
+               &lt;d2p2:EntryMode&gt;TrackDataFromMSR&lt;/d2p2:EntryMode&gt;
+               &lt;d2p2:GoodsType&gt;NotSet&lt;/d2p2:GoodsType&gt;
+               &lt;d2p2:IndustryType&gt;Retail&lt;/d2p2:IndustryType&gt;
+               &lt;d2p2:InternetTransactionData i:nil="true"/&gt;
+               &lt;d2p2:InvoiceNumber&gt;545&lt;/d2p2:InvoiceNumber&gt;
+               &lt;d2p2:OrderNumber&gt;885380&lt;/d2p2:OrderNumber&gt;
+               &lt;d2p2:SignatureCaptured&gt;false&lt;/d2p2:SignatureCaptured&gt;
+               &lt;d2p2:TerminalId i:nil="true"/&gt;
+               &lt;d2p2:TipAmount&gt;0&lt;/d2p2:TipAmount&gt;
+          &lt;/d2p2:TransactionData&gt;
+     &lt;/Transaction&gt;
+&lt;/AuthorizeAndCaptureTransaction&gt; </code></pre></p>
+<p>Please advise if you see any strange behaviours or unexpected formatting/etc.</p>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2010-07-03.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consistency In Customer Experience:  Single-Sign On · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>Consistency In Customer Experience:  Single-Sign On</h1>
+    <p class="meta">2010-07-28</p>
+    <div class="content">
+<p>As I mentioned yesterday when discussing <a href="http://tylerhannan.com/2010/07/after-the-swipe-transaction-management/">Transaction Management</a>, one of the key components of <a href="http://www.ipcommerce.com/Products/Commerce_Modules.aspx">Commerce Modules</a> (as offered through the IP Commerce Platform) is the ability to quickly and simply drive a consistent customer experience.  Hence the statement of a "snap-in business solution"...</p>
+<p>It is worth noting, when considering the technical side of supplementing a payment solution with a Commerce Module, that there are two audiences whose needs must be met.  If the implementation experience solves for merchant customer pain, but is overwhelming for the Software Company, there will simply be no adoption.  Similarly, if the implementation is simple for a Software Company, but does not solve for merchant customer needs, there may be minor adoption with little (to no) ultimate usage or adoption.</p>
+<p>As IP Commerce is not in the business of building merchant facing applications, we had to take both sides of the equation into account when designing how Commerce Modules are developed and brought to market.  I can discuss more of the marketing/business requirements and how they relate to platform implementation theory (i.e. single-sided network effects) at some point in the future...but, for this post, the focus is solely on handling credentials.</p>
+<p>In a post entitled <a href="http://tylerhannan.com/2010/06/federated-identity-overlaying-integrations-with-appropriate-security-controls/"><em>Federated Identity:  Overlaying Integrations with Appropriate Security Controls</em></a>, I spent a fair bit of time discussing the concepts behind Federated Identity.  But the term, Federated Identity, is not one you will likely hear the majority of Software Companies using.  It is worth noting that this differs by the vertical that the Software Company services.  For example, those who know, understand, and deploy their application according to the principles of SaaS will, likely, be familiar with the conceptual implementation of Federated Identity (generally) and often well versed in specific components of implementation (such as Single-Sign On).</p>
+<p><!--more--></p>
+<p>In general, however, we have heard the terms:<br>
+<ul><br>
+<li>consistent customer experience</li><br>
+<li>no repeated logins</li><br>
+<li>simple access control</li><br>
+</ul><br>
+or variations thereof.</p>
+<p>These statements are usually referring to a Single-Sign On (SSO) style implementation.  Leveraging the same set of credentials, seamlessly and securely across multiple applications, goes a long way towards solving the issues of customer experience.</p>
+<p>To truly understand how we have addressed this issue, I must present a bit of back story.</p>
+<p><strong>Transaction Originator Authentication</strong></p>
+<p>As the Platform experienced growth, and we continued to supplement the available <a href="http://commercelab.ipcommerce.com/Integration/Commerce_APIs.aspx">Commerce APIs</a> and <a href="http://commercelab.ipcommerce.com/Integration/Payment_Services.aspx">Payment Services</a>, we recognized there was an industry-wide issue.  The majority of payment services in the market do not implement any form of authentication of the "originator" when processing transactions.  Instead of verifying the originating point of the transaction, they (usually) require that certain bits of data are passed within the body of the transaction.  Importantly, this "identity" data (loosely using the term identity here) is rarely protected adequately.  The result is, as you might expect, an available vector for the submission of fraudulent transactions.</p>
+<p>Recognizing this, early, IP Commerce has made strong authentication of the transaction originator a requirement.  As a Platform, we are able to extend this requirement to the edge (point of acceptance) and perform the authentication on behalf of the service provider.  The technology that was implemented leverages the best practices of Federation in a fashion that is not onerous to the Software Company but enables the exposure of multiple services, from multiple providers seamlessly and securely.</p>
+<p><strong>SSO Toolkit for Commerce Modules</strong></p>
+<p>With this infrastructure in place, consumed by all Software Companies using IP Commerce APIs has enabled us to build an <a href="http://commercelab.ipcommerce.com/docs/Documentation/1.17.11/SSO_Toolkit_Commerce_Modules/Introduction.aspx">SSO Toolkit for Commerce Modules</a>.  This enables the Module developer to build to an infrastructure that has the inherent capability of ensuring their solution can be simply consumed...and will work seamlessly with other software, and services, also leveraging the Platform.</p>
+<p>What I, personally, find exciting is the "how".</p>
+<p><img border="0" width="548" style="display:block; margin-left:auto; margin-right:auto; padding: 2px 2px 2px 2px;" alt="SSO Toolkit for Commerce Modules" src="http://commercelab.ipcommerce.com/Docs/Documentation/1.17.11/SSO_Toolkit_Commerce_Modules/_images/figure02.jpg" height="325"/></a></p>
+<p>The image above is a diagramme of the interaction when a Software Company desires to incorporate the capability of a Module within their payment application.  The process is as follows:<br>
+<ol><br>
+<li>The merchant customer logs into the payment application by entering their user/password credentials.</li><br>
+<li>The payment application invokes the <a href="http://commercelab.ipcommerce.com/Integration/Integration_Tools/Web_Services.aspx">Commerce Web Services</a> <span STYLE="font-family: Courier New, Courier, monospace;">SignOnWithToken()</span> operation to retrieve a <span STYLE="font-family: Courier New, Courier, monospace;">sessionToken</span>.</li><br>
+<li>When required the payment application initiates the module authentication process by sending a <span STYLE="font-family: Courier New, Courier, monospace;">GetURL()</span> message to the module-specific SSO URL specified by the Commerce Module provider, and passes the <span STYLE="font-family: Courier New, Courier, monospace;">sessionToken</span> and <span STYLE="font-family: Courier New, Courier, monospace;">merchantProfileID</span> for validation.</li><br>
+<li>The Commerce Module responds to the payment application with a dynamically generated, single-use URL that grants the user access to the module.</li><br>
+<li>The payment application redirects the merchant customer to the module URL (received in step 4) to access the functionality provided by the module.</li><br>
+</ol><br>
+As you can see it is a relatively straightforward flow.</p>
+<p>What is even more compelling is that this same <span STYLE="font-family: Courier New, Courier, monospace;">GetURL()</span> call is used both by the Module provider and by the Module consumer.  In essence one API provides for both the SSO authentication necessary for Software Companies building and using modules.</p>
+<p>There was a term used in the process flow above, "session token", that bears a bit more explanation.</p>
+<p>Without getting into too great of detail*, this token is the output of a Commerce Web Services <span STYLE="font-family: Courier New, Courier, monospace;">SignOnWithToken()</span> operation.  This operation is what facilitates the authentication of an identity token (a signed and encrypted authentication token) that is used for the purpose of transaction origination authentication.  Upon authentication of the identity token, a session token, which is short-lived, is issued for the purpose of all future operations.</p>
+<p>As a result of this interaction, which is the transaction originator authentication described above, the Commerce Module does not ever receive, persist, or interact with the long-life (identity) token.  In addition, the URL that is returned to the application is validate for single-use only.</p>
+<p><strong>The result of this?</strong></p>
+<p>A consistent customer experience.<br /><br>
+A simple deployment.<br /><br>
+Most importantly, merchant customer needs are quickly met and services are consumed more quickly than before thereby satisfying all participating members of the Platform.</p>
+<p>This is a simple example of the power of a true Federated Identity infrastructure.  There are more examples to come in due course.</p>
+<p>What’s your perspective? Agree? Disagree? Anything to add? Critiques? The comment form is below…</p>
+<p>* Although I am happy to discuss should anyone desire.</p>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2010-07-28.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

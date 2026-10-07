@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A return to blogging · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>A return to blogging</h1>
+    <p class="meta">2009-11-22</p>
+    <div class="content">
+<p>Periodically, I am reminded of lessons that I have learned in my past...</p>
+<p>In particular, and most recently, I was reminded that sometimes building "workarounds" for perceived issues in software can, in fact, be a fairly enjoyable experience.  However, when doing such, it is important to ensure that the solution is implemented in such a way that it has little impact on the core system.  Otherwise, the solution will (likely) result in more issues in the future.</p>
+<p>Case in point...this blog leverages the WordPress software.  When I first installed the software, the comments system (powered by Disqus), and the theme...I experienced into an issue in the way in which certain information was presented.  In an effort to make it meet my needs, I did a combination of theme tweaking (involving some interesting php parsing) and some database tweaks.</p>
+<p>The first, expected and encouraged.<br>
+The latter, a fairly bad idea.</p>
+<p>At the time, I had some content-driven categorization ideas and felt that the appropriate methodology for enabling such a workflow would be to change some database fields.  Unfortunately, this resulted in an inability to perform any automatic upgrades to the core software.</p>
+<p>Short story made long...</p>
+<p>My monkeying resulted in an extraordinarily lengthy process whenever an upgrade was necessary.  And, to the compliment of the WordPress community, upgrades are frequently available.  At this point, the changes that were necessary are now solely implemented at the skin/plugin layer and no longer directly in the database.</p>
+<p>Ultimately, my changes resulted in an inability to blog due to a partially upgraded state.  I have exported all data and re-imported.  Expect my level of pontification and comment on trends to return immediately.</p>
+<p>Thanks for your patience during this time of "outage".  What can I say, the DBA in my past is still kicking about somewhere...</p>
+<p>What's your perspective? Agree? Disagree? Anything to add? Critiques? The comment form is below...</p>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2009-11-22.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

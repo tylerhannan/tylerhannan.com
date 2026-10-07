@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PayPal Radio - an IPN Toolkit Discussion · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>PayPal Radio - an IPN Toolkit Discussion</h1>
+    <p class="meta">2007-10-24</p>
+    <div class="content">
+<p>In 2006, BAI (Bank Administration Institute) released a research report entitled <em><a href="http://www.ipcommerce.com/Portals/0/Documents/BAI_Case_Study.pdf" target="_blank">Small Business Payments in 2006: Finally Poised for Technology Solutions that Address Long-Standing Problems and New Opportunities</a></em>. While the entirety of the report is excellent, there is a section specifically germane to the concept of integrating PayPal Instant Payment Notification (IPN). More than 60% of small business responded that:</p>  <blockquote>   <p>&quot;Having faster account access to payment receipts would be very important to my business&quot;</p> </blockquote>  <p>This survey response (page 10 of report) was for businesses between $500,000 and $249.9M in revenue.</p>  <p>Yesterday afternoon, Damon Williams and Jason Miner invited me to join them for a brief interview on <a href="http://www.wsradio.com/internet-talk-radio.cfm/shows/PayPal-Radio.html" target="_blank">PayPal Radio</a>. In specific, we discussed the IP Commerce Developer Resource Kit for IPN. If you aren't already familiar, PayPal IPN is an interface for handling purchase (and importantly payment) confirmation. In its current implementation, this is an inherently web-based solution that sends name-value pair information to a user-defined URL.</p> <span class="fullpost">   <p>Keeping the survey above in mind, IPC developed a methodology of presenting this information so that it could be integrated into the desktop application. In the context of the Windows Vista launch and the PASS Consortium, this capability was manifest as a Windows Vista Sidebar Gadget &quot;<a href="http://passpayments.com/PASS_Marketplace/PASS_Commerce_Center/PASS_Gadget/Sales_Ticker.aspx" target="_blank">Sales Ticker</a>&quot; (receive simple notification on the desktop of transactional information) and is also used to drive business logic in <a href="http://passpayments.com/PASS_Marketplace/PASS_Email_Invoicing.aspx" target="_blank">PASS Email Invoicing</a> (invoice status, payment notification, invoice categorization).</p>    <p>After going through the exercise of defining these experiences, we identified that this information is extraordinarily useful in other situations as well. To that end, we released the developer toolkit for free.</p>    <p>In essence, the developer can choose to either use a basic subscription (simple HTTP interface) for displaying IPN detail or a premium subscription (Web Service) to receive a structured XML return of the same IPN detail. This second method allows for building business logic into an application without having to worry about the persistence of the message prior to desktop receipt (i.e. if the merchant is not connected) or without having to parse the name-value pairs that IPN sends by default.</p>    <p>For example, I would love to see an integration into an application like QuickBooks or Microsoft Office Accounting. If the online business is managing their invoices from their shopping cart in an accounting package, receiving this data could populate those invoices with the payment receipt information dynamically. This addresses the need identified by BAI and would be a substantial value the developer can provide to their merchants. Or, the basic subscription can be used to build desktop widgets (Apple Dashboard, etc) to notify the user of payment receipt without needing to go to the PayPal website.</p>    <p>If you are interested, more information about the IPN Resource Kit can be found <a href="http://www.ipcommerce.com/PayPal-IPN.aspx" target="_blank">here</a>. IPC is presently running a bit of a promotion around this experience. I, for one, am excited about the wealth of data that IPN represents being utilized in desktop applications. This is the beauty of convergence between online information and business experiences.</p>    <p>The archive of my show segment is located in the PayPal Radio <a href="http://www.wsradio.com/internet-talk-radio.cfm/shows/PayPal-Radio/archives/date/selected/10-23-2007.html" target="_blank">archives</a>. I tend not to listen to many podcasts, but this show always has interesting information and discussions regarding PayPal and its user community.</p> </span>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2007-10-24.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

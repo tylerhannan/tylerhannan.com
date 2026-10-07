@@ -24,6 +24,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
 
+# The blog went quiet after 2012. Everything published later was spam injected
+# into the hacked WordPress install, so skip it.
+LAST_REAL_YEAR = "2012"
+
 
 # ---------- SQL parsing ----------
 
@@ -136,11 +140,22 @@ def autop(text):
     return re.sub(r"\x00PRE(\d+)\x00", lambda m: pres[int(m.group(1))], html_out)
 
 
+# SyntaxHighlighter shortcodes: [sourcecode language="bash"]...[/sourcecode], [php]...[/php], etc.
+CODE_TAGS = "sourcecode|code|bash|shell|php|java|csharp|xml|html|js|javascript|python|sql|css|ruby|perl|plain|text"
+
+
+def code_block(m):
+    code = html.unescape(m.group(2)).strip("\r\n")
+    return "<pre><code>" + html.escape(code, quote=False) + "</code></pre>"
+
+
 def clean(content, old_hosts):
     content = re.sub(r"<!--\s*/?wp:[\s\S]*?-->", "", content)  # block editor comments
+    content = re.sub(r"\[(%s)(?:\s[^\]]*)?\]([\s\S]*?)\[/\1\]" % CODE_TAGS, code_block, content)
     content = re.sub(r"\[caption[^\]]*\]([\s\S]*?)\[/caption\]", r"<figure>\1</figure>", content)
     content = re.sub(r"\[embed\]([\s\S]*?)\[/embed\]", r'<p><a href="\1">\1</a></p>', content)
     content = re.sub(r"\[/?(gallery|audio|video)[^\]]*\]", "", content)
+    content = re.sub(r"<script[\s\S]*?</script>", "", content, flags=re.I)  # dead third-party widgets
     for host in old_hosts:
         content = re.sub(r"https?://(www\.)?%s/wp-content/" % re.escape(host), "/wp-content/", content)
     return autop(content)
@@ -172,10 +187,11 @@ PAGE = """<!doctype html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="/archive/">← writing archive</a>
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <article>
     <h1>{title}</h1>
     <p class="meta">{date}</p>
@@ -208,6 +224,8 @@ def main():
     if not table:
         sys.exit("No *_posts table found in that file. Is it the WordPress database export?")
     posts = [p for p in posts if p.get("post_type") == "post" and p.get("post_status") == "publish"]
+    spam = [p for p in posts if p["post_date"][:4] > LAST_REAL_YEAR]
+    posts = [p for p in posts if p["post_date"][:4] <= LAST_REAL_YEAR]
 
     index = []
     for p in posts:
@@ -224,6 +242,8 @@ def main():
     (PUBLIC / "archive" / "posts.json").write_text(json.dumps({"posts": index}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     print(f"Imported {len(index)} posts from {table}.")
+    if spam:
+        print(f"Skipped {len(spam)} posts after {LAST_REAL_YEAR} as spam: " + ", ".join(p["post_name"] or str(p["ID"]) for p in spam))
     print(f"Permalink structure: {structure or '(default ?p=ID; posts placed under /archive/)'}")
     if "%category%" in structure:
         print("Note: %category% in permalinks was written as 'uncategorized'. Old category URLs may not match.")

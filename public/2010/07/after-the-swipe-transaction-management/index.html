@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>After the Swipe:  Transaction Management · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>After the Swipe:  Transaction Management</h1>
+    <p class="meta">2010-07-27</p>
+    <div class="content">
+<p>There is a perception - perhaps even a misconception - among those looking to do a payments integration, that completion of the project should be something like one of the following use cases:</p>
+<ul>
+<li>Add a field that reads from a USB swipe control, and a submit button.</li>
+<li>Add a text entry field, a card-type drop-down, maybe something for those 3 digits on a card, and a submit button.</li>
+</ul>
+<p>The availability of APIs for commerce integrations has begun to drastically decrease the time required to complete an integration...but the process of adding payments to software is somewhat more complex than a text entry field and a submit button.</p>
+<p>One thing that is frequently overlooked during the initial scoping exercise is transaction management.</p>
+<p>What happens after a transaction has been settled?<br />
+How will the application handle refunds of transactions?<br />
+How will the application handle voids of transactions?<br />
+How will reporting, both post and pre-settlement, be handled?</p>
+<!--more-->
+<p>These workflows, a requirement by the merchant customer using the application, represent additional development, testing, and integration work for the Software Company or developer.  In the case of an eCommerce integration, this typically encompasses more development resources, time, and knowledge than the process of building the initial page for payment acceptance.</p>
+<p><strong>How can this issue of time and expertise be addressed?</strong></p>
+<p>One of the important capabilities of the IP Commerce Platform is the ability for Software Companies to build workflow and solutions that are valuable to other Software Companies.  We refer to these "snap-in business solutions" as <a href="http://www.ipcommerce.com/Products/Commerce_Modules.aspx">Commerce Modules</a>.  I will write more, tomorrow, about the technical side of this integration...but, for now, suffice it to say that the experience is seamless from both the perspective of branding & credentials.</p>
+<p>There is none who are better suited to solve the pain of a Software Company than other Software Companies.</p>
+<a href="http://tylerhannan.com/images/TMM_Screenshot.gif" title="Transaction Management Module" target="_blank"><img border="0"width="233"style="float:left; margin-right: 5px;"alt="DSCN1461"src="http://tylerhannan.com/images/TMM_Screenshot.gif"height="250"/></a>
+<p><strong>Introducing the Transaction Management Commerce Module.</strong></p>
+<p><a href="http://commercelab.ipcommerce.com/Integration/Commerce_Modules.aspx">Transaction Management</a>, as a Commerce Module, solves for the post-settlement refunds, pre-settlement voids, searching and reporting on transaction information, as well as real-time transaction status and payment details.  As a solution, it is hosted in a PCI compliant data center thereby ensuring the implementation does not introduce additional risk to the merchant customer.  This specific module was built by <a href="http://www.aurionpro.com/">aurionPro</a> and leverages their expertise in the Banking & Payments technology sectors.</p>
+<p>As you would imagine, there are several targeted business solutions that IP Commerce has identified as potential Commerce Modules based upon our experience with the development community.  I, personally, am excited to see what other Commerce Modules the Software community creates to solve for each others pain.</p>
+<p>Payment application development is quite interesting...opening APIs for commerce development is compelling...pairing these with a powerful Platform to drive innovation is exciting...enabling Software Companies to build solutions that solve the pain of other Software Companies -- that is unique and powerful.<p>
+<p>What’s your perspective? Agree? Disagree? Anything to add? Critiques? The comment form is below…</p>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2010-07-27.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

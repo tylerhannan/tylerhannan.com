@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Federated Identity:  Overlaying Integrations With Appropriate Security Controls · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>Federated Identity:  Overlaying Integrations With Appropriate Security Controls</h1>
+    <p class="meta">2010-06-08</p>
+    <div class="content">
+<p><a href="http://www.ipcommerce.com/Platform/Commerce_Platform/Federated_Identity.aspx"><img style="float: left; border: 1px solid #CCC; padding: 5px 3px 5px 5px; margin: 0 5px 0 0;" src="http://www.ipcommerce.com/Portals/0/Slider/slider-image12-uc.png" alt="Federated Identity" /></a></p>
+<p>In yesterday's post, I concluded by mentioning the concept of "governance."  Governance, as defined by <a href="http://en.wikipedia.org/wiki/Governance">Wikipedia</a>, is:</p>
+<p>"Governance relates to decisions that define expectations, grant power, or verify performance."</p>
+<p>In all software workflows, there is an element of governance.  In the payments industry, this governance is required to ensure a truly <a href="http://tylerhannan.com/2010/06/commerce-apis-it-all-begins-with-integration/">holistic software solution</a> is implemented in market.  The IP Commerce Platform enables this governance, in part, through its implementation of Federated Identity capabilities.</p>
+<p>Whenever I am called upon to discuss Federated Identity, I use a fairly common real-world example, the driver's license.  Consider, if you will, the purchase of alcohol at a restaurant.   When you initiate the purchase ("I'd like a gin &amp; tonic, please.").  The restaurant has to ensure you are of age...they do this by asking for your license.</p>
+<p>How is this <a href="http://www.ipcommerce.com/Platform/Commerce_Platform/Federated_Identity.aspx">Federated Identity</a>?</p>
+<!--more-->
+<p>The restaurant does not "trust" you to provide them with your age.  However, they do trust the entity that issued you a driver's license.  Your driver's license is the credential, your age is a claim on that credential, and the DMV is the Identity Provider.  The restaurant trusts the DMV and looks at your credentialed claim of age and, at that point, brings the gin &amp; tonic to your table.</p>
+<p>The process is not that dissimilar in software.  There are a series of claims that are associated with your identity that drive workflow, or perhaps behavior, of the software application.</p>
+<p>The Platform enables these Federated Identity implementations through several discrete <a href="http://www.ipcommerce.com/Commerce_Service_Bus.aspx#Commerce_APIs">toolkits</a> (which are components to simplify the usage of an API).  The toolkits, themselves, are designed for scenario-based implementations.</p>
+<p>It is important to note that Federation through the Platform is both standards-based and "modality agnostic."  The latter of those two is wildly important.  There exists a wide range of Federated Identity implementations in the market.  You have, likely, heard of things such as <a href="http://openid.net/">OpenId</a>, <a href="http://oauth.net/">OAuth</a>, <a href="http://saml.xml.org/">SAML</a>, etc.  The power, and beauty, of the IP Commerce approach is that we enable the deployment of complex federated workflows regardless of which modality is employed on the front-end.</p>
+<p>Let's discuss some of the technology implementations of <a href="http://www.ipcommerce.com/Platform/Commerce_Platform/Federated_Identity.aspx">Federated Identity</a>, as well as a Use Case associated with each.</p>
+<p><strong>Single-Sign On (SSO)</strong></p>
+<p>SSO is what was mentioned yesterday regarding leveraging the same credentials for multiple applications and is an extraordinarily important component for ensuring customer success.  Leveraging the same credentials, in more than once place or in more than one application, represents a substantive timesaving measure.  SSO capabilities are extended through the Platform from a Service Provider to eliminate the need for redundant user administration in the Software Companies application.  This is valuable to the end-user and a sticky way to cement a customer relationship.</p>
+<p>For example, while developing a <a href="http://www.ipcommerce.com/Products/Commerce_Modules.aspx">Commerce Module</a> that provides online transaction management.  The team from <a href="http://www.aurionpro.com/">aurionPro</a> used the SSO Toolkit to build an integration between their workflow and that of any other Software Company who leverages the Platform and desires to use the Transaction Management Module.  The same sets of credentials that are used for processing transactions are leveraged to authenticate for transaction management…the customers identity permeates the entirety of the workflow.</p>
+<p><strong>Claims Based Authentication</strong></p>
+<p>Remember the “claim” of age on a driver’s license?  Claims extend not only to access control but also to supporting business workflow requirements.  For example, a Service provider who has enabled the usage of corporate purchase cards can allow the definition of pre-set spending limits at the time of authentication.  This is a “claim” on the identity of not only the merchant…but the consumer.  And this claim propagates throughout the Platform enabling all to be aware, and drive their solution workflow, based on the claim.</p>
+<p>The Platform delivers comprehensive federation capabilities.  These capabilities enable all participants in the Platform to seamlessly interact and ensure their business requirements are met while, simultaneously, delivering a seamless customer experience.</p>
+<p>This is governance.</p>
+<p>But, this is also only a component of the governance capabilities provided via the Platform and a requisite for open APIs.</p>
+<p>Tomorrow, we discuss <a href="http://www.ipcommerce.com/Products/Commerce_Business_Rules.aspx">Commerce Business Rules</a>.</p>
+<p>What’s your perspective? Agree? Disagree? Anything to add? Critiques? The comment form is below…</p>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2010-06-08.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
 </head>
 <body>
 
@@ -16,9 +17,9 @@
   <header>
     <div>
       <h1>Tyler Hannan<span class="cur" aria-hidden="true"></span></h1>
-      <p class="tag">Two decades of databases, distributed systems and developer communities. These are the talks, videos and things I've said out loud.</p>
+      <p class="tag">Three decades of databases, distributed systems and developer communities. These are the talks, videos and things I've said out loud.</p>
     </div>
-    <nav aria-label="Sections"><a href="#talks">talks</a><a href="#videos">videos</a><a href="#photos">photos</a><a href="#about">about</a><a href="#contact">contact</a></nav>
+    <nav aria-label="Sections"><a href="#talks">talks</a><a href="#videos">videos</a><a href="/photos/">photos</a><a href="#about">about</a><a href="#contact">contact</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></nav>
   </header>
 
   <section id="talks" aria-labelledby="talks-h">
@@ -34,20 +35,16 @@
 
   <section id="videos" aria-labelledby="videos-h">
     <p class="label" id="videos-h">Videos</p>
-    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> * <span class="kw">FROM</span> talks <span class="kw">WHERE</span> youtube <span class="kw">IS NOT NULL</span></div>
+    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> *
+   <span class="kw">FROM</span> talks
+   <span class="kw">WHERE</span> youtube <span class="kw">IS NOT NULL</span>;</div>
     <div class="vids" id="vids"></div>
   </section>
 
-  <section id="photos" aria-labelledby="photos-h">
-    <p class="label" id="photos-h">Photos</p>
-    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> * <span class="kw">FROM</span> photos <span class="kw">ORDER BY</span> date <span class="kw">DESC</span></div>
-    <div class="photos" id="photo-grid"></div>
-    <p class="foot" id="photo-foot"></p>
-  </section>
 
   <section id="about" aria-labelledby="about-h">
     <p class="label" id="about-h">About</p>
-    <div class="query"><span class="p">:) </span><span class="kw">DESCRIBE</span> tyler</div>
+    <div class="query"><span class="p">:) </span><span class="kw">DESCRIBE</span> tyler;</div>
     <table class="desc">
       <tr><td>now</td><td>Developer advocacy at ClickHouse</td></tr>
       <tr><td>previously</td><td>Hasura · Fauna · Elastic · Basho</td></tr>
@@ -66,13 +63,8 @@
     </div>
   </section>
 
-  <footer><span>tylerhannan.com</span><a href="/archive/">writing archive</a></footer>
+  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><a href="/archive/">writing archive</a></footer>
 </div>
-
-<dialog id="lightbox" aria-label="Photo">
-  <figure><img id="lb-img" alt=""><figcaption id="lb-cap"></figcaption></figure>
-  <button type="button" class="copy" id="lb-close">close</button>
-</dialog>
 
 <script>
 (function(){
@@ -87,9 +79,10 @@
     var w=[];
     if(state.type!=='all') w.push('type = <span class="s">\''+esc(state.type)+'\'</span>');
     if(state.video) w.push('youtube <span class="kw">IS NOT NULL</span>');
-    return '<span class="p">:) </span><span class="kw">SELECT</span> date, title, event <span class="kw">FROM</span> talks'+
-      (w.length?' <span class="kw">WHERE</span> '+w.join(' <span class="kw">AND</span> '):'')+
-      ' <span class="kw">ORDER BY</span> date <span class="kw">DESC</span>';
+    var nl='\n   ';
+    return '<span class="p">:) </span><span class="kw">SELECT</span> date, title, event'+nl+'<span class="kw">FROM</span> talks'+
+      (w.length?nl+'<span class="kw">WHERE</span> '+w.join(nl+'  <span class="kw">AND</span> '):'')+
+      nl+'<span class="kw">ORDER BY</span> date <span class="kw">DESC</span>;';
   }
 
   function chips(){
@@ -152,34 +145,6 @@
     try{ navigator.clipboard.writeText(txt).then(done,function(){sel()}); }catch(_){ sel(); }
     function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('email'));var s=getSelection();s.removeAllRanges();s.addRange(r);}
   });
-
-  function photos(list){
-    var sec=document.getElementById('photos'), grid=document.getElementById('photo-grid');
-    if(!list.length){ sec.hidden=true; document.querySelector('nav a[href="#photos"]').hidden=true; return; }
-    list.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
-    grid.innerHTML=list.map(function(p,i){
-      var meta=[p.place,p.date&&ym(p.date)].filter(Boolean).map(esc).join(' · ');
-      var inner=p.file?'<img src="photos/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy">':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
-      return '<button type="button" class="photo'+(p.file?'':' empty')+'" data-i="'+i+'"'+(p.file?'':' disabled')+'>'+inner+'<span class="pc"><span class="vt">'+esc(p.title)+'</span><span class="vm">'+meta+'</span></span></button>';
-    }).join('');
-    var real=list.filter(function(p){return p.file}).length;
-    document.getElementById('photo-foot').textContent=list.length+' rows in set'+(real<list.length?' ('+(list.length-real)+' example)':'')+'.';
-    photos.list=list;
-  }
-
-  var lb=document.getElementById('lightbox');
-  document.addEventListener('click',function(e){
-    var b=e.target.closest('.photo'); if(!b||b.disabled) return;
-    var p=photos.list[+b.dataset.i];
-    document.getElementById('lb-img').src='photos/'+p.file;
-    document.getElementById('lb-img').alt=p.alt||p.title;
-    document.getElementById('lb-cap').textContent=[p.title,p.place,p.date,p.camera].filter(Boolean).join(' · ');
-    if(lb.showModal) lb.showModal();
-  });
-  document.getElementById('lb-close').addEventListener('click',function(){lb.close()});
-  lb.addEventListener('click',function(e){ if(e.target===lb) lb.close(); });
-
-  fetch('photos.json').then(function(r){return r.json()}).then(function(d){photos(d.photos||[])}).catch(function(){photos([])});
 
   fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();})
     .catch(function(){document.getElementById('rows').innerHTML='<tr><td colspan="4" class="d">Couldn\'t load talks.json. Check that it sits next to index.html.</td></tr>';});

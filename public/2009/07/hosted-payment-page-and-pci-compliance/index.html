@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hosted Payment Page and PCI Compliance · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>Hosted Payment Page and PCI Compliance</h1>
+    <p class="meta">2009-07-09</p>
+    <div class="content">
+<p>Synchronicity is, quite possibly, one of my favourite albums ever produced.  It is also, according to <a href="http://en.wikipedia.org/wiki/Synchronicity">wikipedia</a>:<br>
+<blockquote>two or more events which are causally unrelated occurring together in a meaningful manner.</blockquote><br>
+I experienced just such a series of events today.  During an internal meeting, there was a discussion of the PCI compliance obligations surrounding the use of a hosted payments page.  I have had similar discussions over the last several days with IP Commerce partners and their customers. So, imagine my delight when, upon opening my Google Reader, I noticed these two respective posts by gentlemen whose blogs regarding security I highly encourage you to follow:<br>
+<ul><br>
+	<li><em><a href="http://chuvakin.blogspot.com/2009/07/trick-question-can-pci-dss-apply-if.html">Trick Question: Can PCI DSS Apply if...</a></em> - Anton Chuvakin</li><br>
+	<li><em><a href="http://treyford.wordpress.com/2009/06/18/does-pci-apply-store-process-transmit/">Does PCI Apply to me?  Store Process Transmit</a></em> - Trey Ford</li><br>
+</ul><br>
+Let me begin by providing a bit of information regarding the "Hosted Payment Page"...<br>
+<!--more--><br>
+The traditional test of the application of PCI standards to a merchant is whether any/all of certain criteria are met.  I tend to refer to them as the "big 3"...They are "Store, Process, Transmit"...in specific, and according the the <a href="http://selfservice.talisma.com/display/2n/index.aspx?c=58&amp;cpc=MSdA03B2IfY15uvLEKtr40R5a5pV2lnCUb4i1Qj2q2g&amp;cid=81&amp;cat=&amp;catURL=&amp;r=0.680905044078827">PCI SSC</a>:<br>
+<blockquote>PCI DSS requirements are applicable if a Primary Account Number (PAN) is stored, processed, or transmitted.</blockquote><br>
+Before providing additional detail about merchant obligation in other scenarios, lets consider the implication of this single statement.</p>
+<p>Compliance, as we've discussed in other posts, is gaining (and has gained) additional visibility in the market.  As a result of this, merchants and the software companies who service them, are always looking for methodologies by which they can reduce the scope of their compliance obligation.  I've heard arguments, in the past, that this sort of mindset is detrimental to the purpose of compliance at large...but, frankly, I simply view it as understandable.  The reduction of the scope of compliance (when addressed properly) has the effect* of reducing overall risk for the merchant.</p>
+<p>Enter the "Hosted Payment Page"</p>
+<p>If storage, transmittal, and processing define the scope of requirements, how can a small merchant limit, or remove, these items from their environment whilst still accepting cards as a tender?</p>
+<p>An answer, is that of leveraging a 3rd party to handle the big 3 on their behalf.  In the world of eCommerce, this looks something like setting up a secure re-direct from your website to a validated compliant payment page that accepts payment on your behalf and then redirects the customer back to the merchant's cart.  The storage, transmittal, and processing are now happening outside the merchant's environment.</p>
+<p>HOWEVER...and this is what both Trey and Anton discuss...there is still a compliance obligation in this scenario.  In particular, elements of <em>PCI Requirement 9: Restrict physical access to cardholder data</em> and<em> PCI Requirement 12: Maintain a policy that addresses information security for employees and contractors</em> are still applicable and the merchant must demonstrate compliance against these elements.</p>
+<p>The beauty, however, lies in the fact that the demonstration of this compliance is through a Self-Assessment Questionnaire (SAQ).  In particular, in the scenario of card-not-present, big 3 being "outsourced", the outsource partner is compliant (and a few other items), the specific SAQ is <a href="https://www.pcisecuritystandards.org/saq/instructions_dss.shtml#instructions">SAQ Validation Type 1</a>.</p>
+<p>So, is the merchant still "in scope" for compliance.  Absolutely.  But it is quite a bit simpler.</p>
+<p>You may have noticed that the concept of redirect to a partner for processing the payment transaction itself is quite similar, in notion, to that of the PayPal implementation.  The complaint in this scenario, is often, the break in customer experience.  Merchants are, understandably, wildly protective of their brand...and a perceived interruption in the checkout process is a trade-off decision that has to be made.</p>
+<p>In the interest in a bit of self-promotion, one of the integration methods that IP Commerce offers through <a href="http://commercelab.ipcommerce.com">Commerce Lab</a> and various partner portals is known as the <a href="http://commercelab.ipcommerce.com/Integration/Integration_Tools/Hosted_Payment_Page.aspx">Commerce Hosted Payment Page</a>.  Not only does this provide the functionality of the hosted payment page described above, it implements a cloning technology that supports the look/feel of the merchants website during the redirect process for a seamless experience for the end user.  Even better, the integration process is impressively simple...and quick...we've seen start to code complete and certified in a matter of hours.</p>
+<p>UPDATE:  To view a demonstration of this capability, and some additional commentary, please view the post <em><a href="http://tylerhannan.com/2009/09/hosted-payments-page-a-demonstration/">Hosted Payments Page: a demonstration</a>.</em></p>
+<p>What's your perspective? Agree? Disagree? Anything to add? Critiques? The comment form is below...</p>
+<p>*intended or otherwise</p>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2009-07-09.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

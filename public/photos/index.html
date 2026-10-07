@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photos · Tyler Hannan</title>
+<meta name="description" content="A few favorite photos by Tyler Hannan.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <section style="padding-top:24px">
+    <p class="label">Photos</p>
+    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> *
+   <span class="kw">FROM</span> photos
+   <span class="kw">ORDER BY</span> date <span class="kw">DESC</span>;</div>
+    <div class="photos" id="photo-grid"></div>
+    <p class="foot" id="photo-foot"></p>
+  </section>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+
+<dialog id="lightbox" aria-label="Photo">
+  <figure><img id="lb-img" alt=""><figcaption id="lb-cap"></figcaption></figure>
+  <button type="button" class="copy" id="lb-close">close</button>
+</dialog>
+
+<script>
+(function(){
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var ym=function(d){return String(d).slice(0,7)};
+  var grid=document.getElementById('photo-grid'), list=[];
+
+  function render(){
+    if(!list.length){ grid.outerHTML='<div class="empty-state">0 rows in set. Add photos with <code>scripts/add-photo.sh</code>.</div>'; return; }
+    list.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
+    grid.innerHTML=list.map(function(p,i){
+      var meta=[p.place,p.date&&ym(p.date)].filter(Boolean).map(esc).join(' · ');
+      var inner=p.file?'<img src="/photos/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy">':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
+      return '<button type="button" class="photo'+(p.file?'':' empty')+'" data-i="'+i+'"'+(p.file?'':' disabled')+'>'+inner+'<span class="pc"><span class="vt">'+esc(p.title)+'</span><span class="vm">'+meta+'</span></span></button>';
+    }).join('');
+    var real=list.filter(function(p){return p.file}).length;
+    document.getElementById('photo-foot').textContent=list.length+' rows in set'+(real<list.length?' ('+(list.length-real)+' example)':'')+'.';
+  }
+
+  var lb=document.getElementById('lightbox');
+  grid.addEventListener('click',function(e){
+    var b=e.target.closest('.photo'); if(!b||b.disabled) return;
+    var p=list[+b.dataset.i];
+    document.getElementById('lb-img').src='/photos/'+p.file;
+    document.getElementById('lb-img').alt=p.alt||p.title;
+    document.getElementById('lb-cap').textContent=[p.title,p.place,p.date,p.camera].filter(Boolean).join(' · ');
+    if(lb.showModal) lb.showModal();
+  });
+  document.getElementById('lb-close').addEventListener('click',function(){lb.close()});
+  lb.addEventListener('click',function(e){ if(e.target===lb) lb.close(); });
+
+  fetch('/photos.json').then(function(r){return r.json()}).then(function(d){list=d.photos||[];render()}).catch(function(){render()});
+})();
+</script>
+</body>
+</html>

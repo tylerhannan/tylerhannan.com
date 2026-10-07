@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GeekTool:  Implementation Detail · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>GeekTool:  Implementation Detail</h1>
+    <p class="meta">2012-04-27</p>
+    <div class="content">
+<p>As I stated in my last post, entitled <em><a href="http://tylerhannan.com/2012/04/geektool/" target="_blank">Geektool</a></em> (clever title, I know).  I have now settled upon a workflow that I found both attractive and beneficial.</p>
+<p>In this post, I will enumerate the "how" of my implementation.</p>
+<p>First of all, nearly all of the implementations are simple unix commands.  There are a few situations, the weather implementation in particular, where I want to be able to change cities with relative ease.  To that end, I have pulled the script out of the GeekTool UI and into a .bash script that is called from the geeklet.</p>
+<p>I won't spend any time on GeekTool implementation…there are a variety of quality resources online to help with that.</p>
+<p>In theory, I could simply uploaded a set of exported geeklets to this post and let you play to your heart's content.  In practice, however, this proves problematic.  Your background may not be the same as mine…Your resolution set differently…Your textual color or format preferences different…etc.</p>
+<p>It is worth noting that many of the scripts originated somewhere in the wilds of the internet.  I simply re-used, updated, edited, as necessary.  I invite you to do the same.</p>
+<p>If you are reading this via the .rss feed I apologize…all syntax highlighting is server side.</p>
+<p>Without further ado:</p>
+<p><!--more--></p>
+<h2>Date & Time</h2>
+<img style="display:block; margin-left:auto; margin-right:auto;" src="/wp-content/uploads/2012/04/datetime1.png" alt="Datetime" title="datetime.png" border="0" width="285" height="379" />
+The upper left corner of the desktop is leveraged for the day/date/etc.  The textual categorization ("on this the", "day of", "in the year of our L~rd", "at the time of") are simple overrides of the GeekTool script to display static text.
+<p>Now for the fun bits :)</p>
+<h3>Fuzzy Date</h3>
+<pre><code>#!/bin/bash
+# converts exact date to fuzzy format
+
+export day=$(date '+%d')
+case $day in
+01) export fuzzy_day='First';;
+02) export fuzzy_day='Second';;
+03) export fuzzy_day='Third';;
+04) export fuzzy_day='Fourth';;
+05) export fuzzy_day='Fifth';;
+06) export fuzzy_day='Sixth';;
+07) export fuzzy_day='Seventh';;
+08) export fuzzy_day='Eighth';;
+09) export fuzzy_day='Ninth';;
+10) export fuzzy_day='Tenth';;
+11) export fuzzy_day='Eleventh';;
+12) export fuzzy_day='Twelth';;
+13) export fuzzy_day='Thirteenth';;
+14) export fuzzy_day='Fourteenth';;
+15) export fuzzy_day='Fifteenth';;
+16) export fuzzy_day='Sixteenth';;
+17) export fuzzy_day='Seventeenth';;
+18) export fuzzy_day='Eighteenth';;
+19) export fuzzy_day='Nineteenth';;
+20) export fuzzy_day='Twentieth';;
+21) export fuzzy_day='Twenty-first';;
+22) export fuzzy_day='Twenty-second';;
+23) export fuzzy_day='Twenty-third';;
+24) export fuzzy_day='Twenty-fourth';;
+25) export fuzzy_day='Twenty-fifth';;
+26) export fuzzy_day='Twenty-sixth';;
+27) export fuzzy_day='Twenty-seventh';;
+28) export fuzzy_day='Twenty-eighth';;
+29) export fuzzy_day='Twenty-ninth';;
+30) export fuzzy_day='Thirtieth';;
+31) export fuzzy_day='Thirty-first';;
+esac
+echo $fuzzy_day
+exit 0</code></pre>
+<h3>Month</h3>
+<pre><code>date +%B</code></pre>
+<h3>Year</h3>
+Simple textual override
+<h4>Time</h4>
+<pre><code>export time=$(date '+%H:%M' | 
+sed s/://g) ; echo $time juliet</code></pre>
+<h2>Daily Quote</h2>
+In the middle of the day it often good to have something inspirational to read.  I have played with a fair few daily quote sites and found that a consistently interesting one is DailyZen.com.
+<pre><code>curl -s http://www.dailyzen.com/ | 
+sed -n "/&lt;\!--Add Quote for correct day--&gt;/,/&lt;\/TD&gt;/p" |
+sed -e "s/&lt;[^&gt;]*&gt;//g" |
+strings |
+fold -sw60</code></pre>
+<h2>Day of Week & Calendar</h2>
+<img style="display:block; margin-left:auto; margin-right:auto;" src="/wp-content/uploads/2012/04/calendar1.png" alt="Calendar" title="calendar.png" border="0" width="412" height="202" />
+The lower left corner of the desktop is a day of the week and a 3 month calendar.
+<p>It is worth noting that the script for the current month calendar is a bit heavier than the rest.  As you can see in the screen capture, this was built to highlight the current day by placing a "==" in place of the actual date.  If you implement these scripts, use a fixed width font for your own sanity.</p>
+<h3>Day of Week</h3>
+<pre><code>date +"%A"</code></pre>
+<h3>Previous Month Calendar</h3>
+<pre><code>cal `date -v-1m "+%m"` `date -v-1m "+%Y"`</code></pre>
+<h3>Current Month Calendar</h3>
+<pre><code>cal | 
+sed "s/^/ /;s/$/ /;s/ $(date +%e) / $(date +%e | sed 's/./=/g') /" | 
+sed "s/^ //;s/ $//"</code></pre>
+<h3>Next Month Calendar</h3>
+<pre><code>cal `date -v+1m "+%m"` `date -v+1m "+%Y"`</code></pre>
+<h2>Current Weather</h2>
+<img style="display:block; margin-left:auto; margin-right:auto;" src="/wp-content/uploads/2012/04/weatherimage.png" alt="Weatherimage" title="weatherimage.png" border="0" width="494" height="127" />
+Here is where things get interesting…and a bit confusing.  I played with a WIDE variety of weather services and they were either unreliable or nearly impossible to parse for detailed data.
+<p>I ended up using the Yahoo Weather "APIs" (note the scare quotes) but the implementation is a bit wonky.  Basically, you pass a city code and get back a structured XML response in .RSS form.  ummm…great.  But, having spent a bunch of time playing with grep and sed it wasn't that onerous to address.</p>
+<p>These are the scripts I run as individual .bash scripts.  That allows me to add a new city in the text editor of my choice and then comment/uncomment fields as I move about the United States.</p>
+<h3>Weather Description</h3>
+The textual representation of the current weather.  
+<pre><code>#!/bin/bash
+####### Denver #######
+curl --silent "http://weather.yahooapis.com/forecastrss?w=2391279" | grep -E '(Current Conditions:|F&lt;BR)' | sed -e 's/Current Conditions://' -e 's/&lt;br \/&gt;//' -e 's/&lt;b&gt;//' -e 's/&lt;\/b&gt;//' -e 's/&lt;BR \/&gt;//' -e 's/&lt;description&gt;//' -e 's/&lt;\/description&gt;//'
+#
+####### Evergreen #######
+# curl --silent "http://weather.yahooapis.com/forecastrss?w=2400904" | grep -E '(Current Conditions:|F&lt;BR)' | sed -e 's/Current Conditions://' -e 's/&lt;br \/&gt;//' -e 's/&lt;b&gt;//' -e 's/&lt;\/b&gt;//' -e 's/&lt;BR \/&gt;//' -e 's/&lt;description&gt;//' -e 's/&lt;\/description&gt;//'
+#
+####### Glenwood Springs #######
+# curl --silent "http://weather.yahooapis.com/forecastrss?w=2411457" | grep -E '(Current Conditions:|F&lt;BR)' | sed -e 's/Current Conditions://' -e 's/&lt;br \/&gt;//' -e 's/&lt;b&gt;//' -e 's/&lt;\/b&gt;//' -e 's/&lt;BR \/&gt;//' -e 's/&lt;description&gt;//' -e 's/&lt;\/description&gt;//'
+#
+####### New York #######
+# curl --silent "http://weather.yahooapis.com/forecastrss?w=2459115" | grep -E '(Current Conditions:|F&lt;BR)' | sed -e 's/Current Conditions://' -e 's/&lt;br \/&gt;//' -e 's/&lt;b&gt;//' -e 's/&lt;\/b&gt;//' -e 's/&lt;BR \/&gt;//' -e 's/&lt;description&gt;//' -e 's/&lt;\/description&gt;//'
+#
+####### San Francisco #######
+# curl --silent "http://weather.yahooapis.com/forecastrss?w=2487956" | grep -E '(Current Conditions:|F&lt;BR)' | sed -e 's/Current Conditions://' -e 's/&lt;br \/&gt;//' -e 's/&lt;b&gt;//' -e 's/&lt;\/b&gt;//' -e 's/&lt;BR \/&gt;//' -e 's/&lt;description&gt;//' -e 's/&lt;\/description&gt;//'
+#
+####### Seattle #######
+# curl --silent "http://weather.yahooapis.com/forecastrss?w=2490383" | grep -E '(Current Conditions:|F&lt;BR)' | sed -e 's/Current Conditions://' -e 's/&lt;br \/&gt;//' -e 's/&lt;b&gt;//' -e 's/&lt;\/b&gt;//' -e 's/&lt;BR \/&gt;//' -e 's/&lt;description&gt;//' -e 's/&lt;\/description&gt;//'
+#
+####### Washington DC #######
+# curl --silent "http://weather.yahooapis.com/forecastrss?w=2514815" | grep -E '(Current Conditions:|F&lt;BR)' | sed -e 's/Current Conditions://' -e 's/&lt;br \/&gt;//' -e 's/&lt;b&gt;//' -e 's/&lt;\/b&gt;//' -e 's/&lt;BR \/&gt;//' -e 's/&lt;description&gt;//' -e 's/&lt;\/description&gt;//'
+#</code></pre>
+<h3>Weather Image</h3>
+This image is actually a combination of two discrete geek lets.  One is a script that pulls the image down and saves it to a known location (in this case /tmp/weather.png).  The second geek let simply displays the image.
+<pre><code>#!/bin/bash
+####### Denver #######
+curl --silent "http://weather.yahoo.com/united-states/colorado/denver-12792942/" | grep "forecast-icon" | sed "s/.*background\:url(\'\(.*\)\')\;\ _background.*/\1/" | xargs curl --silent -o /tmp/weather.png
+#
+####### Evergreen #######
+# curl --silent "http://weather.yahoo.com/united-states/colorado/evergreen-2400904/" | grep "forecast-icon" | sed "s/.*background\:url(\'\(.*\)\')\;\ _background.*/\1/" | xargs curl --silent -o /tmp/weather.png
+#
+####### Glenwood Springs #######
+# curl --silent "http://weather.yahoo.com/united-states/colorado/glenwood-springs-2411457/" | grep "forecast-icon" | sed "s/.*background\:url(\'\(.*\)\')\;\ _background.*/\1/" | xargs curl --silent -o /tmp/weather.png
+#
+####### New York #######
+# curl --silent "http://weather.yahoo.com/united-states/new-york/new-york-2459115/" | grep "forecast-icon" | sed "s/.*background\:url(\'\(.*\)\')\;\ _background.*/\1/" | xargs curl --silent -o /tmp/weather.png
+#
+####### San Francisco #######
+# curl --silent "http://weather.yahoo.com/united-states/california/san-francisco-2487956/" | grep "forecast-icon" | sed "s/.*background\:url(\'\(.*\)\')\;\ _background.*/\1/" | xargs curl --silent -o /tmp/weather.png
+#
+####### Seattle #######
+# curl --silent "http://weather.yahoo.com/united-states/washington/seattle-2490383/" | grep "forecast-icon" | sed "s/.*background\:url(\'\(.*\)\')\;\ _background.*/\1/" | xargs curl --silent -o /tmp/weather.png
+#
+####### Washington DC #######
+# curl --silent "http://weather.yahoo.com/united-states/district-of-columbia/washington-2514815/" | grep "forecast-icon" | sed "s/.*background\:url(\'\(.*\)\')\;\ _background.*/\1/" | xargs curl --silent -o /tmp/weather.png
+#</code></pre>
+<h3>City Name</h3>
+Finally, I had to put the city name on the display so I could quickly check whether I had the conditions for where I actually was spending time.
+<pre><code>#!/bin/bash
+####### Denver #######
+echo denver
+#
+####### Evergreen #######
+# echo evergreen
+#
+####### Glenwood Springs #######
+# echo glenwood springs
+#
+####### New York #######
+# echo new york
+#
+####### San Francisco #######
+# echo san francisco
+#
+####### Seattle #######
+# echo seattle
+#
+####### Washington DC #######
+# echo washington dc
+#</code></pre>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2012-04-27.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

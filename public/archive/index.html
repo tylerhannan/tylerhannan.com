@@ -9,13 +9,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="/">← tylerhannan.com</a>
+  <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <section style="padding-top:24px">
     <p class="label">Writing archive</p>
-    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> date, title <span class="kw">FROM</span> posts <span class="kw">ORDER BY</span> date <span class="kw">DESC</span></div>
+    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> date, title
+   <span class="kw">FROM</span> posts
+   <span class="kw">ORDER BY</span> date <span class="kw">DESC</span>;</div>
     <p class="tag" style="margin-top:16px">Older posts from the WordPress years, kept so the links still work. Some of it has aged better than the rest.</p>
     <div id="list"></div>
     <p class="foot" id="foot"></p>

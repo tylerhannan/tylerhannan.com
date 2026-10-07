@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Medieval Art, Collective Intelligence, and Language Abuse · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>Medieval Art, Collective Intelligence, and Language Abuse</h1>
+    <p class="meta">2010-11-04</p>
+    <div class="content">
+<p>As mentioned in my <a href="http://tylerhannan.com/2010/10/paypal-x-innovate-2010-open-api-economy-an-exciting-week/">last post</a>, I suspected that last week would prove to be extremely interesting.  I was, in fact, not disappointed.</p>
+<p>The Paypal X Innovate event was much what you would expect.  I will comment on some of my learnings and perceptions, in context, over the next several weeks...but I must commend PayPal on their recognition of the importance of the software community as it relates to payments.  One of the core tenants of IP Commerce, and the reason for which we built our <a href="http://www.ipcommerce.com/Platform/Commerce_Platform.aspx">Managed Commerce Services Platform</a>, is that future commerce innovation will be driven by the software community.</p>
+<p>It was this in mind, and with the sessions still in my head, that I built the presentation after the jump for the <a href="http://www.meetup.com/APIEconomy/">Open API Economy Meetup</a>.  I had, originally, intended for the presentation to head a different direction and remain theoretical (i.e. stories from history that can be applied to present learnings)...but the event necessitated not only a discussion of theory but a discussion of practice.</p>
+<p>The message, however, remained the same.  The importance of the API cannot be underestimated.  Similarly, the importance of the consumption of the API in building innovative workflows, which are enabled by the software community, is what truly defines API value.</p>
+<p><!--more--></p>
+<p>Let's discuss, in specific, slides 221 to 225.*</p>
+<p>The discussion of Federated Identity is one that I have frequently.  As such I was excited to attend the PayPal session on Identity Services.  In the session, however, I found myself somewhat underwhelmed.  In essence, what PayPal described is the ability to use PayPal credentials in an OpenID or Information Card context.  It is, simply, PayPal as an Identity Provider for the purpose of managing login credentials.  But I was surprised that they only information that is shared (from a claims perspective) is that of the username.  For a website provider, this could be considered compelling...</p>
+<p>Frankly, however, this is wholly insufficient for the purposes of commerce.</p>
+<p>Keeping in mind that the software developer is key in driving commerce innovation, consider the purpose of Federated Identity implementations:</p>
+<p>Security is one aspect...<br /><br>
+Tapping into known identity sources is another...</p>
+<p>However, the ultimate point (and perhaps utility) is enabling collaboration between Software Companies thereby driving single-sided network effects...as well as interacting with Identity Authorities...that would otherwise be impossible or too costly to justify.  It is for this exact reason that the IP Commerce Platform enables a holistic <a href="http://www.ipcommerce.com/Platform/Commerce_Platform/Federated_Identity.aspx">Federated Identity</a> implementation.  Consider, for example managing transactional information after the initial authorization.  Transaction management is a relatively complex and specialized workflow that is required for the vast majority of software companies building a complete payment application.  For one Software Company to leverage an application built by another with specific domain expertise is what we have termed <a href="http://www.ipcommerce.com/Products/Commerce_Modules.aspx">Commerce Modules for Merchants</a>.**</p>
+<p>A Platform, and Open APIs for commerce, must not only provide payment processing...but it must address the core needs of the software community...enabling them to focus on their expertise (the vertical or segment that they serve) rather than on the difficulty of specific, widely used implementations - and this is where Federated Identity (specifically in the use case above - Single-Sign On) becomes wildly valuable by decreasing the time and expense of this necessary collaboration.</p>
+<p>At present I am collaborating with our internal team on a new Federated Identity white-paper that explains the IP Commerce implementation in greater detail, if you would like to discuss specifics (in advance of this) contact me and I'm happy to oblige.  In addition, we do have a whitepaper entitled <a href="http://www.ipcommerce.com/Products/Whitepapers.aspx"><em>Federated Identity:  Universal Authentication for eCommerce Transactions</em></a> that emphasizes the aspect of security rather than the aspect of collaboration.</p>
+<p>* Yes, there are 279 slides.  Yes, the presentation was given in less than 15 minutes.<br>
+** More information about the Online Transaction Management Module can be found on the <a href="http://commercelab.ipcommerce.com/Integration/Commerce_Modules.aspx">Commerce Modules</a> page on <a href="http://commercelab.ipcommerce.com/Home.aspx">CommerceLab</a>.</p>
+<div style="width:425px" id="__ss_5624943"><strong style="display:block;margin:12px 0 4px"><a href="http://www.slideshare.net/tylerhannan/medieval-art-collective-intelligence-language-abuse-a-story-of-apis" title="medieval art, collective intelligence, &amp; language abuse - a story of APIs">medieval art, collective intelligence, &amp; language abuse - a story of APIs</a></strong><object id="__sse5624943" width="425" height="355"><param name="movie" value="http://static.slidesharecdn.com/swf/ssplayer2.swf?doc=openapimeetup-101031130524-phpapp02&stripped_title=medieval-art-collective-intelligence-language-abuse-a-story-of-apis&userName=tylerhannan" /><param name="allowFullScreen" value="true"/><param name="allowScriptAccess" value="always"/><embed name="__sse5624943" src="http://static.slidesharecdn.com/swf/ssplayer2.swf?doc=openapimeetup-101031130524-phpapp02&stripped_title=medieval-art-collective-intelligence-language-abuse-a-story-of-apis&userName=tylerhannan" type="application/x-shockwave-flash" allowscriptaccess="always" allowfullscreen="true" width="425" height="355"></embed></object><div style="padding:5px 0 12px">View more <a href="http://www.slideshare.net/">presentations</a> from <a href="http://www.slideshare.net/tylerhannan">Tyler Hannan</a>.</div></div>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2010-11-04.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>

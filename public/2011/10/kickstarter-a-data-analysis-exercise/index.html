@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kickstarter:  a data analysis exercise · Tyler Hannan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/theme.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/archive/">← writing archive</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <article>
+    <h1>Kickstarter:  a data analysis exercise</h1>
+    <p class="meta">2011-10-15</p>
+    <div class="content">
+<p>I am a data nerd.<br /><br>
+I am a platform geek.<br /><br>
+I am passionate about commerce.<br /></p>
+<p>These are things that, if you have met me, you know.</p>
+<p>What you may not know (unless you have seen the fingernails on my right hand) is that I also am a guitarist.</p>
+<p>Music represents a unique creative outlet that I find wildly important.  Recently, I have had the opportunity to partner with good friends at <a href="https://www.facebook.com/LaunchPadStudios.inc">LaunchPad Studios, Inc.</a> (in Arvada, Colorado) as a studio musician and a producer on an as needed basis.</p>
+<p>Over the last several months, it has been interesting to watch as a high percentage of projects have been funded through <a href="http://wwww.kickstarter.com">Kickstarter</a>.  This, in and of itself, is not that suprising…after all, Kickstarter <a href="http://mashable.com/2011/10/11/kickstarter-pledges/">announced</a> this week that their Platform has enabled more than 1 Million backers and more than 100 Million in funding.</p>
+<p>Kickstarter is a platform, it enables a commerce workflow, is related to music, and generates a wealth of interesting data.  Seems the perfect confluence of events and interests for a Friday night exercise…</p>
+<p>I will warn/advise you, in advance, that the purpose of this exercise was not to discuss the methodology by which Kickstarter collects and disburses funds (although that is an interesting discussion) but to analyze the outcome of the funding process itself.</p>
+<p>In discussing this process with several of these artists, there are some base assumptions that are made regarding the most popular level of backing, duration of project, etc.  And, while experiential knowledge is important, I was interested in whether I could identify any patterns from some simple analysis of data available on the Kickstarter website.</p>
+<p>My methodology was not what I would refer to as "rigorously scientific" but the analysis thereof did result in some interesting patterns.<!--more-->To be clear, I have seen (both on Kickstarter's <a href="http://www.kickstarter.com/blog">blog</a> and in other locations) similar analysis.  However, I was interested in some very specific information…</p>
+<h3>Analysis Goal</h3>
+Simply, the goal was to identify patterns so that I am able to provide useful information to LaunchPad clients either in the stage of determining their funding strategy or who have already chosen Kickstarter as their funding platform of choice.
+<h3>Data Categorization</h3>
+Before I describe the methodology utilized, or results of my analysis, I think it important to discuss categorization.  While LaunchPad Studios sees a wide variety of projects, in a wide variety of genres, the majority of Kickstarter backed projects have some measure similarity.  To that end, my analysis was limited to the following:
+<ul>
+	<li>Singer/Songwriter Albums & EPs</li>
+	<li>Folk Album & EPs</li>
+	<li>Smaller Rock Albums & EPs</li>
+	<li>Above categories performing small, regional tours including house shows</li>
+	<li>Requested funding amount less than 10k</li>
+	<li>Funding successful</li>
+	<li>Funded at less than 125%</li>
+</ul>
+<p>Wildly niche…but also appropriate given the projects we see in the studio.</p>
+<h3>Methodology</h3>
+Since there isn't an easily accessible repository of Kickstarter data (i.e. no publicly accessible API), it was necessary to obtain the data manually.  As such, I simply began looking at projects that met the above criteria and copying information from the website into a spreadsheet.  I tracked the following:
+<ul>
+	<li>Project Name</li>
+	<li>Project Type</li>
+	<li># of Backers</li>
+	<li>$ Goal</li>
+	<li>$ Raised</li>
+	<li>% of Total Raised</li>
+</ul>
+Then, against each of these items, I tracked a simple count, as available on project main page, of backers by the level of minimum donation (at rewards levels).  I threw this into a simple, replicable format so that I could aggregate the data onto a summary page.  Given that the count (by amount donated) appears at a structured column interval (in this case every 7th column) it was an interesting exercise of doing the summation without having to manually update the calculation frequently.  The formula was as follows:
+<pre><code>=SUMPRODUCT((MOD(ROW(Detail!$E$4:$E$400),7)=0)*(Detail!$E$4:$E$400))</code></pre>
+<p>The summary data is dynamically filtered to remove the 0 value columns.  And, for simple visualization without having to view the chart, I used the formula below to create a pseudo-histogram.<br>
+<pre><code>=REPT(&amp;quot;|&amp;quot;,CellReference)</code></pre></p>
+<h3>Results</h3>
+The output, in imagery, is below…but my thoughts are as follows:
+<p>This represents 28 projects with a total funding of $125,468 and a total of 1,718 backers.</p>
+<p>It is intriguing that the most donated level ($25) is consistent with the experiential knowledge that came through the studio discussions.  The assertion by those I have talked to is that $25 is the most important funding/gift level in the limited vertical identified by the data…and that it goes down from there.</p>
+<p>The data supports the $25.  However, the data DOES NOT support that $25 is the high water mark for common donation.  In fact, in descending order, the levels were $25, $10, $100, $50, $20, $15, $35, $30, $5, $500, $150 and, after that, it all becomes less than 1% of total (count to total backers).</p>
+<p>I was also very surprised to find that $1, $250, $1000 all occurred at a fairly similar rate within the dataset.  My resultant assertion is that the $1 donation, perhaps, isn't worth the effort required given frequency of usage.</p>
+<p>It was also interesting to note the common theme of "partnership" in the language created in the successfully funded projects.  It was less "I am making an album" and more "Join me in making an album".  The idea of participation is core to the Kickstarter Platform and should be taken into account when project materials are created.</p>
+<p><img style="display:block; margin-left:auto; margin-right:auto;" src="/wp-content/uploads/2011/10/KickstarterDataAnalysis.png" alt="KickstarterDataAnalysis" title="KickstarterDataAnalysis.png" border="0" width="600" height="317" /><br>
+<br /><br>
+<img style="display:block; margin-left:auto; margin-right:auto;" src="/wp-content/uploads/2011/10/KickstarterDataGraph.png" alt="KickstarterDataGraph" title="KickstarterDataGraph.png" border="0" width="600" height="359" /></p>
+<h3>Concerns</h3>
+To be frank, I have no clue whether this sample is representative. <br /> 
+It is consistent with experiential data, it is a specified targeted vertical, but it is also only 28 projects.  Kickstarter does not say, to my knowledge, how many projects fall into each category…and there is no clean categorization/vertical information within the category (i.e. how many music projects, small album, under 10k).  So the data could be skewed based on what we are experiencing.  There is, unfortunately, no way around this.  To "checkpoint" the data I ensured that I included 3 successful projects that have come through the studio and the analysis of them was consistent with the entirety…supposition I realize, but the best I can do.
+<p>Duration is ignored.<br /><br>
+I feel, perhaps suspect, that project duration is an important component.  But couldn't locate a good way of identifying project create data, end date, and funding complete data (at 100%) via the website.  This represents a missing variable…there is some supposition surrounding duration, but (for the time being) it remains just supposition.</p>
+<p>The numbers don't match.<br /><br>
+For some reason, on the Kickstarter site, backer count (as displayed in project summary) often does not align with backer detail as it appears in the funding levels.  I did not spend the effort necessary to dig into this…but it is worth noting that the data source is not internally consistent.</p>
+<p>How did you find my project?<br /><br>
+I have no way to advise artists in "sources" of funding.  For example, we know that the average Facebook user has 130 friends…but without access to back-end UTM tracking, or similar, I can't advise artists whether the majority of their funding comes from extant social connections (what I expect) or some measure from organic discovery.  It would be wildly intriguing to discover, given that the above data indicates an average of 61 backers per project, how many of those are in the users social graph of the project creators.</p>
+<h3>In Summary</h3>
+I feel well positioned to discuss the funding process with artists who arrive in the studio.  
+To emphasize their focus on the 25-100 dollar gift range.  <br />
+To ensure they create high-level funding options as they may, in fact, be utilized more often than the lowest range and are definitely more impactful. <br />
+And, most importantly, to ensure they emphasize the partnership aspect of the project.
+<p>If you are interested in the source data, contact me via the usual methods and I will be happy to oblige.  My version of RStudio didn't want to play nicely on the plane…so it is all in an Excel workbook presently.</p>
+<p>What’s your perspective? Agree? Disagree? Anything to add? Critiques? The comment form is below…</p>
+<p>written while in seat 21f from SFO to DEN</p>
+    </div>
+    <p class="note">Archived from the old tylerhannan.com blog. Originally published 2011-10-15.</p>
+  </article>
+  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+</div>
+</body>
+</html>
