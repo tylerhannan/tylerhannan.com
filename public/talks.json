@@ -1,6 +1,6 @@
 {
   "talks": [
-    { "date": "2026-05", "title": "Open House 2026: Day 2 Keynote", "event": "ClickHouse Open House", "location": "San Francisco, US", "type": "keynote", "url": "https://clickhouse.com/videos/openhouse-2026-keynote-day-2", "youtube": null, "verify": "YouTube ID (only Day 1, GwCRcRa8f3A, is on the ClickHouse channel)" },
+    { "date": "2026-05", "title": "Open Source as Stained Glass", "event": "ClickHouse Open House 2026", "location": "San Francisco, US", "type": "keynote", "url": "https://clickhouse.com/openhouse/san-francisco", "youtube": "dBDu0NHKmWI" },
     { "date": "2026-03-12", "title": "Do Metrics Matter?", "event": "SREday London", "location": "London, UK", "type": "keynote", "url": "https://sreday.com/2026-london-q1/", "youtube": "8mHSNPYy004" },
     { "date": "2025-04-04", "title": "ML, Vectors, and Philosophy: Oh my!", "event": "Latency Conference", "location": "Perth, AU", "type": "talk", "url": "https://latencyconf.io/past-conferences", "youtube": "1Qqd2JEsSeU" },
     { "date": "2024-10-10", "title": "How Open Source is Re-Shaping the Cloud Data Warehouse Landscape", "event": "Big Data & AI World", "location": "Singapore", "type": "keynote", "url": "https://www.bigdataworldasia.com/speakers/tyler-hannan", "youtube": null },
