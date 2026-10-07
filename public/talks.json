@@ -1,8 +1,8 @@
 {
   "talks": [
-    { "date": "2026", "title": "Open House 2026: Day 2 Keynote", "event": "ClickHouse Open House", "type": "keynote", "url": "https://clickhouse.com/videos/openhouse-2026-keynote-day-2", "youtube": null, "verify": "date + YouTube ID" },
+    { "date": "2026-05", "title": "Open House 2026: Day 2 Keynote", "event": "ClickHouse Open House", "location": "San Francisco, US", "type": "keynote", "url": "https://clickhouse.com/videos/openhouse-2026-keynote-day-2", "youtube": null, "verify": "YouTube ID (only Day 1, GwCRcRa8f3A, is on the ClickHouse channel)" },
     { "date": "2026-03-12", "title": "Do Metrics Matter?", "event": "SREday London", "location": "London, UK", "type": "keynote", "url": "https://sreday.com/2026-london-q1/", "youtube": "8mHSNPYy004" },
-    { "date": "2025-04-04", "title": "ML, Vectors, and Philosophy: Oh my!", "event": "Latency Conference", "location": "Perth, AU", "type": "talk", "url": "https://clickhouse.com/company/events/202503-apj-perth-latency", "youtube": null, "verify": "year" },
+    { "date": "2025-04-04", "title": "ML, Vectors, and Philosophy: Oh my!", "event": "Latency Conference", "location": "Perth, AU", "type": "talk", "url": "https://latencyconf.io/past-conferences", "youtube": "1Qqd2JEsSeU" },
     { "date": "2024-10-10", "title": "How Open Source is Re-Shaping the Cloud Data Warehouse Landscape", "event": "Big Data & AI World", "location": "Singapore", "type": "keynote", "url": "https://www.bigdataworldasia.com/speakers/tyler-hannan", "youtube": null },
     { "date": "2024-10-03", "title": "My Favourite ClickHouse Features", "event": "ClickHouse Singapore Meetup", "location": "Singapore", "type": "talk", "url": "https://clickhouse.com/videos/my-favourite-clickhouse-features-singapore-meetup", "youtube": "6mCahEIDwFc" },
     { "date": "2024-09-27", "title": "Rethinking Status Quo: Open Source and the Cloud Data Warehouse", "event": "DataEngBytes", "location": "Perth, AU", "type": "talk", "url": "https://clickhouse.com/company/events/202409-dataengbytes-perth", "youtube": null },
@@ -11,8 +11,8 @@
     { "date": "2023-12-11", "title": "Learning Databases and Learning Languages", "event": "ClickHouse Community Meetup", "location": "Boston, US", "type": "talk", "url": "https://clickhouse.com/videos/learning-databases-and-learning-languages", "youtube": "ZICoTYUPFq4" },
     { "date": "2021-06-24", "title": "Closing Keynote", "event": "HasuraCon 2021", "type": "keynote", "url": "https://hasura.io/events/hasura-con-2021/speakers/tyler-hannan", "youtube": null },
     { "date": "2020", "title": "When Worlds Collide: Frontend vs Database", "event": "JSNation Live 2020", "type": "talk", "url": "https://gitnation.com/contents/when-worlds-collide-frontend-vs-database", "youtube": null },
-    { "date": "2013", "title": "Interview with O'Reilly (Basho Technologies)", "event": "Strata Santa Clara 2013", "type": "interview", "url": "https://www.youtube.com/watch?v=P4KXpKV3FfM", "youtube": "P4KXpKV3FfM" },
-    { "date": "2013", "title": "Basho Technologies interview", "event": "Strata", "type": "interview", "url": "https://www.youtube.com/watch?v=utSuBFm2Kt4", "youtube": "utSuBFm2Kt4", "verify": "event/date" }
+    { "date": "2013-10", "title": "Medieval Art, Collective Intelligence, and Language Abuse: The Ethos of Distributed Systems", "event": "Monktoberfest 2013", "location": "Portland, ME, US", "type": "talk", "url": "https://www.youtube.com/watch?v=MboWxOKP4-Y", "youtube": "MboWxOKP4-Y" },
+    { "date": "2013", "title": "Interview with O'Reilly (Basho Technologies)", "event": "Strata Santa Clara 2013", "type": "interview", "url": "https://www.youtube.com/watch?v=P4KXpKV3FfM", "youtube": "P4KXpKV3FfM" }
   ],
   "writing": [
     { "outlet": "Elastic blog", "url": "https://www.elastic.co/blog/author/tyler-hannan" },
