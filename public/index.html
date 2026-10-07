@@ -23,18 +23,6 @@
     <nav aria-label="Sections"><a href="#talks">talks</a><a href="#videos">videos</a><a href="/photos/">photos</a><a href="#about">about</a><a href="#contact">contact</a></nav>
   </header>
 
-  <section id="summary" aria-labelledby="summary-h">
-    <p class="label" id="summary-h">At a glance</p>
-    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">count</span>() <span class="kw">AS</span> talks,
-          <span class="kw">countIf</span>(type = <span class="s">'keynote'</span>) <span class="kw">AS</span> keynotes,
-          <span class="kw">countIf</span>(youtube <span class="kw">IS NOT NULL</span>) <span class="kw">AS</span> videos,
-          <span class="kw">uniqExact</span>(<span class="kw">splitByString</span>(<span class="s">', '</span>, location)[<span class="n">-1</span>]) <span class="kw">AS</span> countries,
-          <span class="kw">min</span>(<span class="kw">toYear</span>(date)) <span class="kw">AS</span> since
-   <span class="kw">FROM</span> talks;</div>
-    <div class="stats" id="stats"></div>
-    <p class="foot">1 row in set.</p>
-  </section>
-
   <section id="talks" aria-labelledby="talks-h">
     <p class="label" id="talks-h">Talks and events</p>
     <div class="query" id="sql" aria-live="polite"></div>
@@ -156,18 +144,6 @@
     tr.insertAdjacentHTML('afterend',html); btn.setAttribute('aria-expanded','true');
   }
 
-  function stats(){
-    var countries=new Set(talks.filter(function(t){return t.location}).map(function(t){return t.location.split(',').pop().trim()}));
-    var tiles=[
-      ['talks',talks.length],
-      ['keynotes',talks.filter(function(t){return t.type==='keynote'}).length],
-      ['videos',talks.filter(function(t){return t.youtube}).length],
-      ['countries',countries.size],
-      ['since',talks.reduce(function(m,t){return Math.min(m,+String(t.date).slice(0,4))},Infinity)]
-    ];
-    document.getElementById('stats').innerHTML=tiles.map(function(s){return '<div class="stat"><span class="sv">'+s[1]+'</span><span class="sl">'+s[0]+'</span></div>'}).join('');
-  }
-
   function vids(){
     var v=talks.filter(function(t){return t.youtube}).sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
     document.getElementById('vids').innerHTML=v.map(function(t){
@@ -190,7 +166,7 @@
     function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('email'));var s=getSelection();s.removeAllRanges();s.addRange(r);}
   });
 
-  fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];stats();render();vids();})
+  fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();})
     .catch(function(){document.getElementById('rows').innerHTML='<tr><td colspan="4" class="d">Couldn\'t load talks.json. Check that it sits next to index.html.</td></tr>';});
 })();
 </script>
