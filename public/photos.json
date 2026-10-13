@@ -1,7 +1,77 @@
 {
   "photos": [
-    { "file": null, "title": "Example: replace me", "place": "Somewhere", "date": "2026-09", "camera": "", "alt": "", "example": true },
-    { "file": null, "title": "Example: replace me", "place": "Somewhere else", "date": "2026-06", "camera": "", "alt": "", "example": true },
-    { "file": null, "title": "Example: replace me", "place": "Another place", "date": "2026-03", "camera": "", "alt": "", "example": true }
+    {
+      "file": "backgammon.jpg",
+      "title": "Backgammon",
+      "place": "",
+      "date": "2026-08",
+      "camera": "Film",
+      "alt": ""
+    },
+    {
+      "file": "never-stop-exploring.jpg",
+      "title": "Never Stop Exploring",
+      "place": "",
+      "date": "2026-08",
+      "camera": "Film",
+      "alt": ""
+    },
+    {
+      "file": "lb-s-record-bar.jpg",
+      "title": "LB's Record Bar",
+      "place": "",
+      "date": "2026-08",
+      "camera": "Film",
+      "alt": ""
+    },
+    {
+      "file": "wall-of-tapes.jpg",
+      "title": "Wall of Tapes",
+      "place": "",
+      "date": "2023-08",
+      "camera": "Film",
+      "alt": ""
+    },
+    {
+      "file": "jester.jpg",
+      "title": "Jester",
+      "place": "",
+      "date": "2023-08",
+      "camera": "Film",
+      "alt": ""
+    },
+    {
+      "file": "fountain-at-night.jpg",
+      "title": "Fountain at Night",
+      "place": "Efteling, Netherlands",
+      "date": "2025-07",
+      "camera": "Film",
+      "alt": ""
+    },
+    {
+      "file": "chateau-under-star-trails.jpg",
+      "title": "Chateau Under Star Trails",
+      "place": "France",
+      "date": "2020-07",
+      "camera": "Leica Q2",
+      "alt": ""
+    },
+    {
+      "file": "symbolica-at-blue-hour.jpg",
+      "title": "Symbolica at Blue Hour",
+      "place": "Efteling, Netherlands",
+      "date": "2021-07",
+      "camera": "Leica M10-D · Apo-Summicron 90mm f/2",
+      "alt": ""
+    },
+    {
+      "file": "portmeirion-sea-wall.jpg",
+      "title": "Portmeirion Sea Wall",
+      "place": "Portmeirion, Wales",
+      "date": "2019-10",
+      "camera": "Leica M10-D · Summilux 50mm f/1.4",
+      "alt": "",
+      "focus": "top"
+    }
   ]
 }

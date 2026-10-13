@@ -44,7 +44,8 @@
     list.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
     grid.innerHTML=list.map(function(p,i){
       var meta=[p.place,p.date&&ym(p.date)].filter(Boolean).map(esc).join(' · ');
-      var inner=p.file?'<img src="/photos/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy">':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
+      var focus=/^(top|bottom|left|right|center)$/.test(p.focus)?' style="object-position:'+p.focus+'"':'';  // which edge the grid crop keeps
+      var inner=p.file?'<img src="/photos/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy"'+focus+'>':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
       return '<button type="button" class="photo'+(p.file?'':' empty')+'" data-i="'+i+'"'+(p.file?'':' disabled')+'>'+inner+'<span class="pc"><span class="vt">'+esc(p.title)+'</span><span class="vm">'+meta+'</span></span></button>';
     }).join('');
     var real=list.filter(function(p){return p.file}).length;
