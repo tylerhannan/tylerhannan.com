@@ -20,6 +20,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import quote, unquote
 
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
@@ -149,6 +150,13 @@ def code_block(m):
     return "<pre><code>" + html.escape(code, quote=False) + "</code></pre>"
 
 
+# Link roundups copied from feeds kept links relative to the source site, which 404 here.
+RELATIVE_FIXUPS = {
+    "/archives/2009/12/18/cloud-exchange-aws-spot-prices-visualized/": "http://www.datacenterknowledge.com/archives/2009/12/18/cloud-exchange-aws-spot-prices-visualized/",
+    "/ignition-strategies-how-to-launch-a-platform-business": "http://pymnts.com/ignition-strategies-how-to-launch-a-platform-business",
+}
+
+
 def clean(content, old_hosts):
     content = re.sub(r"<!--\s*/?wp:[\s\S]*?-->", "", content)  # block editor comments
     content = re.sub(r"\[(%s)(?:\s[^\]]*)?\]([\s\S]*?)\[/\1\]" % CODE_TAGS, code_block, content)
@@ -158,6 +166,9 @@ def clean(content, old_hosts):
     content = re.sub(r"<script[\s\S]*?</script>", "", content, flags=re.I)  # dead third-party widgets
     for host in old_hosts:
         content = re.sub(r"https?://(www\.)?%s/wp-content/" % re.escape(host), "/wp-content/", content)
+    content = re.sub(r'href="www\.', 'href="http://www.', content)  # scheme-less links
+    for rel, absolute in RELATIVE_FIXUPS.items():
+        content = content.replace('href="%s' % rel, 'href="%s' % absolute)
     return autop(content)
 
 
@@ -174,7 +185,7 @@ def permalink(structure, post):
     }.items():
         p = p.replace(tag, val)
     p = "/" + p.strip("/") + "/"
-    return p.replace("//", "/")
+    return quote(unquote(p.replace("//", "/")), safe="/")  # canonical %XX (upper case), as the host redirects to
 
 
 PAGE = """<!doctype html>
@@ -232,7 +243,9 @@ def main():
         path = permalink(structure, p)
         title = html.unescape(p.get("post_title") or "Untitled")
         date = p["post_date"][:10]
-        out = PUBLIC / path.strip("/") / "index.html"
+        # WordPress stores non-ASCII slugs percent-encoded ("%e2%80%9c"). The host decodes request
+        # paths before matching files, so folders need the real characters; links stay encoded.
+        out = PUBLIC / unquote(path.strip("/")) / "index.html"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(PAGE.format(title=html.escape(title), date=date,
                                    content=clean(p.get("post_content") or "", hosts)), encoding="utf-8")

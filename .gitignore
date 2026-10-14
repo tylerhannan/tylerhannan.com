@@ -4,3 +4,4 @@ backup/
 *.sql
 *.sql.gz
 __pycache__/
+.wrangler/
