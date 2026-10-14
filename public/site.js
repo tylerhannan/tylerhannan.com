@@ -1,5 +1,6 @@
-// Dark by default. The header button switches to light and remembers the choice.
-// Loaded in <head> (not deferred) so a saved light theme applies before first paint.
+// Shared by every page. Loaded in <head> (not deferred) so a saved light theme applies before first paint.
+// Theme: dark by default; the header button switches to light and remembers the choice.
+// Contact: the copy button next to the email address.
 (function(){
   var root=document.documentElement;
   try{ if(localStorage.getItem('theme')==='light') root.dataset.theme='light'; }catch(_){}
@@ -18,4 +19,12 @@
     label();
   });
   document.addEventListener('DOMContentLoaded',label);
+
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('#copy'); if(!b) return;
+    var el=document.getElementById('email');
+    var done=function(){b.textContent='copied';setTimeout(function(){b.textContent='copy'},1500)};
+    function sel(){var r=document.createRange();r.selectNodeContents(el);var s=getSelection();s.removeAllRanges();s.addRange(r);}
+    try{ navigator.clipboard.writeText(el.textContent).then(done,sel); }catch(_){ sel(); }
+  });
 })();

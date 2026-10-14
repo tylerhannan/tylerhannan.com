@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
-<script src="/theme.js"></script>
+<script src="/site.js"></script>
 </head>
 <body>
 
@@ -67,7 +67,7 @@
     </div>
   </section>
 
-  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><a href="/archive/">writing archive</a></footer>
+  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
 </div>
 
 <script>
@@ -160,13 +160,6 @@
     var t=e.target.closest('.t'); if(t){ toggle(+t.dataset.i,false); return; }
     var p=e.target.closest('.play'); if(p&&!framed){ e.preventDefault(); toggle(+p.dataset.i,true); return; }
     var v=e.target.closest('.vid'); if(v&&!framed){ e.preventDefault(); var th=v.querySelector('.thumb'); th.outerHTML=embed(v.dataset.id); return; }
-  });
-
-  document.getElementById('copy').addEventListener('click',function(){
-    var b=this, txt=document.getElementById('email').textContent;
-    var done=function(){b.textContent='copied';setTimeout(function(){b.textContent='copy'},1500)};
-    try{ navigator.clipboard.writeText(txt).then(done,function(){sel()}); }catch(_){ sel(); }
-    function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('email'));var s=getSelection();s.removeAllRanges();s.addRange(r);}
   });
 
   fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();})

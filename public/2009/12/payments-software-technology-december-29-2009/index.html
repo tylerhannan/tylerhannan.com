@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
-<script src="/theme.js"></script>
+<script src="/site.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -21,7 +21,16 @@
     </div>
     <p class="note">Archived from the old tylerhannan.com blog. Originally published 2009-12-29.</p>
   </article>
-  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+  <section id="contact" aria-labelledby="contact-h">
+    <p class="label" id="contact-h">Contact</p>
+    <div class="contact">
+      <span><span id="email">tyler@tylerhannan.com</span><button class="copy" id="copy" type="button">copy</button></span>
+      <a href="https://www.linkedin.com/in/tylerhannan/">linkedin</a>
+      <a href="https://twitter.com/tylerhannan">x / twitter</a>
+    </div>
+  </section>
+
+  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
 </div>
 </body>
 </html>

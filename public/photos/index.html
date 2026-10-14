@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
-<script src="/theme.js"></script>
+<script src="/site.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -32,7 +32,7 @@
     </div>
   </section>
 
-  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/archive/">writing archive</a></span></footer>
+  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
 </div>
 
 <dialog id="lightbox" aria-label="Photo">
@@ -97,13 +97,6 @@
   });
   document.getElementById('lb-close').addEventListener('click',function(){lb.close()});
   lb.addEventListener('click',function(e){ if(e.target===lb) lb.close(); });
-
-  document.getElementById('copy').addEventListener('click',function(){
-    var b=this, txt=document.getElementById('email').textContent;
-    var done=function(){b.textContent='copied';setTimeout(function(){b.textContent='copy'},1500)};
-    try{ navigator.clipboard.writeText(txt).then(done,function(){sel()}); }catch(_){ sel(); }
-    function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('email'));var s=getSelection();s.removeAllRanges();s.addRange(r);}
-  });
 
   fetch('/photos.json').then(function(r){return r.json()}).then(function(d){list=d.photos||[];render()}).catch(function(){render()});
 })();
