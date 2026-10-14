@@ -90,6 +90,7 @@
 (function(){
   var framed = window.self !== window.top;
   var state = {type:'all', video:false, group:'year'};
+  var folded={};  // per grouping mode: group key -> true when collapsed. Older years start folded.
   var talks = [];
   var esc = function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var ym = function(d){return String(d).slice(0,7)};
@@ -135,14 +136,19 @@
     if(g){
       rows.sort(function(a,b){return g.key(b).localeCompare(g.key(a))||String(b.date).localeCompare(String(a.date))});
       rows.forEach(function(t){var k=g.key(t); counts[k]=(counts[k]||0)+1});
+      if(!folded[state.group]){  // first time in this mode: open the two newest groups
+        folded[state.group]={}; Object.keys(counts).sort().reverse().forEach(function(k,n){ if(state.group==='year'&&n>=2) folded[state.group][k]=true; });
+      }
     }
+    var shut=g?folded[state.group]:{};
     document.getElementById('sql').innerHTML=sql();
     document.getElementById('rows').innerHTML=rows.map(function(t,i){
       var head='';
-      if(g&&g.key(t)!==last){ last=g.key(t); head='<tr class="g"><th colspan="4" scope="rowgroup">'+esc(g.label(last))+'<span>'+counts[last]+' row'+(counts[last]===1?'':'s')+'</span></th></tr>'; }
+      var k=g?g.key(t):'';
+      if(g&&k!==last){ last=k; head='<tr class="g"><th colspan="4" scope="rowgroup"><button type="button" class="gh" data-g="'+esc(k)+'" aria-expanded="'+!shut[k]+'"><span class="tw" aria-hidden="true">'+(shut[k]?'▸':'▾')+'</span>'+esc(g.label(k))+'<span>'+counts[k]+' row'+(counts[k]===1?'':'s')+'</span></button></th></tr>'; }
       var kind=t.type==='keynote'?'<span class="k">keynote</span>':'';
       var play=t.youtube?'<a class="play" href="'+yt(t.youtube)+'" data-i="'+i+'" aria-label="Watch '+esc(t.title)+'">▶</a>':'';
-      return head+'<tr><td class="d">'+esc(ym(t.date))+'</td><td><button class="t" type="button" data-i="'+i+'" aria-expanded="false">'+esc(t.title)+'</button>'+kind+'</td><td class="e">'+esc(t.event)+'</td><td class="v">'+play+'</td></tr>';
+      return head+'<tr data-g="'+esc(k)+'"'+(shut[k]?' hidden':'')+'><td class="d">'+esc(ym(t.date))+'</td><td><button class="t" type="button" data-i="'+i+'" aria-expanded="false">'+esc(t.title)+'</button>'+kind+'</td><td class="e">'+esc(t.event)+'</td><td class="v">'+play+'</td></tr>';
     }).join('')||'<tr><td colspan="4" class="d">0 rows. Try another filter.</td></tr>';
     var ms=Math.max(0.001,(performance.now()-t0)/1000);
     document.getElementById('foot').textContent=rows.length+' row'+(rows.length===1?'':'s')+' in set. Elapsed: '+ms.toFixed(3)+' sec.';
@@ -162,7 +168,7 @@
     if(t.repo) links.push('<a href="'+esc(t.repo)+'">code ↗</a>');
     var meta=[t.event,t.location,t.type].filter(Boolean).map(esc).join(' · ');
     var html='<tr class="x"><td></td><td colspan="3">'+meta+(t.note?'<br>'+esc(t.note):'')+'<div class="links">'+links.join('')+'</div>'+(withVideo&&t.youtube&&!framed?embed(t.youtube):'')+'</td></tr>';
-    tr.insertAdjacentHTML('afterend',html); btn.setAttribute('aria-expanded','true');
+    tr.insertAdjacentHTML('afterend',html); tr.nextElementSibling.dataset.g=tr.dataset.g||''; btn.setAttribute('aria-expanded','true');
   }
 
   function vids(){
@@ -176,6 +182,14 @@
   document.addEventListener('click',function(e){
     var c=e.target.closest('.chip');
     if(c){ if(c.dataset.video) state.video=!state.video; else if(c.dataset.group) state.group=c.dataset.group; else state.type=c.dataset.type; render(); return; }
+    var gh=e.target.closest('.gh');
+    if(gh){  // fold or unfold one group
+      var key=gh.dataset.g, f=folded[state.group]=folded[state.group]||{}, open=!!f[key];
+      if(open) delete f[key]; else f[key]=true;
+      gh.setAttribute('aria-expanded',String(open)); gh.querySelector('.tw').textContent=open?'▾':'▸';
+      document.querySelectorAll('#rows tr[data-g]').forEach(function(r){ if(r.dataset.g===key) r.hidden=!open; });
+      return;
+    }
     var t=e.target.closest('.t'); if(t){ toggle(+t.dataset.i,false); return; }
     var p=e.target.closest('.play'); if(p&&!framed){ e.preventDefault(); toggle(+p.dataset.i,true); return; }
     var v=e.target.closest('.vid'); if(v&&!framed){ e.preventDefault(); var th=v.querySelector('.thumb'); th.outerHTML=embed(v.dataset.id); return; }
