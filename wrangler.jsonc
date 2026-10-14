@@ -6,6 +6,8 @@
   "assets": {
     "directory": "./public",
     // /2012/04/geektool/ serves /2012/04/geektool/index.html, so old WordPress links keep working
-    "html_handling": "auto-trailing-slash"
+    "html_handling": "auto-trailing-slash",
+    // Unknown URLs get public/404.html with a real 404 status
+    "not_found_handling": "404-page"
   }
 }

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 · Tyler Hannan</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/site.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <section style="padding-top:24px">
+    <p class="label">404 · Not found</p>
+    <div class="query" id="q404"><span class="p">:) </span><span class="kw">SELECT</span> *
+   <span class="kw">FROM</span> pages
+   <span class="kw">WHERE</span> path = <span class="s" id="req">'/'</span>;</div>
+    <p class="foot">0 rows in set. Elapsed: 0.000 sec.</p>
+    <pre class="err" role="alert">Received exception from server (version 404.0.0):
+Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may have moved when this site stopped being WordPress, or it never existed. (PAGE_NOT_FOUND)</pre>
+
+    <div class="query" style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> title, path
+   <span class="kw">FROM</span> posts
+   <span class="kw">ORDER BY</span> <span class="kw">ngramDistance</span>(path, <span class="s" id="req3">'/'</span>)
+   <span class="kw">LIMIT</span> <span class="n">3</span>;</div>
+    <ul class="posts" id="near"></ul>
+    <p class="foot" id="near-foot"></p>
+
+    <p class="tag" style="margin-top:28px">Or start over: <a href="/">home</a> · <a href="/photos/">photos</a> · <a href="/archive/">writing archive</a></p>
+  </section>
+
+  <section id="contact" aria-labelledby="contact-h">
+    <p class="label" id="contact-h">Contact</p>
+    <div class="contact">
+      <span><span id="email">tyler@tylerhannan.com</span><button class="copy" id="copy" type="button">copy</button></span>
+      <a href="https://www.linkedin.com/in/tylerhannan/">linkedin</a>
+      <a href="https://twitter.com/tylerhannan">x / twitter</a>
+    </div>
+  </section>
+
+  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
+</div>
+<script>
+(function(){
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var path;
+  try{ path=decodeURIComponent(location.pathname); }catch(_){ path=location.pathname; }
+  var lit="'"+esc(path.replace(/'/g,"\\'"))+"'";
+  ['req','req2','req3'].forEach(function(id){document.getElementById(id).innerHTML=lit});
+
+  // Trigram distance, in the spirit of ClickHouse's ngramDistance(): 0 = identical, 1 = nothing in common.
+  function grams(s){ s='  '+s.toLowerCase()+' '; var m={}; for(var i=0;i<s.length-2;i++){var g=s.substr(i,3); m[g]=(m[g]||0)+1;} return m; }
+  function dist(a,b){
+    var A=grams(a), B=grams(b), na=0, nb=0, diff=0, k;
+    for(k in A) na+=A[k]; for(k in B) nb+=B[k];
+    for(k in A) diff+=Math.abs(A[k]-(B[k]||0)); for(k in B) if(!(k in A)) diff+=B[k];
+    return diff/(na+nb);
+  }
+  var slug=path.replace(/^\/(\d{4}\/\d{2}\/)?/,'').replace(/\/$/,'');
+  var near=document.getElementById('near'), foot=document.getElementById('near-foot');
+  fetch('/archive/posts.json').then(function(r){return r.json()}).then(function(d){
+    var pages=[{title:'Home',path:'/'},{title:'Photos',path:'/photos/'},{title:'Writing archive',path:'/archive/'}].concat(d.posts||[]);
+    var best=pages.map(function(p){
+      var ps; try{ ps=decodeURIComponent(p.path); }catch(_){ ps=p.path; }
+      return {p:p, d:Math.min(dist(path,ps), dist(slug,ps.replace(/^\/(\d{4}\/\d{2}\/)?/,'').replace(/\/$/,'')))};
+    }).sort(function(a,b){return a.d-b.d}).slice(0,3);
+    near.innerHTML=best.map(function(b){
+      return '<li><span class="d">'+b.d.toFixed(2)+'</span><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></li>';
+    }).join('');
+    foot.textContent='3 rows in set. Lower is closer.';
+  }).catch(function(){ foot.textContent='0 rows in set. (posts.json is also missing, which is impressive.)'; });
+})();
+</script>
+</body>
+</html>

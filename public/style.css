@@ -3,7 +3,7 @@
    Layout: one column "query console" — a header, then each section is a query and its result set. */
 :root{
   --bg:#181818; --panel:#252525; --line:#3b3b3b; --fg:#dedede; --muted:#9a9a9a;
-  --accent:#faff69; --kw:#3fc5b7; --str:#70b433; --num:#eb6eb7; --on-accent:#181818;
+  --accent:#faff69; --kw:#3fc5b7; --str:#70b433; --num:#eb6eb7; --err:#ff665c; --on-accent:#181818;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --body:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -11,7 +11,7 @@
 }
 :root[data-theme="light"]{
   --bg:#ffffff; --panel:#ebebeb; --line:#cdcdcd; --fg:#282828; --muted:#5f5f5f;
-  --accent:#686b00; --kw:#006e63; --str:#177300; --num:#c4108c; --on-accent:#ffffff; color-scheme:light}
+  --accent:#686b00; --kw:#006e63; --str:#177300; --num:#c4108c; --err:#c00010; --on-accent:#ffffff; color-scheme:light}
 
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 var(--body);-webkit-font-smoothing:antialiased}
@@ -35,6 +35,7 @@ section{padding-top:48px}
 .label{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
 .query{font:14px/1.7 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre}
 .query .p{color:var(--accent);user-select:none}
+.err{font:14px/1.7 var(--mono);color:var(--err);background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--err);border-radius:8px;padding:12px 14px;margin:16px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .kw{color:var(--kw)} .s{color:var(--str)} .n{color:var(--num)}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}
