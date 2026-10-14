@@ -1,0 +1,11 @@
+// Cloudflare Workers config: serves public/ as a static site, no build step.
+// Connected to GitHub in the Cloudflare dashboard, so every push to main deploys.
+{
+  "name": "tylerhannan-com",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    // /2012/04/geektool/ serves /2012/04/geektool/index.html, so old WordPress links keep working
+    "html_handling": "auto-trailing-slash"
+  }
+}

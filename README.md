@@ -1,6 +1,6 @@
 # tylerhannan.com
 
-Static site, no build step. Everything served lives in `public/`.
+Static site, no build step. Everything served lives in `public/`. Hosted on Cloudflare Workers (`wrangler.jsonc`); every push to `main` deploys.
 
 Preview locally (pages fetch JSON, so opening the files directly won't work):
 
