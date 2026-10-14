@@ -48,7 +48,3 @@ Queries go from the browser to the public [ClickHouse playground](https://play.c
 - Errors come back from ClickHouse as they are, minus the long list of expected tokens on syntax errors.
 
 The `play` user can't change settings, read from URLs, use `format()`, or create temporary tables, so the inline data uses `values()`. Every query shown on the site has to be valid ClickHouse SQL, which is why the grouped talks views use `groupArray()`. To make a new query box runnable, give it `data-run` (`<div class="query" data-run>`) and load `/run.js` on the page. `DESCRIBE tyler` stays decorative.
-
-## Old blog
-
-`scripts/import_wordpress.py backup/<dump>.sql` regenerates the archive from the WordPress export. `backup/` is gitignored and must never be committed, because the export contains password hashes and email addresses.
