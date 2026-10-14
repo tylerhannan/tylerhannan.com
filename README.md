@@ -40,7 +40,7 @@ Edit `public/talks.json`. Each talk has `date`, `title`, `event`, `location`, `t
 
 The query boxes on the home, photos, archive and 404 pages run on real ClickHouse. Click **▶ run** to execute the query, or **edit** to change it first (⌘/Ctrl+Enter runs it while editing).
 
-Queries go from the browser to the public [ClickHouse playground](https://play.clickhouse.com) as its read-only `play` user. There is no server of our own. `public/run.js` handles it:
+ClickHouse accepts SQL over plain HTTP, so `public/run.js` sends each query from the browser with a single `fetch()`: a POST to `https://play.clickhouse.com/?user=play` with the SQL as the body. `play` is the public [ClickHouse playground](https://play.clickhouse.com)'s read-only user and needs no password. The playground allows requests from any website (`Access-Control-Allow-Origin: *`), so there is no server of our own in between. Before sending a query, `run.js` does this:
 
 - The site's data is sent along with each query as inline tables, so `talks`, `photos`, `posts` and `pages` work like real tables. For example, a query that mentions `talks` is sent as `WITH talks AS (SELECT * FROM values(...)) <your query>`.
 - Anything else on the playground works too, such as `SHOW TABLES` or its demo datasets like `uk_price_paid`.
