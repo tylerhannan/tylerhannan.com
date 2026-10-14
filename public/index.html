@@ -147,7 +147,7 @@
       var head='';
       var k=g?g.key(t):'';
       if(g&&k!==last){ last=k; head='<tr class="g"><th colspan="4" scope="rowgroup"><button type="button" class="gh" data-g="'+esc(k)+'" aria-expanded="'+!shut[k]+'"><span class="tw" aria-hidden="true">'+(shut[k]?'▸':'▾')+'</span>'+esc(g.label(k))+'<span>'+counts[k]+' row'+(counts[k]===1?'':'s')+'</span></button></th></tr>'; }
-      var kind=t.type==='keynote'?'<span class="k">keynote</span>':'';
+      var kind=(t.type==='keynote'?'<span class="k">keynote</span>':'')+(t.mc?'<span class="k" title="Also MC for the event">mc</span>':'');
       var play=t.youtube?'<a class="play" href="'+yt(t.youtube)+'" data-i="'+i+'" aria-label="Watch '+esc(t.title)+'">▶</a>':'';
       return head+'<tr data-g="'+esc(k)+'"'+(shut[k]?' hidden':'')+'><td class="d">'+esc(ym(t.date))+'</td><td><button class="t" type="button" data-i="'+i+'" aria-expanded="false">'+esc(t.title)+'</button>'+kind+'</td><td class="e">'+esc(t.event)+'</td><td class="v">'+play+'</td></tr>';
     }).join('')||'<tr><td colspan="4" class="d">0 rows. Try another filter.</td></tr>';

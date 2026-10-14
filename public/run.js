@@ -10,16 +10,16 @@
 
   // ---- the site's data as ClickHouse tables ----
   var day=function(d){ d=String(d||''); return d.length===4?d+'-01-01':d.length===7?d+'-01':d.slice(0,10); };
-  var lit=function(v){ return v==null||v===''&&v!==0?'NULL':typeof v==='number'?String(v):"'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
+  var lit=function(v){ return typeof v==='boolean'?(v?'true':'false'):v==null||v===''&&v!==0?'NULL':typeof v==='number'?String(v):"'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
   function cte(name,schema,rows,cols){
     var vals=rows.map(function(r){return '('+cols.map(function(c){return lit(r[c])}).join(', ')+')'}).join(', ');
     return name+' AS (SELECT * FROM values('+lit(schema)+', '+(vals||'')+'))';
   }
   var TABLES={
     talks:function(){ return load('/talks.json').then(function(d){
-      var rows=(d.talks||[]).map(function(t){var o={};for(var k in t)o[k]=t[k];o.date=day(t.date);return o});
-      return cte('talks','date Date, title String, event String, location Nullable(String), type String, url Nullable(String), youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String)',
-        rows,['date','title','event','location','type','url','youtube','repo','highlight','note']); }); },
+      var rows=(d.talks||[]).map(function(t){var o={};for(var k in t)o[k]=t[k];o.date=day(t.date);o.mc=!!t.mc;return o});
+      return cte('talks','date Date, title String, event String, location Nullable(String), type String, url Nullable(String), youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String), mc Bool',
+        rows,['date','title','event','location','type','url','youtube','repo','highlight','note','mc']); }); },
     photos:function(){ return load('/photos.json').then(function(d){
       var rows=(d.photos||[]).filter(function(p){return p.file}).map(function(p){var o={};for(var k in p)o[k]=p[k];o.date=day(p.date);return o});
       return cte('photos','date Date, file String, title String, place Nullable(String), camera Nullable(String), alt Nullable(String), focus Nullable(String)',
