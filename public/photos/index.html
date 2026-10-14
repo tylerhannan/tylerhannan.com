@@ -16,7 +16,7 @@
   <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <section style="padding-top:24px">
     <p class="label">Photos</p>
-    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> *
+    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> *
    <span class="kw">FROM</span> photos
    <span class="kw">ORDER BY</span> date <span class="kw">DESC</span>;</div>
     <div class="photos" id="photo-grid"></div>
@@ -133,5 +133,6 @@
   fetch('/photos.json').then(function(r){return r.json()}).then(function(d){list=d.photos||[];render();var i=fromHash();if(i>=0) open(i,false);}).catch(function(){render()});
 })();
 </script>
+<script src="/run.js" defer></script>
 </body>
 </html>

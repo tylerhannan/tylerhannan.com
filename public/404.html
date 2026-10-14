@@ -16,14 +16,14 @@
   <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <section style="padding-top:24px">
     <p class="label">404 · Not found</p>
-    <div class="query" id="q404"><span class="p">:) </span><span class="kw">SELECT</span> *
+    <div class="query" data-run id="q404"><span class="p">:) </span><span class="kw">SELECT</span> *
    <span class="kw">FROM</span> pages
    <span class="kw">WHERE</span> path = <span class="s" id="req">'/'</span>;</div>
     <p class="foot">0 rows in set. Elapsed: 0.000 sec.</p>
     <pre class="err" role="alert">Received exception from server (version 404.0.0):
 Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may have moved when this site stopped being WordPress, or it never existed. (PAGE_NOT_FOUND)</pre>
 
-    <div class="query" style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">ngramDistance</span>(path, <span class="s" id="req3">'/'</span>) <span class="kw">AS</span> distance, title, path
+    <div class="query" data-run style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">ngramDistance</span>(path, <span class="s" id="req3">'/'</span>) <span class="kw">AS</span> distance, title, path
    <span class="kw">FROM</span> posts
    <span class="kw">ORDER BY</span> distance
    <span class="kw">LIMIT</span> <span class="n">3</span>;</div>
@@ -78,5 +78,6 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
   }).catch(function(){ near.innerHTML=''; foot.textContent='0 rows in set. (posts.json is also missing, which is impressive.)'; });
 })();
 </script>
+<script src="/run.js" defer></script>
 </body>
 </html>

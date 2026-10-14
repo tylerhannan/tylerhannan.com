@@ -16,7 +16,7 @@
   <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <section style="padding-top:24px">
     <p class="label">Writing archive</p>
-    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> date, title
+    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> date, title
    <span class="kw">FROM</span> posts
    <span class="kw">ORDER BY</span> date <span class="kw">DESC</span>;</div>
     <p class="tag" style="margin-top:16px">Older posts from the WordPress years, kept so the links still work. Some of it has aged better than the rest.</p>
@@ -55,5 +55,6 @@
   }).catch(function(){ list.innerHTML='<div class="empty-state">Couldn\'t load posts.json.</div>'; });
 })();
 </script>
+<script src="/run.js" defer></script>
 </body>
 </html>

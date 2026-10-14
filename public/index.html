@@ -37,7 +37,7 @@
 
   <section id="talks" aria-labelledby="talks-h">
     <p class="label" id="talks-h">Talks and events</p>
-    <div class="query" id="sql" aria-live="polite"></div>
+    <div class="query" data-run id="sql" aria-live="polite"></div>
     <div class="chips" id="chips" role="group" aria-label="Filter talks"></div>
     <div class="chips" id="groups" role="group" aria-label="Group talks"></div>
     <div class="tbl"><table>
@@ -49,7 +49,7 @@
 
   <section id="videos" aria-labelledby="videos-h">
     <p class="label" id="videos-h">Highlighted videos</p>
-    <div class="query"><span class="p">:) </span><span class="kw">SELECT</span> *
+    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> *
    <span class="kw">FROM</span> talks
    <span class="kw">WHERE</span> highlight <span class="kw">IS NOT NULL</span>
    <span class="kw">ORDER BY</span> highlight
@@ -91,11 +91,13 @@
     var w=[];
     if(state.type!=='all') w.push('type = <span class="s">\''+esc(state.type)+'\'</span>');
     if(state.video) w.push('youtube <span class="kw">IS NOT NULL</span>');
+    // Real ClickHouse SQL (the box is runnable): grouped modes collect each group's talks with groupArray().
     var nl='\n   ', g=GROUPS[state.group];
-    return '<span class="p">:) </span><span class="kw">SELECT</span> '+(g?g.col+', ':'')+'date, title, event'+nl+'<span class="kw">FROM</span> talks'+
+    var cols=g?g.col+','+nl+'       <span class="kw">arrayReverseSort</span>(<span class="kw">groupArray</span>((date, title, event))) <span class="kw">AS</span> talks':'date, title, event';
+    return '<span class="p">:) </span><span class="kw">SELECT</span> '+cols+nl+'<span class="kw">FROM</span> talks'+
       (w.length?nl+'<span class="kw">WHERE</span> '+w.join(nl+'  <span class="kw">AND</span> '):'')+
       (g?nl+'<span class="kw">GROUP BY</span> '+g.name:'')+
-      nl+'<span class="kw">ORDER BY</span> '+(g?g.name+' <span class="kw">DESC</span>, ':'')+'date <span class="kw">DESC</span>;';
+      nl+'<span class="kw">ORDER BY</span> '+(g?g.name+' <span class="kw">DESC</span>':'date <span class="kw">DESC</span>')+';';
   }
 
   function chips(){
@@ -166,5 +168,6 @@
     .catch(function(){document.getElementById('rows').innerHTML='<tr><td colspan="4" class="d">Couldn\'t load talks.json. Check that it sits next to index.html.</td></tr>';});
 })();
 </script>
+<script src="/run.js" defer></script>
 </body>
 </html>
