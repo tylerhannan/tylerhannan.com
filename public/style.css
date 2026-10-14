@@ -107,6 +107,7 @@ dialog .copy{margin:0}
 dialog img{touch-action:pan-y}
 footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
 footer a{color:var(--muted)}
+footer .fl{display:flex;gap:16px}
 
 /* archive + posts */
 .back{font:14px var(--mono);color:var(--muted);text-decoration:none}

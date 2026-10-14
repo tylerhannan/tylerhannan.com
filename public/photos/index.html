@@ -22,7 +22,17 @@
     <div class="photos" id="photo-grid"></div>
     <p class="foot" id="photo-foot"></p>
   </section>
-  <footer><span>tylerhannan.com</span><a href="/">home</a></footer>
+
+  <section id="contact" aria-labelledby="contact-h">
+    <p class="label" id="contact-h">Contact</p>
+    <div class="contact">
+      <span><span id="email">tyler@tylerhannan.com</span><button class="copy" id="copy" type="button">copy</button></span>
+      <a href="https://www.linkedin.com/in/tylerhannan/">linkedin</a>
+      <a href="https://twitter.com/tylerhannan">x / twitter</a>
+    </div>
+  </section>
+
+  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/archive/">writing archive</a></span></footer>
 </div>
 
 <dialog id="lightbox" aria-label="Photo">
@@ -87,6 +97,13 @@
   });
   document.getElementById('lb-close').addEventListener('click',function(){lb.close()});
   lb.addEventListener('click',function(e){ if(e.target===lb) lb.close(); });
+
+  document.getElementById('copy').addEventListener('click',function(){
+    var b=this, txt=document.getElementById('email').textContent;
+    var done=function(){b.textContent='copied';setTimeout(function(){b.textContent='copy'},1500)};
+    try{ navigator.clipboard.writeText(txt).then(done,function(){sel()}); }catch(_){ sel(); }
+    function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('email'));var s=getSelection();s.removeAllRanges();s.addRange(r);}
+  });
 
   fetch('/photos.json').then(function(r){return r.json()}).then(function(d){list=d.photos||[];render()}).catch(function(){render()});
 })();
