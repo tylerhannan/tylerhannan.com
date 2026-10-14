@@ -73,7 +73,11 @@
         show(out,b.raw?{raw:text}:{data:JSON.parse(text)},ms);
       })});
     }).catch(function(e){
-      out.innerHTML='<pre class="err" role="alert">'+esc(e.message.replace(/\s*\(version [^()]*(\([^)]*\))?\)\s*$/,''))+'</pre>';
+      var msg=e.message.replace(/\s*\(version [^()]*(\([^)]*\))?\)\s*$/,'');
+      msg=msg.replace(/\. Expected one of: [\s\S]*?(\([A-Z_]+\))?$/,'. $1');  // syntax errors list every possible token; drop it
+      // ClickHouse echoes the query it saw, including the inlined site data; show the user's query instead
+      msg=msg.replace(/failed at position \d+ \(([^)]*)\)(\s*\(line \d+, col \d+\))?: [\s\S]*?\. (\([A-Z_]+\))$/,'near "$1". $3');
+      out.innerHTML='<pre class="err" role="alert">'+esc(msg.length>600?msg.slice(0,600)+'…':msg)+'</pre>';
     }).then(function(){ btn.disabled=false; btn.textContent='▶ run'; });
   }
 
