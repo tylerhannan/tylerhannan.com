@@ -236,12 +236,45 @@ def permalink(structure, post):
     return quote(unquote(p.replace("//", "/")), safe="/")  # canonical %XX (upper case), as the host redirects to
 
 
+SITE = "https://tylerhannan.com"
+
+
+def excerpt(body, limit=155):
+    """First words of the post as plain text, for search results and link previews."""
+    text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", body))).strip()
+    text = re.sub(r" ([.,;:!?)])", r"\1", text)
+    text = re.sub(r"\[image no longer available[^\]]*\]|\[video no longer available\]", "", text).strip()
+    return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
+
+
+def post_head(title, date, path, body):
+    e = lambda v: html.escape(v, quote=True)
+    desc = excerpt(body) or "An archived post from Tyler Hannan's blog."
+    return "\n".join([
+        f'<meta name="description" content="{e(desc)}">',
+        f'<link rel="canonical" href="{SITE}{path}">',
+        '<meta property="og:type" content="article">',
+        '<meta property="og:site_name" content="Tyler Hannan">',
+        f'<meta property="og:title" content="{e(title)}">',
+        f'<meta property="og:description" content="{e(desc)}">',
+        f'<meta property="og:url" content="{SITE}{path}">',
+        f'<meta property="og:image" content="{SITE}/og.png">',
+        f'<meta property="article:published_time" content="{date}">',
+        '<meta name="twitter:card" content="summary_large_image">',
+        '<meta name="theme-color" content="#181818">',
+        '<link rel="icon" href="/favicon.ico" sizes="32x32">',
+        '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+        '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
+    ])
+
+
 PAGE = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title} · Tyler Hannan</title>
+{head}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
@@ -304,11 +337,16 @@ def main():
         # paths before matching files, so folders need the real characters; links stay encoded.
         out = PUBLIC / unquote(path.strip("/")) / "index.html"
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(PAGE.format(title=html.escape(title), date=date,
-                                   content=clean(p.get("post_content") or "", hosts)), encoding="utf-8")
+        body = clean(p.get("post_content") or "", hosts)
+        out.write_text(PAGE.format(title=html.escape(title), date=date, content=body,
+                                   head=post_head(title, date, path, body)), encoding="utf-8")
         index.append({"date": date, "title": title, "path": path})
 
     index.sort(key=lambda x: x["date"], reverse=True)
+    urls = [("/", None), ("/photos/", None), ("/archive/", None)] + [(x["path"], x["date"]) for x in index]
+    (PUBLIC / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+        "".join(f"  <url><loc>{SITE}{u}</loc>" + (f"<lastmod>{d}</lastmod>" if d else "") + "</url>\n" for u, d in urls) +
+        "</urlset>\n", encoding="utf-8")
     (PUBLIC / "archive" / "posts.json").write_text(json.dumps({"posts": index}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     print(f"Imported {len(index)} posts from {table}.")

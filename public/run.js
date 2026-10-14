@@ -18,8 +18,8 @@
   var TABLES={
     talks:function(){ return load('/talks.json').then(function(d){
       var rows=(d.talks||[]).map(function(t){var o={};for(var k in t)o[k]=t[k];o.date=day(t.date);return o});
-      return cte('talks','date Date, title String, event String, location Nullable(String), type String, url Nullable(String), youtube Nullable(String), highlight Nullable(UInt8), note Nullable(String)',
-        rows,['date','title','event','location','type','url','youtube','highlight','note']); }); },
+      return cte('talks','date Date, title String, event String, location Nullable(String), type String, url Nullable(String), youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String)',
+        rows,['date','title','event','location','type','url','youtube','repo','highlight','note']); }); },
     photos:function(){ return load('/photos.json').then(function(d){
       var rows=(d.photos||[]).filter(function(p){return p.file}).map(function(p){var o={};for(var k in p)o[k]=p[k];o.date=day(p.date);return o});
       return cte('photos','date Date, file String, title String, place Nullable(String), camera Nullable(String), alt Nullable(String), focus Nullable(String)',

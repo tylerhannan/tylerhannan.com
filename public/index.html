@@ -4,7 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tyler Hannan</title>
-<meta name="description" content="Talks, videos and writing from Tyler Hannan.">
+<meta name="description" content="Tyler Hannan has spent three decades on databases, distributed systems and developer communities. Talks, keynotes and videos, plus photos and old writing.">
+<link rel="canonical" href="https://tylerhannan.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tyler Hannan">
+<meta property="og:title" content="Tyler Hannan">
+<meta property="og:description" content="Tyler Hannan has spent three decades on databases, distributed systems and developer communities. Talks, keynotes and videos, plus photos and old writing.">
+<meta property="og:url" content="https://tylerhannan.com/">
+<meta property="og:image" content="https://tylerhannan.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@tylerhannan">
+<meta name="theme-color" content="#181818">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Person", "name": "Tyler Hannan", "url": "https://tylerhannan.com/", "jobTitle": "Storyteller", "worksFor": {"@type": "Organization", "name": "ClickHouse", "url": "https://clickhouse.com"}, "sameAs": ["https://www.linkedin.com/in/tylerhannan/", "https://twitter.com/tylerhannan", "https://github.com/tylerhannan", "https://sessionize.com/tyler-hannan"]}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
@@ -143,6 +159,7 @@
     var links=[];
     if(t.youtube) links.push('<a href="'+yt(t.youtube)+'">watch on youtube ↗</a>');
     if(t.url&&(!t.youtube||t.url.indexOf(t.youtube)<0)) links.push('<a href="'+esc(t.url)+'">event page ↗</a>');
+    if(t.repo) links.push('<a href="'+esc(t.repo)+'">code ↗</a>');
     var meta=[t.event,t.location,t.type].filter(Boolean).map(esc).join(' · ');
     var html='<tr class="x"><td></td><td colspan="3">'+meta+(t.note?'<br>'+esc(t.note):'')+'<div class="links">'+links.join('')+'</div>'+(withVideo&&t.youtube&&!framed?embed(t.youtube):'')+'</td></tr>';
     tr.insertAdjacentHTML('afterend',html); btn.setAttribute('aria-expanded','true');
