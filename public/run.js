@@ -33,7 +33,7 @@
   };
 
   function build(q){
-    q=q.replace(/^\s*:\)\s*/,'').replace(/;\s*$/,'').trim();
+    q=q.replace(/^\s*:\)\s*/,'').replace(/^(\s*--[^\n]*\n)+/,'').replace(/;\s*$/,'').trim();  // drop the prompt, leading -- comments and the final ;
     var names=Object.keys(TABLES).filter(function(n){return new RegExp('\\b'+n+'\\b','i').test(q)});
     var own=/\bFORMAT\s+\w+\s*$/i.test(q), select=/^(SELECT|WITH)\b/i.test(q);
     return Promise.all(names.map(function(n){return TABLES[n]()})).then(function(ctes){

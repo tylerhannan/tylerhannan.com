@@ -56,7 +56,7 @@ textarea.query:focus{outline:2px solid var(--accent);outline-offset:2px}
 .result .null{color:var(--muted)}
 .result .raw{font:13px/1.5 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;margin:0}
 .err{font:14px/1.7 var(--mono);color:var(--err);background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--err);border-radius:8px;padding:12px 14px;margin:16px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
-.kw{color:var(--kw)} .s{color:var(--str)} .n{color:var(--num)}
+.c{color:var(--muted);font-style:italic} .kw{color:var(--kw)} .s{color:var(--str)} .n{color:var(--num)}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}
 .chip{font:13px var(--mono);background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer}
