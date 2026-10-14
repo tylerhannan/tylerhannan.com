@@ -23,14 +23,17 @@
     <pre class="err" role="alert">Received exception from server (version 404.0.0):
 Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may have moved when this site stopped being WordPress, or it never existed. (PAGE_NOT_FOUND)</pre>
 
-    <div class="query" style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> title, path
+    <div class="query" style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">ngramDistance</span>(path, <span class="s" id="req3">'/'</span>) <span class="kw">AS</span> distance, title, path
    <span class="kw">FROM</span> posts
-   <span class="kw">ORDER BY</span> <span class="kw">ngramDistance</span>(path, <span class="s" id="req3">'/'</span>)
+   <span class="kw">ORDER BY</span> distance
    <span class="kw">LIMIT</span> <span class="n">3</span>;</div>
-    <ul class="posts" id="near"></ul>
+    <div class="tbl near"><table>
+      <thead><tr><th>distance</th><th>title</th><th>path</th></tr></thead>
+      <tbody id="near"><tr><td colspan="3" class="d">Searching…</td></tr></tbody>
+    </table></div>
     <p class="foot" id="near-foot"></p>
 
-    <p class="tag" style="margin-top:28px">Or start over: <a href="/">home</a> · <a href="/photos/">photos</a> · <a href="/archive/">writing archive</a></p>
+    <p class="restart"><span>or start over:</span><a href="/">home</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></p>
   </section>
 
   <section id="contact" aria-labelledby="contact-h">
@@ -69,10 +72,11 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
       return {p:p, d:Math.min(dist(path,ps), dist(slug,ps.replace(/^\/(\d{4}\/\d{2}\/)?/,'').replace(/\/$/,'')))};
     }).sort(function(a,b){return a.d-b.d}).slice(0,3);
     near.innerHTML=best.map(function(b){
-      return '<li><span class="d">'+b.d.toFixed(2)+'</span><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></li>';
+      var shown; try{ shown=decodeURIComponent(b.p.path); }catch(_){ shown=b.p.path; }
+      return '<tr><td class="d">'+b.d.toFixed(2)+'</td><td><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></td><td class="e">'+esc(shown)+'</td></tr>';
     }).join('');
     foot.textContent='3 rows in set. Lower is closer.';
-  }).catch(function(){ foot.textContent='0 rows in set. (posts.json is also missing, which is impressive.)'; });
+  }).catch(function(){ near.innerHTML=''; foot.textContent='0 rows in set. (posts.json is also missing, which is impressive.)'; });
 })();
 </script>
 </body>
