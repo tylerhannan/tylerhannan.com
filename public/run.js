@@ -88,7 +88,8 @@
       if(ta){ ta.remove(); box.hidden=false; this.textContent='edit'; return; }
       ta=document.createElement('textarea'); ta.className='query'; ta.spellcheck=false;
       ta.value=box.innerText.replace(/^\s*:\)\s*/,'');
-      ta.rows=Math.max(3,ta.value.split('\n').length+1);
+      var fit=function(){ ta.rows=Math.max(3,ta.value.split('\n').length+1); };
+      fit(); ta.addEventListener('input',fit);
       ta.addEventListener('keydown',function(e){ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); run(box,bar,out); } });
       box.hidden=true; box.after(ta); ta.focus(); this.textContent='reset';
     });
