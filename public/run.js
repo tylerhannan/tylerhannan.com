@@ -60,42 +60,51 @@
       'Elapsed: '+(st.elapsed!=null?st.elapsed:ms/1000).toFixed(3)+' sec.'+(st.rows_read!=null?' Processed '+st.rows_read.toLocaleString()+' rows.':'')+' Ran on play.clickhouse.com.</p>';
   }
 
-  function run(box,bar,out){
-    var ta=bar.previousElementSibling&&bar.previousElementSibling.tagName==='TEXTAREA'?bar.previousElementSibling:null;
-    var q=ta?ta.value:box.innerText;
-    var btn=bar.querySelector('.run'); btn.disabled=true; btn.textContent='running…';
-    out.hidden=false; out.innerHTML='<p class="foot">Running on play.clickhouse.com…</p>';
-    var t0=performance.now();
-    build(q).then(function(b){
-      return fetch(ENDPOINT,{method:'POST',body:b.sql}).then(function(r){return r.text().then(function(text){
-        var ms=performance.now()-t0;
-        if(!r.ok) throw new Error(text.trim()||('HTTP '+r.status));
-        show(out,b.raw?{raw:text}:{data:JSON.parse(text)},ms);
-      })});
-    }).catch(function(e){
-      var msg=e.message.replace(/\s*\(version [^()]*(\([^)]*\))?\)\s*$/,'');
-      msg=msg.replace(/\. Expected one of: [\s\S]*?(\([A-Z_]+\))?$/,'. $1');  // syntax errors list every possible token; drop it
-      // ClickHouse echoes the query it saw, including the inlined site data; show the user's query instead
-      msg=msg.replace(/failed at position \d+ \(([^)]*)\)(\s*\(line \d+, col \d+\))?: [\s\S]*?\. (\([A-Z_]+\))$/,'near "$1". $3');
-      out.innerHTML='<pre class="err" role="alert">'+esc(msg.length>600?msg.slice(0,600)+'…':msg)+'</pre>';
-    }).then(function(){ btn.disabled=false; btn.textContent='▶ run'; });
-  }
-
+  // UI: a quiet "▶ run · edit" in the box's top-right corner (outside the box element, so pages that
+  // re-render the query text, like the talks filters, don't wipe it), and a compact result below.
   function setup(box){
+    var wrap=document.createElement('div'); wrap.className='qwrap';
+    box.before(wrap); wrap.appendChild(box);
     var bar=document.createElement('div'); bar.className='runbar';
-    bar.innerHTML='<button type="button" class="copy run" title="Run on play.clickhouse.com (⌘/Ctrl+Enter while editing)">▶ run</button><button type="button" class="copy edit">edit</button>';
+    bar.innerHTML='<button type="button" class="run" title="Run on play.clickhouse.com">▶ run</button><button type="button" class="edit">edit</button>';
+    wrap.appendChild(bar);
     var out=document.createElement('div'); out.className='result'; out.hidden=true; out.setAttribute('aria-live','polite');
-    box.after(bar); bar.after(out);
-    bar.querySelector('.run').addEventListener('click',function(){run(box,bar,out)});
-    bar.querySelector('.edit').addEventListener('click',function(){
-      var ta=bar.previousElementSibling.tagName==='TEXTAREA'?bar.previousElementSibling:null;
-      if(ta){ ta.remove(); box.hidden=false; this.textContent='edit'; return; }
+    wrap.after(out);
+    var ta=null, runBtn=bar.querySelector('.run'), editBtn=bar.querySelector('.edit');
+    function run(){
+      var q=ta?ta.value:box.innerText;
+      runBtn.disabled=true; runBtn.textContent='running…';
+      out.hidden=false; out.innerHTML='<p class="foot">Running on play.clickhouse.com…</p>';
+      var t0=performance.now();
+      build(q).then(function(b){
+        return fetch(ENDPOINT,{method:'POST',body:b.sql}).then(function(r){return r.text().then(function(text){
+          var ms=performance.now()-t0;
+          if(!r.ok) throw new Error(text.trim()||('HTTP '+r.status));
+          show(out,b.raw?{raw:text}:{data:JSON.parse(text)},ms);
+        })});
+      }).catch(function(e){
+        var msg=e.message.replace(/\s*\(version [^()]*(\([^)]*\))?\)\s*$/,'');
+        msg=msg.replace(/\. Expected one of: [\s\S]*?(\([A-Z_]+\))?$/,'. $1');  // syntax errors list every possible token; drop it
+        // ClickHouse echoes the query it saw, including the inlined site data; show the user's query instead
+        msg=msg.replace(/failed at position \d+ \(([^)]*)\)(\s*\(line \d+, col \d+\))?: [\s\S]*?\. (\([A-Z_]+\))$/,'near "$1". $3');
+        out.innerHTML='<pre class="err" role="alert">'+esc(msg.length>600?msg.slice(0,600)+'…':msg)+'</pre>';
+      }).then(function(){
+        runBtn.disabled=false; runBtn.textContent='▶ run';
+        if(out.querySelector('.clear')) return;
+        var c=document.createElement('button'); c.type='button'; c.className='clear'; c.textContent='clear';
+        c.addEventListener('click',function(){ out.hidden=true; out.innerHTML=''; });
+        (out.querySelector('.foot')||out).appendChild(c);
+      });
+    }
+    runBtn.addEventListener('click',run);
+    editBtn.addEventListener('click',function(){
+      if(ta){ ta.remove(); ta=null; box.hidden=false; editBtn.textContent='edit'; return; }
       ta=document.createElement('textarea'); ta.className='query'; ta.spellcheck=false;
       ta.value=box.innerText.replace(/^\s*:\)\s*/,'');
       var fit=function(){ ta.rows=Math.max(3,ta.value.split('\n').length+1); };
       fit(); ta.addEventListener('input',fit);
-      ta.addEventListener('keydown',function(e){ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); run(box,bar,out); } });
-      box.hidden=true; box.after(ta); ta.focus(); this.textContent='reset';
+      ta.addEventListener('keydown',function(e){ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); run(); } });
+      box.hidden=true; box.after(ta); ta.focus(); editBtn.textContent='reset';
     });
   }
   function init(){ document.querySelectorAll('.query[data-run]').forEach(setup); }
