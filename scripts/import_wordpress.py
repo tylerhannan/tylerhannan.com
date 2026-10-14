@@ -157,6 +157,39 @@ RELATIVE_FIXUPS = {
 }
 
 
+# Images that were hot-linked from other sites that no longer exist. These were recovered from the
+# Wayback Machine (web.archive.org) and saved under public/wp-content/uploads/recovered/.
+RECOVERED_IMAGES = {
+    "http://www.ipcommerce.com/Portals/0/Images/application_enrollment.png": "/wp-content/uploads/recovered/application_enrollment.png",
+    "http://www.ipcommerce.com/Portals/0/Images/csb-diagram-md.png": "/wp-content/uploads/recovered/csb-diagram-md.png",
+    "http://www.ipcommerce.com/Portals/0/Slider/slider-image04-detail.png": "/wp-content/uploads/recovered/slider-image04-detail.png",
+    "http://www.ipcommerce.com/Portals/0/Slider/slider-image05-detail.png": "/wp-content/uploads/recovered/slider-image05-detail.png",
+    "http://www.ipcommerce.com/Portals/0/Slider/slider-image12-uc.png": "/wp-content/uploads/recovered/slider-image12-uc.png",
+}
+
+
+# Old Flash YouTube embeds whose videos still exist (checked via YouTube oEmbed); others are gone.
+LIVE_YOUTUBE = set()
+
+
+def flash_embed(m):
+    """Flash is dead. Keep YouTube videos as a modern embed; drop the rest (SlideShare keeps its text link)."""
+    yt = re.search(r"youtube\.com/v/([A-Za-z0-9_-]{11})", m.group(0))
+    if not yt:
+        return ""
+    if yt.group(1) in LIVE_YOUTUBE:
+        return ('<div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/%s" title="Video" '
+                'allow="encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>' % yt.group(1))
+    return '<span class="lost">[video no longer available]</span>'
+
+
+def lost_image(m):
+    """An image that is gone for good: say so instead of showing a broken-image icon."""
+    alt = re.search(r'alt="([^"]*)"', m.group(0))
+    label = html.unescape(alt.group(1)) if alt and alt.group(1).strip() else "image"
+    return '<span class="lost">[image no longer available: %s]</span>' % html.escape(label)
+
+
 def clean(content, old_hosts):
     content = re.sub(r"<!--\s*/?wp:[\s\S]*?-->", "", content)  # block editor comments
     content = re.sub(r"\[(%s)(?:\s[^\]]*)?\]([\s\S]*?)\[/\1\]" % CODE_TAGS, code_block, content)
@@ -167,6 +200,21 @@ def clean(content, old_hosts):
     for host in old_hosts:
         content = re.sub(r"https?://(www\.)?%s/wp-content/" % re.escape(host), "/wp-content/", content)
     content = re.sub(r'href="www\.', 'href="http://www.', content)  # scheme-less links
+    # dead embeds and badges: "Digg!" links, Flash players, the SlideShare logo (the link to each deck stays)
+    content = re.sub(r'<a [^>]*href="http://digg\.com/submit[^"]*"[^>]*>\s*<img[^>]*>\s*</a>', "", content)
+    content = re.sub(r'<object[\s\S]*?</object>', flash_embed, content, flags=re.I)
+    # WordPress auto-embedded a bare YouTube link that sits on its own line
+    content = re.sub(r'(?m)^\s*https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11})\S*\s*$',
+                     lambda m: '<div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/%s" title="Video" '
+                               'allow="encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>' % m.group(1),
+                     content)
+    content = re.sub(r'<a href="http://www\.slideshare\.net/\?src=embed">\s*<img[^>]*>\s*</a>\s*\|?\s*', "", content)
+    for dead, local in RECOVERED_IMAGES.items():
+        content = content.replace(dead, local)
+    content = re.sub(r'<img[^>]+src="https?://(?:blog\.jestes\.com|www\.ipcommerce\.com|commercelab\.ipcommerce\.com)/[^"]*"[^>]*>', lost_image, content)
+    # a lost image that was a link to a bigger copy on the same dead site: drop the dead link and the spacing around it
+    content = re.sub(r'<a [^>]*href="https?://(?:blog\.jestes\.com|www\.ipcommerce\.com|commercelab\.ipcommerce\.com)/[^"]*"[^>]*>\s*(<span class="lost">[^<]*</span>)\s*</a>', r"\1", content)
+    content = re.sub(r'(?:\s*<br\s*/?>)*\s*(<span class="lost">[^<]*</span>)(?:\s*<br\s*/?>)*', r"\n\1\n", content)
     for rel, absolute in RELATIVE_FIXUPS.items():
         content = content.replace('href="%s' % rel, 'href="%s' % absolute)
     return autop(content)

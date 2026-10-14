@@ -152,6 +152,7 @@ article h1{font-size:clamp(30px,5vw,44px);line-height:1.1;margin:20px 0 8px}
 article .meta{font:13px var(--mono);color:var(--muted);margin:0 0 28px}
 article .content{font-size:17px;line-height:1.7}
 article .content img{height:auto;border-radius:6px}
+.lost{display:block;margin:12px 0;font:13px var(--mono);color:var(--muted)}
 article .content pre{font:13px/1.6 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
 article .content code{font-family:var(--mono);font-size:.9em}
 article .content blockquote{margin:0;padding-left:16px;border-left:2px solid var(--line);color:var(--muted)}
