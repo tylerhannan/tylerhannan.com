@@ -27,12 +27,12 @@
     <pre class="err">Received exception from server (version 404.0.0):
 Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may have moved when this site stopped being WordPress, or it never existed. (PAGE_NOT_FOUND)</pre>
 
-    <div class="query" data-run style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="kw">ngramDistance</span>(path, <span class="s" id="req3">'/'</span>), <span class="n">2</span>) <span class="kw">AS</span> distance, title, path
+    <div class="query" data-run style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="kw">ngramSearchCaseInsensitive</span>(title, <span class="s" id="req3">''</span>), <span class="n">2</span>) <span class="kw">AS</span> match, title, path
    <span class="kw">FROM</span> pages
-   <span class="kw">ORDER BY</span> distance, path
+   <span class="kw">ORDER BY</span> match <span class="kw">DESC</span>, path
    <span class="kw">LIMIT</span> <span class="n">3</span>;</div>
     <div class="tbl near"><table>
-      <thead><tr><th>distance</th><th>title</th><th>path</th></tr></thead>
+      <thead><tr><th>match</th><th>title</th><th>path</th></tr></thead>
       <tbody id="near"><tr><td colspan="3" class="d">Searching…</td></tr></tbody>
     </table></div>
     <p class="foot" id="near-foot"></p>
@@ -55,32 +55,38 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var dec=function(p){ try{ return decodeURIComponent(p); }catch(_){ return p; } };
   var path=dec(location.pathname);
-  // a ClickHouse string literal: escape backslashes before quotes, then HTML-escape for display
-  var lit="'"+path.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
-  ['req','req2','req3'].forEach(function(id){document.getElementById(id).textContent=lit});
+  // the words someone was looking for: /2026/10/clickhouse-agents/ -> "clickhouse agents"
+  var words=path.replace(/^\/(\d{4}\/\d{2}\/)?/,'').replace(/\.[a-z0-9]+$/i,'').replace(/[\/_-]+/g,' ').trim();
+  // ClickHouse string literals: escape backslashes before quotes
+  var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
+  document.getElementById('req').textContent=lit(path); document.getElementById('req2').textContent=lit(path);
+  document.getElementById('req3').textContent=lit(words);
 
-  // The table below shows what the query above returns, computed locally: same function, same order.
-  // ngramDistance(a, b) in ClickHouse: multisets of 4-byte grams, sum |countA - countB| / (|A| + |B|).
-  var utf8=function(s){ return unescape(encodeURIComponent(s)); };  // one char per UTF-8 byte, like ClickHouse
+  // The table shows what the query above returns, computed locally: same function, same order.
+  // ngramSearchCaseInsensitive(haystack, needle) in ClickHouse: the share of the needle's 4-byte grams
+  // (lowercased) that also appear in the haystack, 0 to 1.
+  var utf8=function(s){ return unescape(encodeURIComponent(s.toLowerCase())); };
   function grams(s){ var m={},n=0; for(var i=0;i+4<=s.length;i++){ var g=s.substr(i,4); m[g]=(m[g]||0)+1; n++; } return {m:m,n:n}; }
-  function ngramDistance(a,b){
-    var A=grams(utf8(a)), B=grams(utf8(b)), diff=0, k;
-    if(!A.n&&!B.n) return 0;
-    for(k in A.m) diff+=Math.abs(A.m[k]-(B.m[k]||0));
-    for(k in B.m) if(!(k in A.m)) diff+=B.m[k];
-    return diff/(A.n+B.n);
+  function ngramSearch(hay,needle){
+    var N=grams(utf8(needle)), H=grams(utf8(hay)), hit=0, k;
+    if(!N.n) return 1;  // ClickHouse: a needle too short to have any 4-grams matches everything
+    for(k in N.m) hit+=Math.min(N.m[k],H.m[k]||0);
+    return hit/N.n;
   }
   var near=document.getElementById('near'), foot=document.getElementById('near-foot');
-  fetch('/archive/posts.json').then(function(r){ if(!r.ok) throw r; return r.json(); }).then(function(d){
+  var get=function(u){ return fetch(u).then(function(r){ if(!r.ok) throw r; return r.json(); }); };
+  Promise.all([get('/archive/posts.json'),get('/talks.json')]).then(function(r){
     // the same rows as the `pages` table run.js sends to ClickHouse
-    var pages=[{title:'Home',path:'/'},{title:'Photos',path:'/photos/'},{title:'Writing archive',path:'/archive/'}].concat(d.posts||[]);
-    var best=pages.map(function(p){ var shown=dec(p.path); return {p:p, shown:shown, d:Math.round(ngramDistance(shown,path)*100)/100}; })
-      .sort(function(a,b){ return a.d-b.d || (a.shown<b.shown?-1:a.shown>b.shown?1:0); }).slice(0,3);
+    var pages=[{title:'Home',path:'/'},{title:'Photos',path:'/photos/'},{title:'Writing archive',path:'/archive/'}]
+      .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title}; })
+      .concat((r[1].talks||[]).map(function(t){ return {path:t.url||'https://www.youtube.com/watch?v='+t.youtube,title:t.title+' · '+t.event}; }));
+    var best=pages.map(function(p){ return {p:p, m:Math.round(ngramSearch(p.title,words)*100)/100}; })
+      .sort(function(a,b){ return b.m-a.m || (a.p.path<b.p.path?-1:a.p.path>b.p.path?1:0); }).slice(0,3);
     near.innerHTML=best.map(function(b){
-      return '<tr><td class="d">'+String(b.d)+'</td><td><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></td><td class="e">'+esc(b.shown)+'</td></tr>';
+      return '<tr><td class="d">'+String(b.m)+'</td><td><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></td><td class="e">'+esc(b.p.path)+'</td></tr>';
     }).join('');
-    foot.textContent=best.length+' rows in set. Lower is closer.';
-  }).catch(function(){ near.innerHTML=''; foot.textContent='0 rows in set. (posts.json is also missing, which is impressive.)'; });
+    foot.textContent=best.length+' rows in set. 1 means every bit of what you typed is in the title.';
+  }).catch(function(){ near.innerHTML=''; foot.textContent='0 rows in set. (the data is also missing, which is impressive.)'; });
 })();
 </script>
 <script src="/run.js" defer></script>

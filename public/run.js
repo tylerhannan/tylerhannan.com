@@ -31,9 +31,12 @@
     posts:function(){ return load('/archive/posts.json').then(function(d){
       var rows=(d.posts||[]).map(function(p){return {date:day(p.date),title:p.title,path:p.path}});
       return cte('posts','date Date, title String, path String',rows,['date','title','path']); }); },
-    pages:function(){ return load('/archive/posts.json').then(function(d){
+    // every page on the site plus every talk, for the 404 page's "did you mean" query
+    pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json')]).then(function(r){
       var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
-      var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}].concat(d.posts||[]).map(function(p){ return {path:dec(p.path),title:p.title}; });
+      var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}]
+        .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title}; })
+        .concat((r[1].talks||[]).map(function(t){ return {path:t.url||'https://www.youtube.com/watch?v='+t.youtube,title:t.title+' · '+t.event}; }));
       return cte('pages','path String, title String',rows,['path','title']); }); }
   };
 
