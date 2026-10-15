@@ -52,4 +52,7 @@ d["photos"].insert(0, {"file": name, "title": title, "place": place, "date": dat
 json.dump(d, open(p, "w"), indent=2, ensure_ascii=False)
 open(p, "a").write("\n")
 PY
+# grid thumbnail, made from the location-stripped copy above
+mkdir -p public/photos/thumbs
+sips -Z 600 -s format jpeg -s formatOptions 72 "public/photos/$name" --out "public/photos/thumbs/$name" >/dev/null
 echo "Added public/photos/$name ($(du -h "public/photos/$name" | cut -f1))"

@@ -53,14 +53,14 @@
 
   <section id="talks" aria-labelledby="talks-h">
     <p class="label" id="talks-h">Talks and events</p>
-    <div class="query" data-run id="sql" aria-live="polite"></div>
+    <div class="query" data-run id="sql"></div>
     <div class="chips" id="chips" role="group" aria-label="Filter talks"></div>
     <div class="chips" id="groups" role="group" aria-label="Group talks"></div>
     <div class="tbl"><table>
       <thead><tr><th>date</th><th>title</th><th>event</th><th class="v"><span class="sr" aria-label="video">▶</span></th></tr></thead>
       <tbody id="rows"><tr><td colspan="4" class="d">Loading…</td></tr></tbody>
     </table></div>
-    <p class="foot" id="foot"></p>
+    <p class="foot" id="foot" aria-live="polite"></p>
   </section>
 
   <section id="videos" aria-labelledby="videos-h">
@@ -94,7 +94,7 @@
   var talks = [];
   var esc = function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var ym = function(d){return String(d).slice(0,7)};
-  var yt = function(id){return 'https://www.youtube.com/watch?v='+id};
+  var yt = function(id){return 'https://www.youtube.com/watch?v='+encodeURIComponent(id)};
 
   // Table grouping: each mode adds a column to the query and a header row per group.
   var GROUPS={
@@ -119,15 +119,20 @@
   }
 
   function chips(){
+    var f=document.activeElement, keep=f&&f.classList&&f.classList.contains('chip')?{type:f.dataset.type,video:f.dataset.video,group:f.dataset.group}:null;
     var types=['all'].concat(Array.from(new Set(talks.map(function(t){return t.type}))).sort());
     var el=document.getElementById('chips');
     el.innerHTML=types.map(function(t){return '<button type="button" class="chip" data-type="'+esc(t)+'" aria-pressed="'+(state.type===t)+'">'+esc(t)+'</button>'}).join('')+
       '<button type="button" class="chip" data-video="1" aria-pressed="'+state.video+'">▶ has video</button>';
     document.getElementById('groups').innerHTML='<span class="chips-l">group by</span>'+['year','has_video','none'].map(function(g){
       return '<button type="button" class="chip" data-group="'+g+'" aria-pressed="'+(state.group===g)+'">'+g+'</button>'}).join('');
+    if(keep){
+      var sel=keep.type!=null?'[data-type="'+keep.type+'"]':keep.video?'[data-video]':'[data-group="'+keep.group+'"]';
+      var again=document.querySelector('.chip'+sel); if(again) again.focus();
+    }
   }
 
-  function embed(id){return '<div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/'+esc(id)+'?autoplay=1&rel=0" title="Video" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>'}
+  function embed(id,title){return '<div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/'+esc(id)+'?autoplay=1&rel=0" title="'+esc(title||'Video')+'" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>'}
 
   function render(){
     var t0=performance.now();
@@ -142,7 +147,8 @@
       }
     }
     var shut=g?folded[state.group]:{};
-    document.getElementById('sql').innerHTML=sql();
+    var box=document.getElementById('sql'); box.innerHTML=sql();
+    if(render.done) box.dispatchEvent(new Event('query-changed')); render.done=true;
     document.getElementById('rows').innerHTML=rows.map(function(t,i){
       var head='';
       var k=g?g.key(t):'';
@@ -152,7 +158,8 @@
       return head+'<tr data-g="'+esc(k)+'"'+(shut[k]?' hidden':'')+'><td class="d">'+esc(ym(t.date))+'</td><td><button class="t" type="button" data-i="'+i+'" aria-expanded="false">'+esc(t.title)+'</button>'+kind+'</td><td class="e">'+esc(t.event)+'</td><td class="v">'+play+'</td></tr>';
     }).join('')||'<tr><td colspan="4" class="d">0 rows. Try another filter.</td></tr>';
     var ms=Math.max(0.001,(performance.now()-t0)/1000);
-    document.getElementById('foot').textContent=rows.length+' row'+(rows.length===1?'':'s')+' in set (not exhaustive, but directional). Elapsed: '+ms.toFixed(3)+' sec.';
+    var n=Object.keys(counts).length;
+    document.getElementById('foot').textContent=rows.length+' talk'+(rows.length===1?'':'s')+(g?' in '+n+' group'+(n===1?'':'s'):'')+' (not exhaustive, but directional). Rendered in '+ms.toFixed(3)+' sec.';
     render.rows=rows; chips();
   }
 
@@ -160,7 +167,7 @@
     var btn=document.querySelector('.t[data-i="'+i+'"]'); if(!btn) return;
     var tr=btn.closest('tr'), next=tr.nextElementSibling, t=render.rows[i];
     if(next&&next.classList.contains('x')){
-      if(withVideo&&t.youtube&&!next.querySelector('iframe')&&!framed){next.querySelector('td').insertAdjacentHTML('beforeend',embed(t.youtube));return}
+      if(withVideo&&t.youtube&&!next.querySelector('iframe')&&!framed){next.querySelector('td').insertAdjacentHTML('beforeend',embed(t.youtube,t.title));return}
       next.remove(); btn.setAttribute('aria-expanded','false'); return;
     }
     var links=[];
@@ -168,7 +175,7 @@
     if(t.url&&(!t.youtube||t.url.indexOf(t.youtube)<0)) links.push('<a href="'+esc(t.url)+'">event page ↗</a>');
     if(t.repo) links.push('<a href="'+esc(t.repo)+'">code ↗</a>');
     var meta=[t.event,t.location,t.type].filter(Boolean).map(esc).join(' · ');
-    var html='<tr class="x"><td></td><td colspan="3">'+meta+(t.note?'<br>'+esc(t.note):'')+'<div class="links">'+links.join('')+'</div>'+(withVideo&&t.youtube&&!framed?embed(t.youtube):'')+'</td></tr>';
+    var html='<tr class="x"><td></td><td colspan="3">'+meta+(t.note?'<br>'+esc(t.note):'')+'<div class="links">'+links.join('')+'</div>'+(withVideo&&t.youtube&&!framed?embed(t.youtube,t.title):'')+'</td></tr>';
     tr.insertAdjacentHTML('afterend',html); tr.nextElementSibling.dataset.g=tr.dataset.g||''; btn.setAttribute('aria-expanded','true');
   }
 
@@ -176,7 +183,7 @@
     // Hand-picked: talks.json entries with "highlight": 1-6 (and a youtube ID), shown in that order.
     var v=talks.filter(function(t){return t.youtube&&t.highlight}).sort(function(a,b){return a.highlight-b.highlight}).slice(0,6);
     document.getElementById('vids').innerHTML=v.map(function(t){
-      return '<a class="vid" href="'+yt(t.youtube)+'" data-id="'+esc(t.youtube)+'"><div class="thumb"><span class="ph">'+esc(t.event)+'</span><img alt="" loading="lazy" src="https://i.ytimg.com/vi/'+esc(t.youtube)+'/hqdefault.jpg" onerror="this.remove()"><span class="btn" aria-hidden="true">▶</span></div><span class="vt">'+esc(t.title)+'</span><span class="vm">'+esc(ym(t.date))+' · '+esc(t.event)+'</span></a>';
+      return '<div class="vid" data-id="'+esc(t.youtube)+'" data-title="'+esc(t.title)+'"><a class="thumb" href="'+yt(t.youtube)+'" aria-label="Play '+esc(t.title)+'"><span class="ph">'+esc(t.event)+'</span><img alt="" loading="lazy" src="https://i.ytimg.com/vi/'+esc(t.youtube)+'/hqdefault.jpg" onerror="this.remove()"><span class="btn" aria-hidden="true">▶</span></a><a class="vt" href="'+yt(t.youtube)+'">'+esc(t.title)+'</a><span class="vm">'+esc(ym(t.date))+' · '+esc(t.event)+'</span></div>';
     }).join('');
   }
 
@@ -193,7 +200,7 @@
     }
     var t=e.target.closest('.t'); if(t){ toggle(+t.dataset.i,false); return; }
     var p=e.target.closest('.play'); if(p&&!framed){ e.preventDefault(); toggle(+p.dataset.i,true); return; }
-    var v=e.target.closest('.vid'); if(v&&!framed){ e.preventDefault(); var th=v.querySelector('.thumb'); th.outerHTML=embed(v.dataset.id); return; }
+    var th=e.target.closest('.vid .thumb'); if(th&&!framed){ e.preventDefault(); var v=th.closest('.vid'); th.outerHTML=embed(v.dataset.id,v.dataset.title); return; }
   });
 
   fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();})

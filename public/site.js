@@ -6,6 +6,7 @@
   try{ if(localStorage.getItem('theme')==='light') root.dataset.theme='light'; }catch(_){}
   function label(){
     var light=root.dataset.theme==='light';
+    var tc=document.querySelector('meta[name="theme-color"]'); if(tc) tc.content=light?'#ffffff':'#181818';  // browser bar matches
     document.querySelectorAll('.theme').forEach(function(b){
       b.textContent=light?'☾ dark':'☀ light';
       b.setAttribute('aria-label','Switch to '+(light?'dark':'light')+' mode');

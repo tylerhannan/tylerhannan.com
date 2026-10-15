@@ -65,12 +65,13 @@
   var grid=document.getElementById('photo-grid'), list=[];
 
   function render(){
-    if(!list.length){ grid.outerHTML='<div class="empty-state">0 rows in set. Add photos with <code>scripts/add-photo.sh</code>.</div>'; return; }
+    if(!list.length){ grid.outerHTML='<div class="empty-state">0 rows in set.</div>'; return; }
     list.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
     grid.innerHTML=list.map(function(p,i){
       var meta=[p.place,p.date&&ym(p.date)].filter(Boolean).map(esc).join(' · ');
       var focus=/^(top|bottom|left|right|center)$/.test(p.focus)?' style="object-position:'+p.focus+'"':'';  // which edge the grid crop keeps
-      var inner=p.file?'<img src="/photos/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy"'+focus+'>':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
+      // grid uses the 600px thumbnail; fall back to the full photo if a thumbnail is missing
+      var inner=p.file?'<img src="/photos/thumbs/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy" decoding="async"'+focus+' onerror="this.onerror=null;this.src=\'/photos/'+esc(p.file)+'\'">':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
       return '<button type="button" class="photo'+(p.file?'':' empty')+'" data-i="'+i+'"'+(p.file?'':' disabled')+'>'+inner+'<span class="pc"><span class="vt">'+esc(p.title)+'</span><span class="vm">'+meta+'</span></span></button>';
     }).join('');
     var real=list.filter(function(p){return p.file}).length;
@@ -78,17 +79,20 @@
   }
 
   var lb=document.getElementById('lightbox');
-  var cur=-1;
+  var cur=-1, closing=false, queued=null, opener=null;
   // Each photo has its own URL (/photos/#<file name>): Back closes the viewer, and the link can be shared.
   var slug=function(p){return p.file.replace(/\.[^.]+$/,'')};
   function open(i,push){
+    if(closing){ queued=i; return; }  // a close is still stepping back through history; open once it lands
     show(i);
     var p=list.filter(function(q){return q.file})[cur];
     if(push) history.pushState({photo:true},'','#'+slug(p));
     if(lb.showModal&&!lb.open) lb.showModal();
   }
+  function dec(v){ try{ return decodeURIComponent(v); }catch(_){ return null; } }
   function fromHash(){
-    var h=decodeURIComponent(location.hash.slice(1)), real=list.filter(function(q){return q.file});
+    var h=dec(location.hash.slice(1)), real=list.filter(function(q){return q.file});
+    if(h==null) return -1;  // malformed link
     for(var i=0;i<real.length;i++) if(slug(real[i])===h) return i;
     return -1;
   }
@@ -97,9 +101,12 @@
     var real=list.filter(function(p){return p.file}); if(!real.length) return;
     cur=(i+real.length)%real.length;
     var p=real[cur];
-    document.getElementById('lb-img').src='/photos/'+p.file;
-    document.getElementById('lb-img').alt=p.alt||p.title;
-    document.getElementById('lb-cap').textContent=[p.title,p.place,p.date,p.camera].filter(Boolean).join(' · ');
+    var img=document.getElementById('lb-img'), cap=[p.title,p.place,p.date,p.camera].filter(Boolean).join(' · ');
+    // swap the caption when the new photo has loaded, so it never sits under the previous one
+    img.onload=function(){ document.getElementById('lb-cap').textContent=cap; img.onload=null; };
+    img.src='/photos/'+p.file; img.alt=p.alt||p.title;
+    if(img.complete) img.onload();
+    lb.setAttribute('aria-label',p.title);
     document.getElementById('lb-pos').textContent=(cur+1)+' / '+real.length;
     document.getElementById('lb-prev').parentNode.hidden=real.length<2;
     if(lb.open) history.replaceState(history.state,'','#'+slug(p));  // prev/next update the URL without piling up history
@@ -107,7 +114,7 @@
   }
   grid.addEventListener('click',function(e){
     var b=e.target.closest('.photo'); if(!b||b.disabled) return;
-    var p=list[+b.dataset.i];
+    var p=list[+b.dataset.i]; opener=b;
     open(list.filter(function(q){return q.file}).indexOf(p),true);
   });
   document.getElementById('lb-prev').addEventListener('click',function(){show(cur-1)});
@@ -117,7 +124,9 @@
     else if(e.key==='ArrowLeft'){ e.preventDefault(); show(cur-1); }
   });
   var sx=null, sy=0;
-  lb.addEventListener('touchstart',function(e){ if(e.touches.length===1){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; } },{passive:true});
+  lb.addEventListener('touchstart',function(e){
+    if(e.touches.length===1){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; } else sx=null;  // a pinch is not a swipe
+  },{passive:true});
   lb.addEventListener('touchend',function(e){
     if(sx===null) return;
     var dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy; sx=null;
@@ -127,15 +136,21 @@
   // If opening pushed a history entry, step back over it; for a shared link, just drop the #photo.
   function closeViewer(){
     if(!lb.open) return;
-    lb.close();
-    if(history.state&&history.state.photo) history.back();
+    lb.close(); refocus();
+    if(history.state&&history.state.photo){ closing=true; history.back(); }
     else history.replaceState(null,'',location.pathname+location.search);
+  }
+  function refocus(){  // back to the photo that was open, so keyboard users keep their place
+    var real=list.filter(function(q){return q.file}), p=real[cur];
+    var b=opener&&document.body.contains(opener)?opener:p&&grid.querySelector('.photo[data-i="'+list.indexOf(p)+'"]');
+    if(b) b.focus(); opener=null;
   }
   document.getElementById('lb-close').addEventListener('click',closeViewer);
   lb.addEventListener('cancel',function(e){ e.preventDefault(); closeViewer(); });  // Esc
   window.addEventListener('popstate',function(){  // browser Back/Forward
+    if(closing){ closing=false; if(queued!=null){ var q=queued; queued=null; open(q,true); } return; }
     var i=fromHash();
-    if(i<0){ if(lb.open) lb.close(); }
+    if(i<0){ if(lb.open){ lb.close(); refocus(); } }
     else open(i,false);
   });
   document.getElementById('lb-link').addEventListener('click',function(){
@@ -145,7 +160,9 @@
   });
   lb.addEventListener('click',function(e){ if(e.target===lb) closeViewer(); });
 
-  fetch('/photos.json').then(function(r){return r.json()}).then(function(d){list=d.photos||[];render();var i=fromHash();if(i>=0) open(i,false);}).catch(function(){render()});
+  fetch('/photos.json').then(function(r){ if(!r.ok) throw r; return r.json(); })
+    .then(function(d){ list=d.photos||[]; render(); var i=fromHash(); if(i>=0) open(i,false); })
+    .catch(function(){ grid.outerHTML='<div class="empty-state">Couldn\'t load the photos. Try reloading the page.</div>'; });
 })();
 </script>
 <script src="/run.js" defer></script>
