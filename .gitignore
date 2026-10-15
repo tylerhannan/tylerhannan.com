@@ -7,3 +7,7 @@ __pycache__/
 .wrangler/
 internal/
 CLAUDE.local.md
+# local secrets, never commit
+.env
+.env.*
+.dev.vars

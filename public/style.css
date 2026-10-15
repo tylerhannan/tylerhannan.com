@@ -51,6 +51,7 @@ section{padding-top:48px}
 .result .foot{margin-top:6px}
 .result .clear{all:unset;cursor:pointer;margin-left:12px;text-decoration:underline;text-decoration-color:var(--line)}
 .result .clear:hover{color:var(--accent)}
+.result .clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
 .result .err{margin-top:0}
 textarea.query{display:block;width:100%;color:var(--fg);resize:vertical;white-space:pre}
 textarea.query:focus{outline:2px solid var(--accent);outline-offset:2px}
@@ -159,7 +160,8 @@ article{max-width:68ch}
 article h1{font-size:clamp(30px,5vw,44px);line-height:1.1;margin:20px 0 8px}
 article .meta{font:13px var(--mono);color:var(--muted);margin:0 0 28px}
 article .content{font-size:17px;line-height:1.7}
-article .content img{height:auto;border-radius:6px}
+article .content img{max-width:100%;height:auto;border-radius:6px}
+article .content iframe{max-width:100%}
 .lost{display:block;margin:12px 0;font:13px var(--mono);color:var(--muted)}
 article .content pre{font:13px/1.6 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
 article .content code{font-family:var(--mono);font-size:.9em}

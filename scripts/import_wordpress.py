@@ -159,6 +159,8 @@ RELATIVE_FIXUPS = {
 
 # Images that were hot-linked from other sites that no longer exist. These were recovered from the
 # Wayback Machine (web.archive.org) and saved under public/wp-content/uploads/recovered/.
+OLD_SITE_FILES = ["TMM_Screenshot.gif", "facebook-small-icon.gif", "linkedin-small-icon.gif", "twitter-small-icon.gif", "blog.jpg"]
+
 RECOVERED_IMAGES = {
     "http://www.ipcommerce.com/Portals/0/Images/application_enrollment.png": "/wp-content/uploads/recovered/application_enrollment.png",
     "http://www.ipcommerce.com/Portals/0/Images/csb-diagram-md.png": "/wp-content/uploads/recovered/csb-diagram-md.png",
@@ -194,9 +196,17 @@ def clean(content, old_hosts):
     content = re.sub(r"<!--\s*/?wp:[\s\S]*?-->", "", content)  # block editor comments
     content = re.sub(r"\[(%s)(?:\s[^\]]*)?\]([\s\S]*?)\[/\1\]" % CODE_TAGS, code_block, content)
     content = re.sub(r"\[caption[^\]]*\]([\s\S]*?)\[/caption\]", r"<figure>\1</figure>", content)
-    content = re.sub(r"\[embed\]([\s\S]*?)\[/embed\]", r'<p><a href="\1">\1</a></p>', content)
+    content = re.sub(r"\[embed\]([\s\S]*?)\[/embed\]",
+                     lambda m: '<p><a href="%s">%s</a></p>' % (html.escape(m.group(1).strip(), quote=True), html.escape(m.group(1).strip())), content)
     content = re.sub(r"\[/?(gallery|audio|video)[^\]]*\]", "", content)
     content = re.sub(r"<script[\s\S]*?</script>", "", content, flags=re.I)  # dead third-party widgets
+    # the database was hacked once, so don't trust it: no inline event handlers, no javascript: links
+    content = re.sub(r"""\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)""", "", content, flags=re.I)
+    content = re.sub(r"""(href|src)\s*=\s*(["'])\s*javascript:[^"']*\2""", r'\1="#"', content, flags=re.I)
+    # files the old theme served outside wp-content, rescued from the old host before it went away
+    content = re.sub(r'https?://(?:www\.)?tylerhannan\.com/(?:style|images)/(%s)' % "|".join(map(re.escape, OLD_SITE_FILES)),
+                     r"/wp-content/uploads/recovered/\1", content)
+    content = re.sub(r'(<iframe[^>]+src=")http://', r"\1https://", content, flags=re.I)  # http players are blocked on https
     for host in old_hosts:
         content = re.sub(r"https?://(www\.)?%s/wp-content/" % re.escape(host), "/wp-content/", content)
     content = re.sub(r'href="www\.', 'href="http://www.', content)  # scheme-less links
@@ -204,9 +214,9 @@ def clean(content, old_hosts):
     content = re.sub(r'<a [^>]*href="http://digg\.com/submit[^"]*"[^>]*>\s*<img[^>]*>\s*</a>', "", content)
     content = re.sub(r'<object[\s\S]*?</object>', flash_embed, content, flags=re.I)
     # WordPress auto-embedded a bare YouTube link that sits on its own line
-    content = re.sub(r'(?m)^\s*https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11})\S*\s*$',
-                     lambda m: '<div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/%s" title="Video" '
-                               'allow="encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>' % m.group(1),
+    content = re.sub(r'(?m)^[ \t]*https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{11})[^\s<]*[ \t\r]*$',
+                     lambda m: '\n\n<div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/%s" title="Video" '
+                               'allow="encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>\n\n' % m.group(1),
                      content)
     content = re.sub(r'<a href="http://www\.slideshare\.net/\?src=embed">\s*<img[^>]*>\s*</a>\s*\|?\s*', "", content)
     for dead, local in RECOVERED_IMAGES.items():
@@ -335,7 +345,10 @@ def main():
         date = p["post_date"][:10]
         # WordPress stores non-ASCII slugs percent-encoded ("%e2%80%9c"). The host decodes request
         # paths before matching files, so folders need the real characters; links stay encoded.
-        out = PUBLIC / unquote(path.strip("/")) / "index.html"
+        out = (PUBLIC / unquote(path.strip("/")) / "index.html").resolve()
+        if not out.is_relative_to(PUBLIC.resolve()) or out.parent == PUBLIC.resolve():
+            print(f"Skipped post with an unsafe slug: {p.get('post_name')!r}")  # e.g. %2e%2e/ from a tampered database
+            continue
         out.parent.mkdir(parents=True, exist_ok=True)
         body = clean(p.get("post_content") or "", hosts)
         out.write_text(PAGE.format(title=html.escape(title), date=date, content=body,

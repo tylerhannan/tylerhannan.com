@@ -25,11 +25,11 @@ Then add each one:
 scripts/add-photo.sh ~/Pictures/Export/IMG_1234.jpg "Title" "Place" "YYYY-MM"
 ```
 
-The script shrinks the long edge to 2000 px (smaller photos stay as they are), removes GPS location data, saves it as `public/photos/<title>.jpg`, and adds it to the top of `public/photos.json`. Commit and push to publish.
+The script shrinks the long edge to 2000 px (smaller photos stay as they are), makes a 600 px thumbnail for the grid, strips the metadata, saves them as `public/photos/<title>.jpg` and `public/photos/thumbs/<title>.jpg`, and adds the photo to the top of `public/photos.json`. The date is required, as `YYYY-MM`. Commit and push to publish.
 
-- The script strips location data (EXIF GPS and Lightroom's XMP), but ticking "Remove Location Info" in Lightroom is still a good habit. Other metadata, like camera and copyright, is kept.
+- `scripts/strip_metadata.py` keeps only the pixels, the colour profile and the orientation. GPS, place names (EXIF, XMP and IPTC), camera and lens serial numbers, owner and copyright all go, so fill in `camera` in `photos.json` if you want it shown. Ticking "Remove Location Info" in Lightroom is still a good habit.
 - The grid crops every photo to a 4:3 landscape box. The full-size viewer shows the whole photo. If the crop cuts off the subject, add `"focus": "top"` (or `bottom`, `left`, `right`) to that photo in `photos.json`.
-- Titles become filenames, so a repeated title overwrites the earlier photo.
+- Titles become filenames; the script refuses a title whose file already exists.
 - Optional fields in `photos.json`: `camera` (shown in the viewer caption) and `alt` (a short description for screen readers; the title is used if empty).
 
 ## Talks
