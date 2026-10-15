@@ -1,6 +1,30 @@
 {
   "photos": [
     {
+      "file": "rain-vortex.jpg",
+      "title": "Rain Vortex",
+      "place": "Jewel Changi, Singapore",
+      "date": "2026-10",
+      "camera": "Film",
+      "alt": ""
+    },
+    {
+      "file": "oasia-hotel-downtown.jpg",
+      "title": "Oasia Hotel Downtown",
+      "place": "Singapore",
+      "date": "2026-10",
+      "camera": "Film",
+      "alt": ""
+    },
+    {
+      "file": "clickhouse-at-open-house.jpg",
+      "title": "#ClickHouse at Open House",
+      "place": "Bengaluru, India",
+      "date": "2026-09",
+      "camera": "Film",
+      "alt": ""
+    },
+    {
       "file": "backgammon.jpg",
       "title": "Backgammon",
       "place": "Santorini, Greece",
