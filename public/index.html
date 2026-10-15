@@ -172,7 +172,7 @@
     }
     var links=[];
     if(t.youtube) links.push('<a href="'+yt(t.youtube)+'">watch on youtube ↗</a>');
-    if(t.url&&(!t.youtube||t.url.indexOf(t.youtube)<0)) links.push('<a href="'+esc(t.url)+'">event page ↗</a>');
+    if(t.url&&(!t.youtube||t.url.indexOf(t.youtube)<0)) links.push('<a href="'+esc(t.url)+'">'+(/youtube\.com\/playlist/.test(t.url)?'all episodes':'event page')+' ↗</a>');
     if(t.repo) links.push('<a href="'+esc(t.repo)+'">code ↗</a>');
     var meta=[t.event,t.location,t.type].filter(Boolean).map(esc).join(' · ');
     var html='<tr class="x"><td></td><td colspan="3">'+meta+(t.note?'<br>'+esc(t.note):'')+'<div class="links">'+links.join('')+'</div>'+(withVideo&&t.youtube&&!framed?embed(t.youtube,t.title):'')+'</td></tr>';
