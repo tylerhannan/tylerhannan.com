@@ -19,17 +19,17 @@
 <div class="wrap">
   <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <section style="padding-top:24px">
-    <p class="label">404 · Not found</p>
+    <h1 class="label">404 · Not found</h1>
     <div class="query" data-run id="q404"><span class="p">:) </span><span class="kw">SELECT</span> *
    <span class="kw">FROM</span> pages
    <span class="kw">WHERE</span> path = <span class="s" id="req">'/'</span>;</div>
     <p class="foot">0 rows in set. Elapsed: 0.000 sec.</p>
-    <pre class="err" role="alert">Received exception from server (version 404.0.0):
+    <pre class="err">Received exception from server (version 404.0.0):
 Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may have moved when this site stopped being WordPress, or it never existed. (PAGE_NOT_FOUND)</pre>
 
-    <div class="query" data-run style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">ngramDistance</span>(path, <span class="s" id="req3">'/'</span>) <span class="kw">AS</span> distance, title, path
-   <span class="kw">FROM</span> posts
-   <span class="kw">ORDER BY</span> distance
+    <div class="query" data-run style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="kw">ngramDistance</span>(path, <span class="s" id="req3">'/'</span>), <span class="n">2</span>) <span class="kw">AS</span> distance, title, path
+   <span class="kw">FROM</span> pages
+   <span class="kw">ORDER BY</span> distance, path
    <span class="kw">LIMIT</span> <span class="n">3</span>;</div>
     <div class="tbl near"><table>
       <thead><tr><th>distance</th><th>title</th><th>path</th></tr></thead>
@@ -53,32 +53,33 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
 <script>
 (function(){
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
-  var path;
-  try{ path=decodeURIComponent(location.pathname); }catch(_){ path=location.pathname; }
-  var lit="'"+esc(path.replace(/'/g,"\\'"))+"'";
-  ['req','req2','req3'].forEach(function(id){document.getElementById(id).innerHTML=lit});
+  var dec=function(p){ try{ return decodeURIComponent(p); }catch(_){ return p; } };
+  var path=dec(location.pathname);
+  // a ClickHouse string literal: escape backslashes before quotes, then HTML-escape for display
+  var lit="'"+path.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
+  ['req','req2','req3'].forEach(function(id){document.getElementById(id).textContent=lit});
 
-  // Trigram distance, in the spirit of ClickHouse's ngramDistance(): 0 = identical, 1 = nothing in common.
-  function grams(s){ s='  '+s.toLowerCase()+' '; var m={}; for(var i=0;i<s.length-2;i++){var g=s.substr(i,3); m[g]=(m[g]||0)+1;} return m; }
-  function dist(a,b){
-    var A=grams(a), B=grams(b), na=0, nb=0, diff=0, k;
-    for(k in A) na+=A[k]; for(k in B) nb+=B[k];
-    for(k in A) diff+=Math.abs(A[k]-(B[k]||0)); for(k in B) if(!(k in A)) diff+=B[k];
-    return diff/(na+nb);
+  // The table below shows what the query above returns, computed locally: same function, same order.
+  // ngramDistance(a, b) in ClickHouse: multisets of 4-byte grams, sum |countA - countB| / (|A| + |B|).
+  var utf8=function(s){ return unescape(encodeURIComponent(s)); };  // one char per UTF-8 byte, like ClickHouse
+  function grams(s){ var m={},n=0; for(var i=0;i+4<=s.length;i++){ var g=s.substr(i,4); m[g]=(m[g]||0)+1; n++; } return {m:m,n:n}; }
+  function ngramDistance(a,b){
+    var A=grams(utf8(a)), B=grams(utf8(b)), diff=0, k;
+    if(!A.n&&!B.n) return 0;
+    for(k in A.m) diff+=Math.abs(A.m[k]-(B.m[k]||0));
+    for(k in B.m) if(!(k in A.m)) diff+=B.m[k];
+    return diff/(A.n+B.n);
   }
-  var slug=path.replace(/^\/(\d{4}\/\d{2}\/)?/,'').replace(/\/$/,'');
   var near=document.getElementById('near'), foot=document.getElementById('near-foot');
-  fetch('/archive/posts.json').then(function(r){return r.json()}).then(function(d){
+  fetch('/archive/posts.json').then(function(r){ if(!r.ok) throw r; return r.json(); }).then(function(d){
+    // the same rows as the `pages` table run.js sends to ClickHouse
     var pages=[{title:'Home',path:'/'},{title:'Photos',path:'/photos/'},{title:'Writing archive',path:'/archive/'}].concat(d.posts||[]);
-    var best=pages.map(function(p){
-      var ps; try{ ps=decodeURIComponent(p.path); }catch(_){ ps=p.path; }
-      return {p:p, d:Math.min(dist(path,ps), dist(slug,ps.replace(/^\/(\d{4}\/\d{2}\/)?/,'').replace(/\/$/,'')))};
-    }).sort(function(a,b){return a.d-b.d}).slice(0,3);
+    var best=pages.map(function(p){ var shown=dec(p.path); return {p:p, shown:shown, d:Math.round(ngramDistance(shown,path)*100)/100}; })
+      .sort(function(a,b){ return a.d-b.d || (a.shown<b.shown?-1:a.shown>b.shown?1:0); }).slice(0,3);
     near.innerHTML=best.map(function(b){
-      var shown; try{ shown=decodeURIComponent(b.p.path); }catch(_){ shown=b.p.path; }
-      return '<tr><td class="d">'+b.d.toFixed(2)+'</td><td><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></td><td class="e">'+esc(shown)+'</td></tr>';
+      return '<tr><td class="d">'+String(b.d)+'</td><td><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></td><td class="e">'+esc(b.shown)+'</td></tr>';
     }).join('');
-    foot.textContent='3 rows in set. Lower is closer.';
+    foot.textContent=best.length+' rows in set. Lower is closer.';
   }).catch(function(){ near.innerHTML=''; foot.textContent='0 rows in set. (posts.json is also missing, which is impressive.)'; });
 })();
 </script>

@@ -28,7 +28,8 @@
       var rows=(d.posts||[]).map(function(p){return {date:day(p.date),title:p.title,path:p.path}});
       return cte('posts','date Date, title String, path String',rows,['date','title','path']); }); },
     pages:function(){ return load('/archive/posts.json').then(function(d){
-      var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}].concat(d.posts||[]);
+      var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
+      var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}].concat(d.posts||[]).map(function(p){ return {path:dec(p.path),title:p.title}; });
       return cte('pages','path String, title String',rows,['path','title']); }); }
   };
 
