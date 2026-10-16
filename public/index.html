@@ -111,7 +111,7 @@
     // Real ClickHouse SQL (the box is runnable): grouped modes collect each group's talks with groupArray().
     var nl='\n   ', g=GROUPS[state.group];
     var cols=g?g.col+','+nl+'       <span class="kw">arrayReverseSort</span>(<span class="kw">groupArray</span>((date, title, event))) <span class="kw">AS</span> talks':'date, title, event';
-    return '<span class="p">:) </span><span class="c">-- not exhaustive, but directional:</span>'+nl+'<span class="c">-- plus countless customer dinners, meetups and hallway tracks</span>'+nl+
+    return '<span class="p">:) </span><span class="c">-- not exhaustive, but directional:</span>'+nl+'<span class="c">-- plus countless customer dinners, meetups, and hallway tracks</span>'+nl+
       '<span class="kw">SELECT</span> '+cols+nl+'<span class="kw">FROM</span> talks'+
       (w.length?nl+'<span class="kw">WHERE</span> '+w.join(nl+'  <span class="kw">AND</span> '):'')+
       (g?nl+'<span class="kw">GROUP BY</span> '+g.name:'')+
