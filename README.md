@@ -36,6 +36,10 @@ The script shrinks the long edge to 2000 px (smaller photos stay as they are), m
 
 Edit `public/talks.json`. Each talk has `date`, `title`, `event`, `location`, `type` (keynote / talk / webinar / video / podcast / host, for MC and host slots), `url`, `youtube` (the 11-character video ID, or `null`), and optionally `note`, `mc` (`true` adds an "mc" tag for events Tyler also hosted) and `repo` (a public GitHub repo for the talk, shown as a "code ↗" link). To show a talk in **Highlighted videos** on the home page, give it `"highlight": 1` to `6` (the number sets its position).
 
+## Demos
+
+Edit `public/demos.json`. Each demo has `date`, `name`, `about` (one line), `event` (or `null`, e.g. for client work that can't be named) and `repo`. They show in the **Demos** section on the home page, newest first. A talk with a demo also gets `repo` in `talks.json`, which adds a "code" tag to its row.
+
 ## Runnable queries
 
 The query boxes on the home, photos, archive and 404 pages run on real ClickHouse. Click **▶ run** to execute the query, or **edit** to change it first (⌘/Ctrl+Enter runs it while editing).

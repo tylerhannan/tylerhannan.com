@@ -1,5 +1,5 @@
 // Makes the query boxes runnable against real ClickHouse (the public, read-only play.clickhouse.com).
-// Boxes opt in with data-run. The site's own data is sent inline as CTEs (talks, photos, posts, pages),
+// Boxes opt in with data-run. The site's own data is sent inline as CTEs (talks, photos, posts, pages, demos),
 // so `FROM talks` works; anything else on the playground (SHOW TABLES, its demo datasets) works too.
 (function(){
   var ENDPOINT='https://play.clickhouse.com/?user=play';
@@ -31,6 +31,9 @@
     posts:function(){ return load('/archive/posts.json').then(function(d){
       var rows=(d.posts||[]).map(function(p){return {date:day(p.date),title:p.title,path:p.path}});
       return cte('posts','date Date, title String, path String',rows,['date','title','path']); }); },
+    demos:function(){ return load('/demos.json').then(function(d){
+      var rows=(d.demos||[]).map(function(x){var o={};for(var k in x)o[k]=x[k];o.date=day(x.date);return o});
+      return cte('demos','date Date, name String, about String, event Nullable(String), repo String',rows,['date','name','about','event','repo']); }); },
     // every page on the site plus every talk, for the 404 page's "did you mean" query
     pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json')]).then(function(r){
       var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
@@ -55,7 +58,7 @@
         return {sql: own ? withTables(ctes,q) : withTables(ctes,'SELECT * FROM (\n'+q+'\n) LIMIT '+(MAX_ROWS+1))+fmt, raw:own};
       if((m=q.match(/^(EXPLAIN(?:\s+(?:AST|SYNTAX|QUERY\s+TREE|PLAN|PIPELINE|ESTIMATE))?(?:\s+\w+\s*=\s*\w+(?:\s*,\s*\w+\s*=\s*\w+)*)?)\s+((?:SELECT|WITH)\b[\s\S]*)$/i)))
         return {sql: m[1]+' '+withTables(ctes,m[2])+fmt, raw:own};
-      if((m=q.match(/^(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(talks|photos|posts|pages)\s*$/i)))  // a site table isn't a real table
+      if((m=q.match(/^(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(talks|photos|posts|pages|demos)\s*$/i)))  // a site table isn't a real table
         return {sql: m[1]+' ('+withTables(ctes,'SELECT * FROM '+m[2].toLowerCase())+')'+fmt};
       return {sql:q+fmt, raw:own};  // SHOW, other DESCRIBE/EXPLAIN …
     });

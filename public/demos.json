@@ -1,0 +1,8 @@
+{
+  "demos": [
+    { "date": "2026-10", "name": "From Humans to Agents", "about": "Claude agents on ClickHouse via MCP, traced and evaluated in Langfuse", "event": "World Summit AI Amsterdam 2026", "repo": "https://github.com/tylerhannan/world-summit-ai-from-humans-to-agents" },
+    { "date": "2026-09", "name": "Kill Your Dashboards", "about": "A synthetic iGaming dataset generated entirely in SQL, with five problems planted in it that no dashboard would surface", "event": "Tech Race Summit 2026", "repo": "https://github.com/tylerhannan/kill-your-dashboards" },
+    { "date": "2026-07", "name": "ClickCity", "about": "Isometric pixel-art schema visualizer: every table is a building, sized by disk footprint and lit by recent reads and writes", "event": "API Days Munich", "repo": "https://github.com/tylerhannan/ClickCity" },
+    { "date": "2026-06", "name": "Redpanda to ClickHouse", "about": "Stream clickstream events from Redpanda Serverless into ClickHouse Cloud via ClickPipes", "event": null, "repo": "https://github.com/tylerhannan/redpanda-demo" }
+  ]
+}
