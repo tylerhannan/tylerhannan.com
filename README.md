@@ -40,6 +40,29 @@ Edit `public/talks.json`. Each talk has `date`, `title`, `event`, `location`, `t
 
 Edit `public/demos.json`. Each demo has `date`, `name`, `about` (one line), `event` (or `null`, e.g. for client work that can't be named) and `repo`. They show in the **Demos** section on the home page, newest first. A talk with a demo also gets `repo` in `talks.json`, which adds a "code" tag to its row.
 
+## Editing data with SQL
+
+`scripts/ch` is a tiny clickhouse-client for the site's JSON files, so you never hand-edit them:
+
+```sh
+scripts/ch                       # interactive: tylerhannan.com :) prompt, end statements with ;
+scripts/ch "DESCRIBE talks"      # one-off
+scripts/ch < changes.sql         # from a file
+```
+
+```sql
+INSERT INTO talks (date, title, event, location, type, url, youtube)
+VALUES ('2026-11-04', 'Kill Your Dashboards', 'Some Conf 2026', 'Paris, FR', 'talk', 'https://someconf.io', NULL);
+
+ALTER TABLE talks UPDATE youtube = 'https://youtu.be/…' WHERE title = 'Kill Your Dashboards';
+UPDATE photos SET camera = 'Rolleiflex 2.8e' WHERE place ILIKE '%singapore%';
+DELETE FROM demos WHERE name = 'Thing';
+
+SELECT date, title FROM talks WHERE youtube IS NULL ORDER BY date DESC LIMIT 5;
+```
+
+`INSERT`, `UPDATE` and `DELETE` rewrite `talks.json`, `demos.json` or `photos.json` in place, after checking each value against the table's schema (`DESCRIBE talks` shows it): dates, talk types, URLs, YouTube IDs (a full YouTube URL is accepted), unique highlight slots. Errors come back ClickHouse style (`Code: 16. DB::Exception: There is no column titel in table talks. Maybe you meant title?`). New rows go in date order without reshuffling the rest. `SELECT` (and anything else) runs on play.clickhouse.com with your local files sent along as tables, the same way the site's run buttons work, so you can check an edit before pushing. Photos are `UPDATE` only: add them with `scripts/add-photo.sh`. Nothing is committed; review with `git diff`, then commit and push.
+
 ## Runnable queries
 
 The query boxes on the home, photos, archive and 404 pages run on real ClickHouse. Click **▶ run** to execute the query, or **edit** to change it first (⌘/Ctrl+Enter runs it while editing).

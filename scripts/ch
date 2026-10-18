@@ -1,0 +1,797 @@
+#!/usr/bin/env python3
+"""ch: edit the site's data with SQL, clickhouse-client style.
+
+    scripts/ch                          interactive: a :) prompt, end each statement with ;
+    scripts/ch "INSERT INTO ..."        one-off (several statements separated by ; work too)
+    scripts/ch < changes.sql            from a file
+
+Local tables, backed by the JSON files the site reads:
+    talks   public/talks.json
+    demos   public/demos.json
+    photos  public/photos.json   (UPDATE only: add photos with scripts/add-photo.sh)
+
+INSERT, ALTER TABLE ... UPDATE / DELETE, UPDATE ... SET and DELETE FROM rewrite the JSON in place, after
+checking every value against the table's schema (DESCRIBE talks shows it). SELECT runs on real ClickHouse
+(play.clickhouse.com, public and read-only) with your local files sent along as tables, the same way the
+site's run buttons work, so you can check an edit before you push it. Type help at the prompt for examples.
+
+Stdlib only. Nothing is committed or pushed: review with git diff, then commit as usual.
+"""
+import datetime
+import difflib
+import json
+import os
+import re
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+ENDPOINT = "https://play.clickhouse.com/?user=play"
+TTY = sys.stdout.isatty()
+
+
+def color(code, s):
+    return f"\033[{code}m{s}\033[0m" if TTY else s
+
+
+class CHError(Exception):
+    def __init__(self, code, name, msg):
+        super().__init__(msg)
+        self.code, self.name, self.msg = code, name, msg
+
+    def __str__(self):
+        return f"Code: {self.code}. DB::Exception: {self.msg}. ({self.name})"
+
+
+def err(code, name, msg):
+    return CHError(code, name, msg)
+
+
+# ---- schemas ----------------------------------------------------------------------------------------
+# mode: req = must have a value; null = always written, may be null; opt = left out of the JSON when
+# null/false; empty = written as "" when unset (photos.json style).
+TALK_TYPES = ("keynote", "talk", "webinar", "video", "podcast", "host")
+FOCUS = ("top", "bottom", "left", "right")
+
+
+def col(name, kind, mode, shown, comment=""):
+    return {"name": name, "kind": kind, "mode": mode, "type": shown, "comment": comment}
+
+
+TABLES = {
+    "talks": {
+        "file": "public/talks.json", "key": "talks", "style": "rows", "insert": True, "delete": True,
+        "cols": [
+            col("date", "date", "req", "Date", "YYYY-MM-DD, or YYYY-MM when the day is unknown"),
+            col("title", "str", "req", "String"),
+            col("event", "str", "req", "String"),
+            col("location", "str", "opt", "Nullable(String)", "City, CC (e.g. 'Munich, DE'); NULL for online"),
+            col("type", "talktype", "req", "Enum(" + ", ".join(f"'{t}'" for t in TALK_TYPES) + ")",
+                "host = MC/host slots; video = standalone, not tied to an event"),
+            col("url", "url", "null", "Nullable(String)", "event or talk page"),
+            col("youtube", "youtube", "null", "Nullable(FixedString(11))", "video ID; a YouTube URL works too"),
+            col("note", "str", "opt", "Nullable(String)", "shown when the row is expanded"),
+            col("repo", "url", "opt", "Nullable(String)", "demo code; adds a 'code' tag"),
+            col("highlight", "highlight", "opt", "Nullable(UInt8)", "1-6: position in Highlighted videos (needs youtube)"),
+            col("mc", "bool", "opt", "Bool", "true adds an 'mc' tag"),
+        ],
+    },
+    "demos": {
+        "file": "public/demos.json", "key": "demos", "style": "rows", "insert": True, "delete": True,
+        "cols": [
+            col("date", "date", "req", "Date", "YYYY-MM is fine"),
+            col("name", "str", "req", "String"),
+            col("about", "str", "req", "String", "one line"),
+            col("event", "str", "null", "Nullable(String)", "NULL for client work that can't be named"),
+            col("repo", "url", "req", "String", "GitHub URL"),
+        ],
+    },
+    "photos": {
+        "file": "public/photos.json", "key": "photos", "style": "indent", "insert": False, "delete": False,
+        "cols": [
+            col("file", "str", "req", "String", "add photos with scripts/add-photo.sh"),
+            col("title", "str", "req", "String"),
+            col("place", "str", "empty", "String"),
+            col("date", "month", "req", "Date", "YYYY-MM"),
+            col("camera", "str", "empty", "String", "e.g. 'Rolleiflex 2.8e', 'Leica M6 · Summicron 50mm f/2'"),
+            col("alt", "str", "empty", "String", "alt text for screen readers"),
+            col("focus", "focus", "opt", "Nullable(Enum('top', 'bottom', 'left', 'right'))", "which part the grid crop keeps"),
+        ],
+    },
+}
+
+
+def spec(table):
+    t = table.split(".")[-1].lower()
+    if t not in TABLES:
+        hint = difflib.get_close_matches(t, TABLES, n=1)
+        raise err(60, "UNKNOWN_TABLE", f"Table {t} does not exist" + (f". Maybe you meant {hint[0]}?" if hint else
+                  f" here (local tables: {', '.join(TABLES)}; SELECT reaches the playground's tables too)"))
+    return t, TABLES[t]
+
+
+def column(table, s, name):
+    for c in s["cols"]:
+        if c["name"] == name.lower():
+            return c
+    hint = difflib.get_close_matches(name.lower(), [c["name"] for c in s["cols"]], n=1)
+    raise err(16, "NO_SUCH_COLUMN_IN_TABLE", f"There is no column {name} in table {table}" +
+              (f". Maybe you meant {hint[0]}?" if hint else ""))
+
+
+# ---- values ------------------------------------------------------------------------------------------
+YT_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+
+def check_date(c, v):
+    m = re.fullmatch(r"(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?", v)
+    if m and not (c["kind"] == "month" and (not m.group(2) or m.group(3))):
+        try:
+            datetime.date(int(m.group(1)), int(m.group(2) or 1), int(m.group(3) or 1))
+            return v
+        except ValueError:
+            pass
+    want = "YYYY-MM" if c["kind"] == "month" else "YYYY-MM-DD or YYYY-MM"
+    raise err(38, "CANNOT_PARSE_DATE", f"Cannot parse date '{v}' for column {c['name']}: expected {want}")
+
+
+def check(table, c, v):
+    """Validate one value for column c; returns the value to store (or None)."""
+    name, kind = c["name"], c["kind"]
+    if v is None or (v == "" and kind != "str"):
+        if c["mode"] == "req":
+            raise err(36, "BAD_ARGUMENTS", f"Column {name} in table {table} can't be NULL")
+        return None
+    if kind == "bool":
+        if v in (True, False, 0, 1):
+            return bool(v)
+        raise err(53, "TYPE_MISMATCH", f"Column {name} is Bool: use true or false, got {v!r}")
+    if kind == "highlight":
+        if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= 6:
+            raise err(36, "BAD_ARGUMENTS", f"highlight is a position from 1 to 6, got {v!r}")
+        return v
+    if not isinstance(v, str):
+        raise err(53, "TYPE_MISMATCH", f"Column {name} is a string type: quote the value ('{v}')")
+    if kind in ("date", "month"):
+        return check_date(c, v)
+    if kind == "str":
+        if v.strip() == "" and c["mode"] == "req":
+            raise err(36, "BAD_ARGUMENTS", f"Column {name} in table {table} can't be empty")
+        return v
+    if kind == "url":
+        if not re.match(r"^https?://\S+$", v):
+            raise err(36, "BAD_ARGUMENTS", f"Column {name} must be a full URL (https://...), got '{v}'")
+        return v
+    if kind == "youtube":
+        if YT_ID.match(v):
+            return v
+        m = re.search(r"(?:[?&]v=|youtu\.be/|/embed/|/shorts/|/live/)([A-Za-z0-9_-]{11})", v)
+        if m:
+            return m.group(1)
+        raise err(36, "BAD_ARGUMENTS", f"youtube must be an 11-character video ID or a YouTube video URL, got '{v}'")
+    if kind == "talktype":
+        if v in TALK_TYPES:
+            return v
+        hint = difflib.get_close_matches(v, TALK_TYPES, n=1)
+        raise err(36, "BAD_ARGUMENTS", f"Unknown element '{v}' for enum type: "
+                  f"{', '.join(TALK_TYPES)}" + (f". Maybe you meant '{hint[0]}'?" if hint else ""))
+    if kind == "focus":
+        if v in FOCUS:
+            return v
+        raise err(36, "BAD_ARGUMENTS", f"focus is one of {', '.join(FOCUS)}, got '{v}'")
+    raise AssertionError(kind)
+
+
+def get(s, row, name):
+    """A row's value as ClickHouse sees it ("" and missing are NULL; missing Bool is false)."""
+    v = row.get(name)
+    if v == "" or v is None:
+        v = None
+    c = next((c for c in s["cols"] if c["name"] == name), None)
+    if c and c["kind"] == "bool":
+        return bool(v)
+    return v
+
+
+def build(s, values, original=None):
+    """A JSON row in schema order, keeping any extra keys the original row had."""
+    out = {}
+    for c in s["cols"]:
+        v = values.get(c["name"])
+        if c["mode"] in ("req", "null"):
+            out[c["name"]] = v
+        elif c["mode"] == "empty":
+            out[c["name"]] = "" if v is None else v
+        elif v is not None and v is not False:
+            out[c["name"]] = v
+    known = {c["name"] for c in s["cols"]}
+    for k, v in (original or {}).items():
+        if k not in known:
+            out[k] = v
+    return out
+
+
+def row_checks(table, s, row):
+    if table == "talks" and row.get("highlight") and not row.get("youtube"):
+        raise err(36, "BAD_ARGUMENTS", f"'{row['title']}' needs a youtube ID to be a highlighted video")
+
+
+def table_checks(table, rows, changed):
+    if table == "talks":
+        for new in changed:
+            h = new.get("highlight")
+            other = next((r for r in rows if h and r is not new and r.get("highlight") == h), None)
+            if other:
+                raise err(36, "BAD_ARGUMENTS", f"highlight {h} is already '{other['title']}'. Move that one first: "
+                          f"ALTER TABLE talks UPDATE highlight = NULL WHERE title = {lit(other['title'])}")
+
+
+def sort_key(d):
+    d = str(d or "")
+    return d + "-00-00" if len(d) == 4 else d + "-00" if len(d) == 7 else d
+
+
+def place(rows, row):
+    """Insert newest-first without moving existing rows: before the first row that's older."""
+    k = sort_key(row.get("date"))
+    for i, r in enumerate(rows):
+        if sort_key(r.get("date")) < k:
+            rows.insert(i, row)
+            return
+    rows.append(row)
+
+
+# ---- files -------------------------------------------------------------------------------------------
+def dumps(obj, style):
+    if style == "indent":
+        return json.dumps(obj, indent=2, ensure_ascii=False) + "\n"
+    j = lambda v: json.dumps(v, ensure_ascii=False)
+
+    def f(v, ind):
+        pad = "  " * ind
+        if isinstance(v, dict) and v:
+            return "{\n" + ",\n".join(f"{pad}  {j(k)}: {f(x, ind + 1)}" for k, x in v.items()) + f"\n{pad}}}"
+        if isinstance(v, list) and v:
+            inner = [("{ " + ", ".join(f"{j(k)}: {j(y)}" for k, y in x.items()) + " }") if isinstance(x, dict)
+                     else f(x, ind + 1) for x in v]
+            return "[\n" + ",\n".join(pad + "  " + s for s in inner) + f"\n{pad}]"
+        return j(v)
+    return f(obj, 0) + "\n"
+
+
+def load(s):
+    return json.loads((ROOT / s["file"]).read_text(encoding="utf-8"))
+
+
+def save(s, data):
+    p = ROOT / s["file"]
+    tmp = p.with_suffix(".json.tmp")
+    tmp.write_text(dumps(data, s["style"]), encoding="utf-8")
+    os.replace(tmp, p)
+
+
+# ---- output ------------------------------------------------------------------------------------------
+def show(v):
+    return "ᴺᵁᴸᴸ" if v is None else ("true" if v is True else "false" if v is False else str(v))
+
+
+def pretty(header, rows):
+    w = [max([len(h)] + [len(show(r[i])) for r in rows]) for i, h in enumerate(header)]
+    print("┌" + "┬".join("─" + h + "─" * (w[i] - len(h) + 1) for i, h in enumerate(header)) + "┐")
+    for r in rows:
+        print("│ " + " │ ".join(show(r[i]).ljust(w[i]) for i in range(len(header))) + " │")
+    print("└" + "┴".join("─" * (x + 2) for x in w) + "┘")
+
+
+def vertical(rows):
+    for n, r in enumerate(rows, 1):
+        print(f"Row {n}:\n" + "─" * (len(str(n)) + 5))
+        w = max(len(k) for k in r)
+        for k, v in r.items():
+            print(f"{k}:{' ' * (w - len(k) + 1)}{show(v)}")
+        print()
+
+
+def done(msg, t0, hint=None):
+    print(f"Ok. {msg} Elapsed: {time.time() - t0:.3f} sec.\n" + (f"{hint}\n" if hint else ""))
+
+
+# ---- remote SELECT (same tables as public/run.js) -----------------------------------------------------
+def lit(v):
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if v is None or v == "":
+        return "NULL"
+    if isinstance(v, (int, float)):
+        return str(v)
+    return "'" + str(v).replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+
+def day(d):
+    d = str(d or "")
+    return d + "-01-01" if len(d) == 4 else d + "-01" if len(d) == 7 else d[:10]
+
+
+REMOTE = {
+    "talks": ("date Date, title String, event String, location Nullable(String), type String, url Nullable(String), "
+              "youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String), mc Bool",
+              lambda: [dict(t, date=day(t.get("date")), mc=bool(t.get("mc"))) for t in load(TABLES["talks"])["talks"]]),
+    "demos": ("date Date, name String, about String, event Nullable(String), repo String",
+              lambda: [dict(x, date=day(x.get("date"))) for x in load(TABLES["demos"])["demos"]]),
+    "photos": ("date Date, file String, title String, place Nullable(String), camera Nullable(String), "
+               "alt Nullable(String), focus Nullable(String)",
+               lambda: [dict(p, date=day(p.get("date"))) for p in load(TABLES["photos"])["photos"] if p.get("file")]),
+    "posts": ("date Date, title String, path String",
+              lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"])
+                       for p in json.loads((ROOT / "public/archive/posts.json").read_text(encoding="utf-8"))["posts"]]),
+}
+
+
+def remote(q, t0):
+    q = re.sub(r";\s*$", "", q.strip())
+    q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts)\b", r"\1", q, flags=re.I)  # as in local statements
+    ctes = []
+    for name, (schema, rows) in REMOTE.items():
+        if re.search(rf"\b{name}\b", q, re.I):
+            cols = [c.split()[0] for c in schema.split(", ")]
+            vals = ", ".join("(" + ", ".join(lit(r.get(c)) for c in cols) + ")" for r in rows())
+            ctes.append(f"{name} AS (SELECT * FROM values({lit(schema)}, {vals}))")
+    if ctes:
+        q = ("WITH " + ", ".join(ctes) + ", " + re.sub(r"^WITH\s+", "", q, flags=re.I) if re.match(r"WITH\b", q, re.I)
+             else "WITH " + ", ".join(ctes) + " " + q) if re.match(r"(SELECT|WITH)\b", q, re.I) else q
+    mine = not re.search(r"\bFORMAT\s+\w+\s*$", q, re.I)
+    if mine:
+        q += "\nFORMAT PrettyCompactMonoBlock"
+    req = urllib.request.Request(ENDPOINT, data=q.encode(), method="POST", headers={"User-Agent": "tylerhannan.com scripts/ch"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            body = r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "replace").strip()
+        m = re.search(r"Code: (\d+)\. DB::Exception: (.*?)\.?\s*\((\w+)\)\s*(?:\(version .*\))?\s*$", body, re.S)
+        if not m:
+            raise err(e.code, "HTTP_ERROR", body[:500] or str(e))
+        msg = re.sub(r"\s*(In scope|Expected one of)\b.*$", "", m.group(2), flags=re.S)  # drop the echoed data
+        msg = msg.rstrip(".")
+        raise err(int(m.group(1)), m.group(3), (msg[:500] + " …") if len(msg) > 500 else msg)
+    except urllib.error.URLError as e:
+        raise err(210, "NETWORK_ERROR", f"Can't reach play.clickhouse.com ({e.reason}); local edits still work")
+    print(body, end="" if body.endswith("\n") else "\n")
+    n = len(re.findall(r"^ *\d+\. │", body, re.M)) if mine else None  # Pretty formats number their rows
+    print(("\n" + (f"{n} row{'' if n == 1 else 's'} in set. " if n is not None else "")) +
+          f"Elapsed: {time.time() - t0:.3f} sec.\n")
+
+
+# ---- parser ------------------------------------------------------------------------------------------
+TOK = re.compile(r"""(?P<str>'(?:[^'\\]|\\.|'')*')|(?P<num>\d+(?:\.\d+)?)|(?P<id>[A-Za-z_][A-Za-z0-9_]*)"""
+                 r"""|(?P<q>`[^`]*`|"[^"]*")|(?P<op><>|!=|[(),=;*.<>-])""", re.S)
+SKIP = re.compile(r"(?:\s+|--[^\n]*|/\*.*?\*/)*", re.S)
+
+
+def unquote(s):
+    return re.sub(r"\\(.)|''", lambda m: {"n": "\n", "t": "\t", "0": "\0"}.get(m.group(1), m.group(1))
+                  if m.group(1) is not None else "'", s[1:-1], flags=re.S)
+
+
+class Parser:
+    def __init__(self, s):
+        self.s, self.i = s, 0
+
+    def tok(self, move=True):
+        i = SKIP.match(self.s, self.i).end()
+        if i >= len(self.s):
+            return ("eof", "", i)
+        m = TOK.match(self.s, i)
+        if not m:
+            what = "unterminated string" if self.s[i] == "'" else f"unexpected '{self.s[i]}'"
+            raise err(62, "SYNTAX_ERROR", f"Syntax error at position {i}: {what}")
+        kind = m.lastgroup
+        val = m.group()
+        if kind == "str":
+            val = unquote(val)
+        elif kind == "q":
+            kind, val = "id", val[1:-1]
+        if move:
+            self.i = m.end()
+        return (kind, val, i)
+
+    def peek(self):
+        return self.tok(move=False)
+
+    def fail(self, want, t=None):
+        t = t or self.peek()
+        got = "end of query" if t[0] == "eof" else f"'{self.s[t[2]:t[2] + 20]}'"
+        raise err(62, "SYNTAX_ERROR", f"Syntax error: failed at position {t[2] + 1} ({got}): expected {want}")
+
+    def kw(self, *words):
+        t = self.peek()
+        if t[0] == "id" and t[1].upper() in words:
+            self.tok()
+            return t[1].upper()
+        return None
+
+    def need(self, *words):
+        return self.kw(*words) or self.fail(" or ".join(words))
+
+    def op(self, o):
+        t = self.peek()
+        if t[0] == "op" and t[1] == o:
+            self.tok()
+            return True
+        return False
+
+    def need_op(self, o):
+        self.op(o) or self.fail(f"'{o}'")
+
+    def ident(self, what="identifier"):
+        t = self.peek()
+        if t[0] != "id":
+            self.fail(what)
+        self.tok()
+        j = SKIP.match(self.s, self.i).end()
+        if self.s[j:j + 1] == ".":  # db.table: the database part doesn't matter here
+            self.i = j + 1
+            return self.ident(what)
+        return t[1]
+
+    def literal(self):
+        neg = self.op("-")
+        t = self.tok()
+        if t[0] == "num":
+            v = float(t[1]) if "." in t[1] else int(t[1])
+            return -v if neg else v
+        if neg:
+            self.fail("number", t)
+        if t[0] == "str":
+            return t[1]
+        if t[0] == "id" and t[1].upper() in ("NULL", "TRUE", "FALSE"):
+            return {"NULL": None, "TRUE": True, "FALSE": False}[t[1].upper()]
+        self.fail("a value: 'string', number, NULL, true or false", t)
+
+    def end(self):
+        if not (self.op(";") or self.peek()[0] == "eof"):
+            self.fail("';' or end of query")
+
+    def rest_of_statement(self, start):
+        """Raw text from start to the next top-level ';' (for statements sent to the server as-is)."""
+        while True:
+            t = self.tok()
+            if t[0] == "eof":
+                return self.s[start:].strip()
+            if t[0] == "op" and t[1] == ";":
+                return self.s[start:t[2]].strip()
+
+    def where(self, table, s):
+        self.need("WHERE")
+        terms = []
+        while True:
+            c = column(table, s, self.ident("column name"))["name"]
+            if self.kw("IS"):
+                neg = bool(self.kw("NOT"))
+                self.need("NULL")
+                terms.append((c, "isnotnull" if neg else "isnull", None))
+            elif self.kw("NOT"):
+                how = self.need("LIKE", "ILIKE")
+                terms.append((c, "not" + how.lower(), self.literal()))
+            elif self.peek()[0] == "id" and self.peek()[1].upper() in ("LIKE", "ILIKE"):
+                terms.append((c, self.kw("LIKE", "ILIKE").lower(), self.literal()))
+            else:
+                t = self.tok()
+                if not (t[0] == "op" and t[1] in ("=", "!=", "<>")):
+                    self.fail("=, !=, LIKE, ILIKE or IS [NOT] NULL", t)
+                terms.append((c, "=" if t[1] == "=" else "!=", self.literal()))
+            if not self.kw("AND"):
+                return terms
+
+
+def like(pattern, v, ci):
+    rx = "".join(".*" if ch == "%" else "." if ch == "_" else re.escape(ch) for ch in str(pattern))
+    return re.fullmatch(rx, "" if v is None else str(v), re.S | (re.I if ci else 0)) is not None
+
+
+def matches(s, row, terms):
+    for c, how, v in terms:
+        x = get(s, row, c)
+        ok = {"isnull": lambda: x is None, "isnotnull": lambda: x is not None,
+              "=": lambda: x == v, "!=": lambda: x is not None and x != v,
+              "like": lambda: x is not None and like(v, x, False), "ilike": lambda: x is not None and like(v, x, True),
+              "notlike": lambda: x is not None and not like(v, x, False),
+              "notilike": lambda: x is not None and not like(v, x, True)}[how]()
+        if not ok:
+            return False
+    return True
+
+
+# ---- statements --------------------------------------------------------------------------------------
+HELP = """Examples (end each with ;):
+
+  INSERT INTO talks (date, title, event, location, type, url, youtube)
+  VALUES ('2026-11-04', 'Kill Your Dashboards', 'Some Conf 2026', 'Paris, FR', 'talk', 'https://someconf.io', NULL);
+
+  INSERT INTO demos FORMAT JSONEachRow
+  {"date": "2026-11", "name": "Thing", "about": "One line about it", "event": null, "repo": "https://github.com/tylerhannan/thing"}
+
+  ALTER TABLE talks UPDATE youtube = 'https://youtu.be/dQw4w9WgXcQ' WHERE title = 'Kill Your Dashboards';
+  UPDATE photos SET alt = 'Neon #ClickHouse sign' WHERE file = 'clickhouse-at-open-house.jpg';
+  DELETE FROM talks WHERE date = '2026-11-04' AND event = 'Some Conf 2026';
+
+  SELECT date, title, event FROM talks WHERE youtube IS NULL ORDER BY date DESC LIMIT 5;
+  SELECT camera, count() FROM photos GROUP BY camera;
+  DESCRIBE talks;   SHOW TABLES;   exit
+
+WHERE takes col = / != / LIKE / ILIKE / IS [NOT] NULL, joined with AND. Quotes inside strings: 'Tyler\\'s talk'.
+SELECT and anything else go to play.clickhouse.com with your local files as tables.
+"""
+
+
+class Session:
+    def __init__(self):
+        self.changed = set()
+
+    def run(self, text):
+        """Run every statement in text; raises on the first error."""
+        p = Parser(text)
+        while p.peek()[0] != "eof":
+            if p.op(";"):
+                continue
+            self.statement(p)
+
+    def statement(self, p):
+        t0 = time.time()
+        start = p.peek()[2]
+        w = p.kw("INSERT", "ALTER", "UPDATE", "DELETE", "DESCRIBE", "DESC", "SHOW", "HELP", "EXIT", "QUIT")
+        if w == "INSERT":
+            p.need("INTO")
+            return self.insert(p, p.ident("table name"), t0)
+        if w == "ALTER":
+            p.need("TABLE")
+            table = p.ident("table name")
+            how = p.need("UPDATE", "DELETE")
+            if how == "UPDATE":
+                return self.update(p, table, t0)
+            return self.delete(p, table, t0)
+        if w == "UPDATE":
+            table = p.ident("table name")
+            p.need("SET")
+            return self.update(p, table, t0)
+        if w == "DELETE":
+            p.need("FROM")
+            return self.delete(p, p.ident("table name"), t0)
+        if w in ("DESCRIBE", "DESC"):
+            p.kw("TABLE")
+            name = p.ident("table name")
+            if name.split(".")[-1].lower() not in TABLES:
+                return remote(p.s[start:p.i] + " " + p.rest_of_statement(p.i), t0)
+            p.end()
+            table, s = spec(name)
+            pretty(["name", "type", "comment"], [[c["name"], c["type"], c["comment"]] for c in s["cols"]])
+            return done(f"{len(s['cols'])} rows in set.", t0)
+        if w == "SHOW":
+            if p.kw("TABLES"):
+                p.end()
+                rows = [[n, s["file"]] for n, s in TABLES.items()] + [["posts", "public/archive/posts.json (SELECT only)"]]
+                pretty(["name", "file"], rows)
+                return done(f"{len(rows)} rows in set.", t0)
+            return remote(p.s[start:p.i] + " " + p.rest_of_statement(p.i), t0)
+        if w == "HELP":
+            p.end()
+            return print(HELP)
+        if w in ("EXIT", "QUIT"):
+            raise SystemExit(0)
+        if p.peek()[0] == "id":  # SELECT, WITH, EXPLAIN, ...: let real ClickHouse handle it
+            return remote(p.rest_of_statement(start), t0)
+        p.fail("INSERT, ALTER TABLE, UPDATE, DELETE, SELECT, DESCRIBE or SHOW TABLES")
+
+    def insert(self, p, name, t0):
+        table, s = spec(name)
+        if not s["insert"]:
+            raise err(48, "NOT_IMPLEMENTED", "INSERT INTO photos needs the image too: use "
+                      "scripts/add-photo.sh <file> \"Title\" \"Place\" \"YYYY-MM\", then UPDATE photos SET camera = ...")
+        cols = None
+        if p.op("("):
+            cols = [p.ident("column name")]
+            while p.op(","):
+                cols.append(p.ident("column name"))
+            p.need_op(")")
+        records = []
+        if p.kw("FORMAT"):
+            fmt = p.ident("format name")
+            if fmt.lower() != "jsoneachrow":
+                raise err(48, "NOT_IMPLEMENTED", f"Only FORMAT JSONEachRow and VALUES are supported here, not {fmt}")
+            dec, i = json.JSONDecoder(), p.i
+            while True:
+                i = re.compile(r"[\s,]*").match(p.s, i).end()
+                if i >= len(p.s) or p.s[i] != "{":
+                    break
+                try:
+                    obj, i = dec.raw_decode(p.s, i)
+                except json.JSONDecodeError as e:
+                    raise err(117, "INCORRECT_DATA", f"Cannot parse JSONEachRow row: {e.msg} at position {e.pos + 1}")
+                if cols:
+                    obj = {k: v for k, v in obj.items() if k.lower() in [c.lower() for c in cols]}
+                records.append(obj)
+            p.i = i
+            if not records:
+                raise err(117, "INCORRECT_DATA", "No rows after FORMAT JSONEachRow (one {...} object per row)")
+        else:
+            p.need("VALUES")
+            names = cols or [c["name"] for c in s["cols"]]
+            while True:
+                pos = p.peek()
+                p.need_op("(")
+                vals = [p.literal()]
+                while p.op(","):
+                    vals.append(p.literal())
+                p.need_op(")")
+                if len(vals) != len(names):
+                    raise err(7, "NUMBER_OF_COLUMNS_DOESNT_MATCH", f"Row at position {pos[2] + 1} has {len(vals)} values "
+                              f"for {len(names)} columns" + ("" if cols else f" ({', '.join(names)})"))
+                records.append(dict(zip(names, vals)))
+                if not p.op(","):
+                    break
+        p.end()
+
+        data = load(s)
+        rows = data[s["key"]]
+        added = []
+        for rec in records:
+            values = {}
+            for k, v in rec.items():
+                c = column(table, s, k)
+                values[c["name"]] = check(table, c, v)
+            for c in s["cols"]:
+                if c["name"] not in values:
+                    values[c["name"]] = check(table, c, None)  # raises for required columns
+            row = build(s, values)
+            row_checks(table, s, row)
+            if row in rows:
+                raise err(117, "INCORRECT_DATA", f"That row is already in {table} (nothing written)")
+            place(rows, row)
+            added.append(row)
+        table_checks(table, rows, added)
+        save(s, data)
+        self.changed.add(s["file"])
+        vertical(added)
+        done(f"{len(added)} row{'' if len(added) == 1 else 's'} inserted into {table} ({s['file']}).", t0)
+
+    def update(self, p, name, t0):
+        table, s = spec(name)
+        sets = []
+        while True:
+            c = column(table, s, p.ident("column name"))
+            if table == "photos" and c["name"] == "file":
+                raise err(420, "CANNOT_UPDATE_COLUMN", "Cannot UPDATE photos.file: it names the image on disk")
+            p.need_op("=")
+            sets.append((c, p.literal()))
+            if not p.op(","):
+                break
+        terms = p.where(table, s)
+        p.end()
+        sets = [(c, check(table, c, v)) for c, v in sets]
+
+        data = load(s)
+        rows = data[s["key"]]
+        hit = [r for r in rows if matches(s, r, terms)]
+        out = []
+        for r in hit:
+            values = {c["name"]: get(s, r, c["name"]) for c in s["cols"]}
+            for c, v in sets:
+                values[c["name"]] = v
+            new = build(s, values, r)
+            row_checks(table, s, new)
+            i = rows.index(r)
+            if new.get("date") != r.get("date") and s["style"] == "rows":
+                rows.pop(i)
+                place(rows, new)
+            else:
+                rows[i] = new
+            out.append(new)
+        if not hit:
+            return done(f"0 rows updated: nothing in {table} matches that WHERE.", t0)
+        table_checks(table, rows, out)
+        save(s, data)
+        self.changed.add(s["file"])
+        vertical(out)
+        done(f"{len(out)} row{'' if len(out) == 1 else 's'} updated in {table} ({s['file']}).", t0)
+
+    def delete(self, p, name, t0):
+        table, s = spec(name)
+        if not s["delete"]:
+            raise err(48, "NOT_IMPLEMENTED", "Deleting a photo also means deleting public/photos/<file> and its "
+                      "thumbnail; do that by hand (git rm) and remove the row from photos.json")
+        terms = p.where(table, s)
+        p.end()
+        data = load(s)
+        rows = data[s["key"]]
+        gone = [r for r in rows if matches(s, r, terms)]
+        if not gone:
+            return done(f"0 rows deleted: nothing in {table} matches that WHERE.", t0)
+        data[s["key"]] = [r for r in rows if r not in gone]
+        save(s, data)
+        self.changed.add(s["file"])
+        vertical(gone)
+        done(f"{len(gone)} row{'' if len(gone) == 1 else 's'} deleted from {table} ({s['file']}).", t0,
+             f"Changed your mind? git checkout {s['file']}")
+
+    def outro(self):
+        if self.changed:
+            files = " ".join(sorted(self.changed))
+            print(f"Changed: {files}\nReview: git diff {files}\nPublish: git commit -m '...' {files} && git push")
+
+
+def report(e):
+    print(color("31", f"Received exception:\n{e}"), file=sys.stderr)
+
+
+def repl(sess):
+    try:
+        import readline
+        hist = os.path.expanduser("~/.tylerhannan-ch-history")
+        try:
+            readline.read_history_file(hist)
+        except OSError:
+            pass
+        import atexit
+        atexit.register(lambda: readline.write_history_file(hist))
+    except ImportError:
+        pass
+    wrap = (lambda s: "\001" + s + "\002") if TTY else (lambda s: "")
+    prompt = "tylerhannan.com " + wrap("\033[33m") + ":)" + wrap("\033[0m") + " "
+    more = "tylerhannan.com :-] "
+    print("tylerhannan.com local client. Tables: talks, demos, photos (SELECT runs on play.clickhouse.com).\n"
+          "Type help for examples, exit to quit.\n")
+    buf = ""
+    while True:
+        try:
+            line = input(more if buf else prompt)
+        except EOFError:
+            print()
+            break
+        except KeyboardInterrupt:
+            print()
+            buf = ""
+            continue
+        buf += line + "\n"
+        word = buf.strip().rstrip(";").strip().lower()
+        if word in ("exit", "quit", "q", "help", "?") or buf.strip().endswith(";") or not buf.strip():
+            text, buf = buf, ""
+            if word in ("q", "?"):
+                text = {"q": "exit", "?": "help"}[word]
+            try:
+                sess.run(text)
+            except CHError as e:
+                report(e)
+            except SystemExit:
+                break
+    sess.outro()
+    print("Bye.")
+
+
+def main(argv):
+    if argv[:1] in (["-h"], ["--help"]):
+        print(__doc__)
+        return 0
+    if argv[:1] in (["-q"], ["--query"]):
+        argv = argv[1:]
+    sess = Session()
+    text = " ".join(argv) if argv else (None if sys.stdin.isatty() else sys.stdin.read())
+    if text is None:
+        repl(sess)
+        return 0
+    try:
+        sess.run(text)
+    except CHError as e:
+        report(e)
+        sess.outro()
+        return 1
+    except SystemExit:
+        pass
+    sess.outro()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
