@@ -323,15 +323,16 @@ REMOTE = {
     "demos": ("date Date, name String, about String, event Nullable(String), repo String",
               lambda: [dict(x, date=day(x.get("date"))) for x in load(TABLES["demos"])["demos"]]),
     "photos": ("date Date, file String, title String, place Nullable(String), camera Nullable(String), "
-               "alt Nullable(String), focus Nullable(String)",
-               lambda: [dict(p, date=day(p.get("date"))) for p in load(TABLES["photos"])["photos"] if p.get("file")]),
+               "alt Nullable(String), focus Nullable(String), e String",
+               lambda: [dict(p, date=day(p.get("date")), e=vector("/photos/" + p["file"])) for p in load(TABLES["photos"])["photos"] if p.get("file")]),
     "posts": ("date Date, title String, path String, e String",
               lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"], e=vector(p["path"]))
                        for p in json.loads((ROOT / "public/archive/posts.json").read_text(encoding="utf-8"))["posts"]]),
 }
 # Tables whose rows carry a base64 embedding (scripts/embed.py), unpacked into `embedding` as in run.js
-VEC = {"posts": "* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), "
-                "range(1, length(base64Decode(e)) + 1)) AS embedding"}
+_UNPACK = ("* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), "
+           "range(1, length(base64Decode(e)) + 1)) AS embedding")
+VEC = {"posts": _UNPACK, "photos": _UNPACK}
 
 
 def vector(path, _cache={}):

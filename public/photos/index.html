@@ -25,13 +25,15 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
 <script src="/site.js"></script>
+<script src="/search.js"></script>
 </head>
 <body>
 <div class="wrap">
   <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <section style="padding-top:24px">
     <p class="label">Photos</p>
-    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> *
+    <form class="query search" id="search-form" role="search" style="margin-bottom:16px"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="search by what's in the shot: night sky, water, neon…" aria-label="Search photos by what's in them"></form>
+    <div class="query" data-run id="photo-sql"><span class="p">:) </span><span class="kw">SELECT</span> *
    <span class="kw">FROM</span> photos
    <span class="kw">ORDER BY</span> date <span class="kw">DESC</span>;</div>
     <div class="photos" id="photo-grid"></div>
@@ -63,20 +65,42 @@
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var ym=function(d){return String(d).slice(0,7)};
   var grid=document.getElementById('photo-grid'), list=[];
+  var rank=null, note='';  // after a search: file -> similarity (the grid takes the search query's order), and its footnote
 
   function render(){
     if(!list.length){ grid.outerHTML='<div class="empty-state">0 rows in set.</div>'; return; }
-    list.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
+    list.sort(rank?function(a,b){ var x=rank[a.file], y=rank[b.file];
+      return (isNaN(x)-isNaN(y)) || y-x || (a.file<b.file?-1:a.file>b.file?1:0); }
+      :function(a,b){return String(b.date).localeCompare(String(a.date))});
     grid.innerHTML=list.map(function(p,i){
-      var meta=[p.place,p.date&&ym(p.date)].filter(Boolean).map(esc).join(' · ');
+      var meta=[rank&&p.file in rank?rank[p.file].toFixed(2):'',p.place,p.date&&ym(p.date)].filter(Boolean).map(esc).join(' · ');
       var focus=/^(top|bottom|left|right|center)$/.test(p.focus)?' style="object-position:'+p.focus+'"':'';  // which edge the grid crop keeps
       // grid uses the 600px thumbnail; fall back to the full photo if a thumbnail is missing
       var inner=p.file?'<img src="/photos/thumbs/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy" decoding="async"'+focus+' onerror="this.onerror=null;this.src=\'/photos/'+esc(p.file)+'\'">':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
       return '<button type="button" class="photo'+(p.file?'':' empty')+'" data-i="'+i+'"'+(p.file?'':' disabled')+'>'+inner+'<span class="pc"><span class="vt">'+esc(p.title)+'</span><span class="vm">'+meta+'</span></span></button>';
     }).join('');
     var real=list.filter(function(p){return p.file}).length;
-    document.getElementById('photo-foot').textContent=list.length+' rows in set'+(real<list.length?' ('+(list.length-real)+' example)':'')+'.';
+    document.getElementById('photo-foot').textContent=rank&&note||list.length+' rows in set'+(real<list.length?' ('+(list.length-real)+' example)':'')+'.';
   }
+
+  // Search by what's in a shot: search.js embeds the words and the grid takes the order of this query.
+  // Each photo's vector comes from its title, alt text and place (scripts/embed.py). An empty search goes back to by-date.
+  var sqlBox=document.getElementById('photo-sql'), byDate=sqlBox.innerHTML, input=document.getElementById('search-q');
+  var BY_MEANING='<span class="p">:) </span><span class="kw">WITH</span>\n     (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> request) <span class="kw">AS</span> words\n   <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, words), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, place\n   <span class="kw">FROM</span> photos\n   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, file;';
+  var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
+  function byDateAgain(){ if(!rank) return; rank=null; note=''; sqlBox.innerHTML=byDate; sqlBox.dispatchEvent(new Event('query-changed')); render(); }
+  siteSearchBox({form:document.getElementById('search-form'), input:input, box:sqlBox, table:'photos',
+    start:function(){ sqlBox.innerHTML=BY_MEANING; document.getElementById('photo-foot').textContent='Embedding…'; },
+    done:function(best,words){
+      rank={}; best.forEach(function(b){ rank[b.key]=b.similarity; });
+      note=best.length+' rows in set, nearest first. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI; each photo was embedded from its title, description and place with ClickHouse\'s aiEmbed.';
+      if(list.length) render();  // a ?q= search can finish before photos.json; its render picks this up
+    },
+    fail:function(){ document.getElementById('photo-foot').textContent='The embedding service is not answering right now; try again in a bit.'; }});
+  document.getElementById('search-form').addEventListener('submit',function(){
+    if(!input.value.trim()){ byDateAgain(); try{ history.replaceState(null,'',location.pathname); }catch(_){} }
+  });
+  input.addEventListener('search',function(){ if(!input.value.trim()) document.getElementById('search-form').requestSubmit(); });  // the field's ✕
 
   var lb=document.getElementById('lightbox');
   var cur=-1, closing=false, queued=null, opener=null;

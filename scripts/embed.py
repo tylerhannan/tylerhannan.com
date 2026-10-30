@@ -9,7 +9,8 @@ Needs, on this machine:
   - clickhouse on PATH (clickhousectl local use latest), or CLICKHOUSE=/path/to/clickhouse
 
 What it does:
-  - collects the same rows as the `pages` table in public/run.js (home, photos, archive, every post, talk and demo),
+  - collects the same rows as the `pages` table in public/run.js (home, photos, archive, every post, talk and demo)
+    plus every photo (from its title, alt text and place),
     with a post's text taken from its HTML
   - runs aiEmbed(…, 'embeddinggemma') over them in clickhouse local, through Ollama's OpenAI-compatible endpoint
   - keeps the first 128 of EmbeddingGemma's 768 dimensions (it's trained so that a prefix still works) and
@@ -61,6 +62,7 @@ def docs():
     posts = json.loads((PUBLIC / "archive/posts.json").read_text(encoding="utf-8"))["posts"]
     talks = json.loads((PUBLIC / "talks.json").read_text(encoding="utf-8"))["talks"]
     demos = json.loads((PUBLIC / "demos.json").read_text(encoding="utf-8"))["demos"]
+    photos = json.loads((PUBLIC / "photos.json").read_text(encoding="utf-8"))["photos"]
     out = [{"path": "/", "kind": "page", "title": "Home", "text": describe("")},
            {"path": "/photos/", "kind": "page", "title": "Photos", "text": describe("photos")},
            {"path": "/archive/", "kind": "page", "title": "Writing archive", "text": describe("archive")}]
@@ -72,6 +74,10 @@ def docs():
     for d in demos:
         text = " · ".join(x for x in ("A demo: " + d["about"], d.get("event")) if x)
         out.append({"path": d["repo"], "kind": "demo", "title": d["name"], "text": text})
+    for p in photos:  # not pages, but the photos table gets vectors too, keyed by the photo's URL
+        if p.get("file"):
+            text = " · ".join(x for x in ("A photo: " + (p.get("alt") or p["title"]), p.get("place")) if x)
+            out.append({"path": "/photos/" + p["file"], "kind": "photo", "title": p["title"], "text": text})
     seen, uniq = set(), []
     for d in out:  # two talks can share a playlist link; they share a vector too
         if d["path"] not in seen:
