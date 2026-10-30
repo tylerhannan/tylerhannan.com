@@ -68,7 +68,9 @@ Embrace the mystery and solve problems.</p>
   <!-- related -->
   <section aria-labelledby="related-h">
     <p class="label" id="related-h">Nearest posts</p>
-    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">&#x27;/2010/12/the-2-steps-of-innovation-an-ordered-list-and-mini-rant/&#x27;</span>)), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
+    <div class="query" data-run><span class="p">:) </span><span class="kw">WITH</span>
+     (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">&#x27;/2010/12/the-2-steps-of-innovation-an-ordered-list-and-mini-rant/&#x27;</span>) <span class="kw">AS</span> this_post
+   <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, this_post), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
    <span class="kw">FROM</span> posts
    <span class="kw">WHERE</span> path != <span class="s">&#x27;/2010/12/the-2-steps-of-innovation-an-ordered-list-and-mini-rant/&#x27;</span>
    <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
