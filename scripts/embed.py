@@ -9,7 +9,7 @@ Needs, on this machine:
   - clickhouse on PATH (clickhousectl local use latest), or CLICKHOUSE=/path/to/clickhouse
 
 What it does:
-  - collects the same rows as the `pages` table in public/run.js (home, photos, archive, every post, every talk),
+  - collects the same rows as the `pages` table in public/run.js (home, photos, archive, every post, talk and demo),
     with a post's text taken from its HTML
   - runs aiEmbed(…, 'embeddinggemma') over them in clickhouse local, through Ollama's OpenAI-compatible endpoint
   - keeps the first 128 of EmbeddingGemma's 768 dimensions (it's trained so that a prefix still works) and
@@ -57,9 +57,10 @@ def post_text(path):
 
 
 def docs():
-    """The rows of run.js's `pages` table, keyed the same way (path before decoding; a talk's url)."""
+    """The rows of run.js's `pages` table, keyed the same way (path before decoding; a talk's url; a demo's repo)."""
     posts = json.loads((PUBLIC / "archive/posts.json").read_text(encoding="utf-8"))["posts"]
     talks = json.loads((PUBLIC / "talks.json").read_text(encoding="utf-8"))["talks"]
+    demos = json.loads((PUBLIC / "demos.json").read_text(encoding="utf-8"))["demos"]
     out = [{"path": "/", "kind": "page", "title": "Home", "text": describe("")},
            {"path": "/photos/", "kind": "page", "title": "Photos", "text": describe("photos")},
            {"path": "/archive/", "kind": "page", "title": "Writing archive", "text": describe("archive")}]
@@ -68,6 +69,9 @@ def docs():
         path = t.get("url") or "https://www.youtube.com/watch?v=" + t["youtube"]
         text = " · ".join(x for x in (t["event"], t.get("location"), t.get("note")) if x)
         out.append({"path": path, "kind": "talk", "title": t["title"], "text": text})
+    for d in demos:
+        text = " · ".join(x for x in ("A demo: " + d["about"], d.get("event")) if x)
+        out.append({"path": d["repo"], "kind": "demo", "title": d["name"], "text": text})
     seen, uniq = set(), []
     for d in out:  # two talks can share a playlist link; they share a vector too
         if d["path"] not in seen:

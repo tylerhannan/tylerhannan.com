@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
 <script src="/site.js"></script>
+<script src="/search.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -87,40 +88,20 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
     for(k in N.m) hit+=Math.min(N.m[k],H.m[k]||0);
     return hit/N.n;
   }
+  var row=function(m,p){ return '<tr><td class="d">'+m+'</td><td><a href="'+esc(p.path)+'">'+esc(p.title)+'</a></td><td class="e">'+esc(p.path)+'</td></tr>'; };
   var near=document.getElementById('near'), foot=document.getElementById('near-foot');
-  var get=function(u){ return fetch(u).then(function(r){ if(!r.ok) throw r; return r.json(); }); };
-  Promise.all([get('/archive/posts.json'),get('/talks.json')]).then(function(r){
-    // the same rows as the `pages` table run.js sends to ClickHouse
-    var pages=[{title:'Home',path:'/'},{title:'Photos',path:'/photos/'},{title:'Writing archive',path:'/archive/'}]
-      .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title}; })
-      .concat((r[1].talks||[]).map(function(t){ return {path:t.url||'https://www.youtube.com/watch?v='+t.youtube,title:t.title+' · '+t.event}; }));
+  sitePages().then(function(pages){  // the same rows as the `pages` table run.js sends to ClickHouse (search.js)
     var best=pages.map(function(p){ return {p:p, m:Math.round(ngramSearch(p.title,words)*100)/100}; })
       .sort(function(a,b){ return b.m-a.m || (a.p.path<b.p.path?-1:a.p.path>b.p.path?1:0); }).slice(0,3);
-    near.innerHTML=best.map(function(b){
-      return '<tr><td class="d">'+String(b.m)+'</td><td><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></td><td class="e">'+esc(b.p.path)+'</td></tr>';
-    }).join('');
+    near.innerHTML=best.map(function(b){ return row(String(b.m),b.p); }).join('');
     foot.textContent=best.length+' rows in set. 1 means every bit of what you typed is in the title.';
   }).catch(function(){ near.innerHTML=''; foot.textContent='0 rows in set. (the data is also missing, which is impressive.)'; });
 
-  // By meaning: the words are embedded just now (EmbeddingGemma on Workers AI, src/worker.js) and become the
-  // one-row `request` table run.js sends along; every page was embedded ahead of time with the same model
-  // (scripts/embed.py). Vectors are 128 Int8, base64. Again the table is computed here, the same way.
+  // By meaning: search.js embeds the words just now and makes them the one-row `request` table.
   var sem=document.getElementById('sem'), semFoot=document.getElementById('sem-foot');
-  var vec=function(b){ var s=atob(b), v=new Float32Array(s.length); for(var i=0;i<s.length;i++) v[i]=(s.charCodeAt(i)<<24)>>24; return v; };
-  function cosine(a,b){ var d=0,x=0,y=0; for(var i=0;i<a.length;i++){ d+=a[i]*b[i]; x+=a[i]*a[i]; y+=b[i]*b[i]; } return d/Math.sqrt(x*y); }
-  window.siteRequest=words?get('/api/embed?q='+encodeURIComponent(words)).then(function(r){ return {path:path,words:words,e:r.embedding}; }):null;
-  if(!window.siteRequest){ sem.innerHTML=''; semFoot.textContent='0 rows in set. There are no words in this URL to embed.'; return; }
-  Promise.all([window.siteRequest,get('/embeddings.json'),get('/archive/posts.json'),get('/talks.json')]).then(function(r){
-    var q=vec(r[0].e), all=r[1].vectors||{}, zero=new Float32Array(r[1].dims||q.length);
-    // the same rows and vectors as the `pages` table in run.js
-    var pages=[{title:'Home',path:'/'},{title:'Photos',path:'/photos/'},{title:'Writing archive',path:'/archive/'}]
-      .concat(r[2].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,v:all[p.path]}; })
-      .concat((r[3].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:u,title:t.title+' · '+t.event,v:all[u]}; }));
-    var best=pages.map(function(p){ return {p:p, m:Math.round(cosine(p.v?vec(p.v):zero,q)*100)/100}; })
-      .sort(function(a,b){ return (isNaN(a.m)-isNaN(b.m)) || b.m-a.m || (a.p.path<b.p.path?-1:a.p.path>b.p.path?1:0); }).slice(0,3);
-    sem.innerHTML=best.map(function(b){
-      return '<tr><td class="d">'+b.m.toFixed(2)+'</td><td><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></td><td class="e">'+esc(b.p.path)+'</td></tr>';
-    }).join('');
+  if(!words){ sem.innerHTML=''; semFoot.textContent='0 rows in set. There are no words in this URL to embed.'; return; }
+  siteSearch(words,3).then(function(best){
+    sem.innerHTML=best.map(function(b){ return row(b.similarity.toFixed(2),b); }).join('');
     semFoot.textContent=best.length+' rows in set. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.';
   }).catch(function(){ sem.innerHTML=''; semFoot.textContent='0 rows in set. The embedding service is not answering, so only spelling works today.'; });
 })();

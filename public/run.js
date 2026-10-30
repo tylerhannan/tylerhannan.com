@@ -42,17 +42,18 @@
     demos:function(){ return load('/demos.json').then(function(d){
       var rows=(d.demos||[]).map(function(x){var o={};for(var k in x)o[k]=x[k];o.date=day(x.date);return o});
       return cte('demos','date Date, name String, about String, event Nullable(String), repo String',rows,['date','name','about','event','repo']); }); },
-    // every page on the site plus every talk, for the 404 page's "did you mean" query
-    pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),vectors()]).then(function(r){
+    // every page on the site plus every talk and demo, for search and the 404 page (search.js has the same rows)
+    pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),load('/demos.json'),vectors()]).then(function(r){
       var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
       var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}]
-        .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,e:r[2](p.path)}; })
-        .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:u,title:t.title+' · '+t.event,e:r[2](u)}; }));
+        .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,e:r[3](p.path)}; })
+        .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:u,title:t.title+' · '+t.event,e:r[3](u)}; }))
+        .concat((r[2].demos||[]).map(function(d){ return {path:d.repo,title:d.name+' · demo',e:r[3](d.repo)}; }));
       return cte('pages','path String, title String, e String',rows,['path','title','e'],VEC); }); },
-    // the 404 page's missed URL, embedded live (window.siteRequest is a promise of {path, words, e})
+    // what was just searched for (or the 404 page's missed URL), embedded live by search.js: {words, e}
     request:function(){
-      if(!window.siteRequest) return Promise.reject(new Error('There is no request table on this page (only the 404 page has one).'));
-      return window.siteRequest.then(function(q){ return cte('request','path String, words String, e String',[q],['path','words','e'],VEC); }); }
+      if(!window.siteRequest) return Promise.reject(new Error('There is no request table yet: search for something first (the home page search box, or the 404 page).'));
+      return window.siteRequest.then(function(q){ return cte('request','words String, e String',[q],['words','e'],VEC); }); }
   };
 
   // Put the site tables in front of a query, merging with the query's own WITH if it has one.

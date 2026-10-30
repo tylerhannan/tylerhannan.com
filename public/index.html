@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
 <script src="/site.js"></script>
+<script src="/search.js"></script>
 </head>
 <body>
 
@@ -36,7 +37,7 @@
       <h1>Tyler Hannan<span class="cur" aria-hidden="true"></span></h1>
       <p class="tag">Three decades of databases, distributed systems and developer communities. These are the talks, videos and things I've said out loud.</p>
     </div>
-    <nav aria-label="Sections"><a href="#about">about</a><a href="#talks">talks</a><a href="#videos">videos</a><a href="#demos">demos</a><a href="#play">play</a><a href="/photos/">photos</a><a href="#contact">contact</a></nav>
+    <nav aria-label="Sections"><a href="#about">about</a><a href="#search">search</a><a href="#talks">talks</a><a href="#videos">videos</a><a href="#demos">demos</a><a href="#play">play</a><a href="/photos/">photos</a><a href="#contact">contact</a></nav>
   </header>
 
   <section id="about" aria-labelledby="about-h">
@@ -49,6 +50,24 @@
       <tr><td>speaks_at</td><td>conferences, meetups, release calls</td></tr>
     </table>
     <p class="bio">I've spent my career where databases meet the people who use them: building developer communities, telling product stories, and explaining why the internals matter. I tell stories about the software other people build.</p>
+  </section>
+
+  <section id="search" aria-labelledby="search-h">
+    <p class="label" id="search-h">Search</p>
+    <form class="query search" id="search-form" role="search"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="search by meaning: payments APIs, real-time analytics, agents…" aria-label="Search talks, demos and posts by meaning"></form>
+    <div id="search-out" hidden>
+      <div class="query" data-run id="search-sql" style="margin-top:16px"><span class="p">:) </span><span class="kw">WITH</span>
+     (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> request) <span class="kw">AS</span> words
+   <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, words), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
+   <span class="kw">FROM</span> pages
+   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
+   <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
+      <div class="tbl near"><table>
+        <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
+        <tbody id="search-rows"></tbody>
+      </table></div>
+      <p class="foot" id="search-foot" aria-live="polite"></p>
+    </div>
   </section>
 
   <section id="talks" aria-labelledby="talks-h">
@@ -236,6 +255,34 @@
 
   fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();})
     .catch(function(){document.getElementById('rows').innerHTML='<tr><td colspan="4" class="d">Couldn\'t load talks.json. Check that it sits next to index.html.</td></tr>';});
+})();
+</script>
+<script>
+// Search: search.js embeds the words (EmbeddingGemma on Workers AI) and makes them the `request` table the
+// query above reads; the rows shown are computed the same way in the browser. ?q= in the URL searches on load.
+(function(){
+  var form=document.getElementById('search-form'), input=document.getElementById('search-q'), out=document.getElementById('search-out');
+  var rows=document.getElementById('search-rows'), foot=document.getElementById('search-foot'), sql=document.getElementById('search-sql'), n=0;
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
+  function search(words){
+    var id=++n; out.hidden=false;
+    sql.dispatchEvent(new Event('query-changed'));  // a result from ▶ run is for the previous words
+    rows.innerHTML='<tr><td colspan="3" class="d">Embedding…</td></tr>'; foot.textContent='';
+    siteSearch(words,5).then(function(best){
+      if(id!==n) return;
+      rows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.similarity.toFixed(2)+'</td><td><a href="'+esc(b.path)+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.path)+'</td></tr>'; }).join('');
+      foot.textContent=best.length+' rows in set. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.';
+    }).catch(function(){ if(id!==n) return; rows.innerHTML=''; foot.textContent='0 rows in set. The embedding service is not answering right now; try again in a bit.'; });
+  }
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var words=input.value.replace(/\s+/g,' ').trim(); if(!words) return;
+    try{ history.replaceState(null,'','?q='+encodeURIComponent(words)+'#search'); }catch(_){}
+    search(words);
+  });
+  var q=new URLSearchParams(location.search).get('q');
+  if(q&&q.trim()){ input.value=q.trim(); search(q.trim()); }
 })();
 </script>
 <script src="/run.js" defer></script>
