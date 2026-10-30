@@ -3,11 +3,17 @@
 {
   "name": "tylerhannan-com",
   "compatibility_date": "2026-10-01",
+  // Only /api/embed (the 404 page's live embedding); everything else is a static file
+  "main": "src/worker.js",
   "assets": {
     "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
     // /2012/04/geektool/ serves /2012/04/geektool/index.html, so old WordPress links keep working
     "html_handling": "auto-trailing-slash",
     // Unknown URLs get public/404.html with a real 404 status
     "not_found_handling": "404-page"
-  }
+  },
+  // Workers AI, for EmbeddingGemma
+  "ai": { "binding": "AI" }
 }

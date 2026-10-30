@@ -55,6 +55,22 @@ At one point, the ISV evangelism team wanted a 3-part webinar series on the conc
     </div>
     <p class="note">Archived from the old tylerhannan.com blog. Originally published 2012-07-26.</p>
   </article>
+  <!-- related -->
+  <section aria-labelledby="related-h">
+    <p class="label" id="related-h">Nearest posts</p>
+    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">&#x27;/2012/07/entering-the-wayback-machine-or-why-you-should-always-record-public-presentations/&#x27;</span>)), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
+   <span class="kw">FROM</span> posts
+   <span class="kw">WHERE</span> path != <span class="s">&#x27;/2012/07/entering-the-wayback-machine-or-why-you-should-always-record-public-presentations/&#x27;</span>
+   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
+   <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
+    <div class="tbl near"><table>
+      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
+      <tbody><tr><td class="d">0.62</td><td><a href="/2007/11/bai-retail-delivery-conference/">BAI Retail Delivery Conference</a></td><td class="e">/2007/11/bai-retail-delivery-conference/</td></tr><tr><td class="d">0.62</td><td><a href="/2010/10/i-do-not-think-that-means-what-you-think-it-means-finovate-2010-day-1/">&quot;I do not think that means what you think it means&quot;:  Finovate 2010, day 1</a></td><td class="e">/2010/10/i-do-not-think-that-means-what-you-think-it-means-finovate-2010-day-1/</td></tr><tr><td class="d">0.60</td><td><a href="/2008/01/2007-innovations-in-finance/">2007 Innovations in Finance</a></td><td class="e">/2008/01/2007-innovations-in-finance/</td></tr><tr><td class="d">0.59</td><td><a href="/2007/10/who-am-i/">who am i?</a></td><td class="e">/2007/10/who-am-i/</td></tr><tr><td class="d">0.59</td><td><a href="/2008/04/finovatestartup-2008-an-ip-commerce-platform-demonstration/">FinovateStartup 2008: an IP Commerce platform demonstration</a></td><td class="e">/2008/04/finovatestartup-2008-an-ip-commerce-platform-demonstration/</td></tr></tbody>
+    </table></div>
+    <p class="foot">5 rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+  </section>
+  <script src="/run.js" defer></script>
+  <!-- /related -->
   <section id="contact" aria-labelledby="contact-h">
     <p class="label" id="contact-h">Contact</p>
     <div class="contact">

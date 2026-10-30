@@ -1,6 +1,7 @@
 // Makes the query boxes runnable against real ClickHouse (the public, read-only play.clickhouse.com).
 // Boxes opt in with data-run. The site's own data is sent inline as CTEs (talks, photos, posts, pages, demos),
 // so `FROM talks` works; anything else on the playground (SHOW TABLES, its demo datasets) works too.
+// posts and pages also carry an `embedding` (scripts/embed.py), and the 404 page adds a `request` table.
 (function(){
   var ENDPOINT='https://play.clickhouse.com/?user=play';
   var MAX_ROWS=500;  // the playground allows far more; a browser table doesn't need it
@@ -15,10 +16,17 @@
   // ---- the site's data as ClickHouse tables ----
   var day=function(d){ d=String(d||''); return d.length===4?d+'-01-01':d.length===7?d+'-01':d.slice(0,10); };
   var lit=function(v){ return typeof v==='boolean'?(v?'true':'false'):v==null||v===''&&v!==0?'NULL':typeof v==='number'?String(v):"'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
-  function cte(name,schema,rows,cols){
+  function cte(name,schema,rows,cols,select){
     var vals=rows.map(function(r){return '('+cols.map(function(c){return lit(r[c])}).join(', ')+')'}).join(', ');
-    return name+' AS (SELECT * FROM values('+lit(schema)+', '+(vals||'')+'))';
+    return name+' AS (SELECT '+(select||'*')+' FROM values('+lit(schema)+', '+(vals||'')+'))';
   }
+  // Embeddings travel as base64 strings (128 Int8 each, from public/embeddings.json) and are unpacked here, so
+  // the whole site's vectors fit in the playground's 256 KB query limit. A page without one gets zeros.
+  var VEC='* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), range(1, length(base64Decode(e)) + 1)) AS embedding';
+  function vectors(){ return load('/embeddings.json').then(function(d){
+    var zero=btoa(new Array((d.dims||0)+1).join('\0'));
+    return function(path){ return (d.vectors||{})[path]||zero; };
+  }); }
   var TABLES={
     talks:function(){ return load('/talks.json').then(function(d){
       var rows=(d.talks||[]).map(function(t){var o={};for(var k in t)o[k]=t[k];o.date=day(t.date);o.mc=!!t.mc;return o});
@@ -28,19 +36,23 @@
       var rows=(d.photos||[]).filter(function(p){return p.file}).map(function(p){var o={};for(var k in p)o[k]=p[k];o.date=day(p.date);return o});
       return cte('photos','date Date, file String, title String, place Nullable(String), camera Nullable(String), alt Nullable(String), focus Nullable(String)',
         rows,['date','file','title','place','camera','alt','focus']); }); },
-    posts:function(){ return load('/archive/posts.json').then(function(d){
-      var rows=(d.posts||[]).map(function(p){return {date:day(p.date),title:p.title,path:p.path}});
-      return cte('posts','date Date, title String, path String',rows,['date','title','path']); }); },
+    posts:function(){ return Promise.all([load('/archive/posts.json'),vectors()]).then(function(r){
+      var rows=(r[0].posts||[]).map(function(p){return {date:day(p.date),title:p.title,path:p.path,e:r[1](p.path)}});
+      return cte('posts','date Date, title String, path String, e String',rows,['date','title','path','e'],VEC); }); },
     demos:function(){ return load('/demos.json').then(function(d){
       var rows=(d.demos||[]).map(function(x){var o={};for(var k in x)o[k]=x[k];o.date=day(x.date);return o});
       return cte('demos','date Date, name String, about String, event Nullable(String), repo String',rows,['date','name','about','event','repo']); }); },
     // every page on the site plus every talk, for the 404 page's "did you mean" query
-    pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json')]).then(function(r){
+    pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),vectors()]).then(function(r){
       var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
       var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}]
-        .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title}; })
-        .concat((r[1].talks||[]).map(function(t){ return {path:t.url||'https://www.youtube.com/watch?v='+t.youtube,title:t.title+' · '+t.event}; }));
-      return cte('pages','path String, title String',rows,['path','title']); }); }
+        .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,e:r[2](p.path)}; })
+        .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:u,title:t.title+' · '+t.event,e:r[2](u)}; }));
+      return cte('pages','path String, title String, e String',rows,['path','title','e'],VEC); }); },
+    // the 404 page's missed URL, embedded live (window.siteRequest is a promise of {path, words, e})
+    request:function(){
+      if(!window.siteRequest) return Promise.reject(new Error('There is no request table on this page (only the 404 page has one).'));
+      return window.siteRequest.then(function(q){ return cte('request','path String, words String, e String',[q],['path','words','e'],VEC); }); }
   };
 
   // Put the site tables in front of a query, merging with the query's own WITH if it has one.
@@ -58,7 +70,7 @@
         return {sql: own ? withTables(ctes,q) : withTables(ctes,'SELECT * FROM (\n'+q+'\n) LIMIT '+(MAX_ROWS+1))+fmt, raw:own};
       if((m=q.match(/^(EXPLAIN(?:\s+(?:AST|SYNTAX|QUERY\s+TREE|PLAN|PIPELINE|ESTIMATE))?(?:\s+\w+\s*=\s*\w+(?:\s*,\s*\w+\s*=\s*\w+)*)?)\s+((?:SELECT|WITH)\b[\s\S]*)$/i)))
         return {sql: m[1]+' '+withTables(ctes,m[2])+fmt, raw:own};
-      if((m=q.match(/^(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(talks|photos|posts|pages|demos)\s*$/i)))  // a site table isn't a real table
+      if((m=q.match(/^(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(talks|photos|posts|pages|demos|request)\s*$/i)))  // a site table isn't a real table
         return {sql: m[1]+' ('+withTables(ctes,'SELECT * FROM '+m[2].toLowerCase())+')'+fmt};
       return {sql:q+fmt, raw:own};  // SHOW, other DESCRIBE/EXPLAIN …
     });

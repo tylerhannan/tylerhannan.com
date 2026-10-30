@@ -54,6 +54,22 @@
     </div>
     <p class="note">Archived from the old tylerhannan.com blog. Originally published 2009-09-14.</p>
   </article>
+  <!-- related -->
+  <section aria-labelledby="related-h">
+    <p class="label" id="related-h">Nearest posts</p>
+    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">&#x27;/2009/09/hosted-payments-page-a-demonstration/&#x27;</span>)), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
+   <span class="kw">FROM</span> posts
+   <span class="kw">WHERE</span> path != <span class="s">&#x27;/2009/09/hosted-payments-page-a-demonstration/&#x27;</span>
+   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
+   <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
+    <div class="tbl near"><table>
+      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
+      <tbody><tr><td class="d">0.77</td><td><a href="/2009/07/hosted-payment-page-and-pci-compliance/">Hosted Payment Page and PCI Compliance</a></td><td class="e">/2009/07/hosted-payment-page-and-pci-compliance/</td></tr><tr><td class="d">0.72</td><td><a href="/2008/06/payment-processing-made-easy-an-article/">Payment Processing Made Easy: an article</a></td><td class="e">/2008/06/payment-processing-made-easy-an-article/</td></tr><tr><td class="d">0.71</td><td><a href="/2010/06/driving-innovation-in-payments-platform-updates/">Driving Innovation in Payments:  Platform Updates</a></td><td class="e">/2010/06/driving-innovation-in-payments-platform-updates/</td></tr><tr><td class="d">0.69</td><td><a href="/2008/10/innovation-in-payments-a-reality-not-a-theory/">Innovation In Payments: a reality, not a theory</a></td><td class="e">/2008/10/innovation-in-payments-a-reality-not-a-theory/</td></tr><tr><td class="d">0.68</td><td><a href="/2008/11/does-pci-compliance-apply-to-me/">Does PCI Compliance Apply To Me?</a></td><td class="e">/2008/11/does-pci-compliance-apply-to-me/</td></tr></tbody>
+    </table></div>
+    <p class="foot">5 rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+  </section>
+  <script src="/run.js" defer></script>
+  <!-- /related -->
   <section id="contact" aria-labelledby="contact-h">
     <p class="label" id="contact-h">Contact</p>
     <div class="contact">

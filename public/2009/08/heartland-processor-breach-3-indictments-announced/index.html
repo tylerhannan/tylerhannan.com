@@ -56,6 +56,22 @@ The process of planning the breach was, as you would expect for something of thi
     </div>
     <p class="note">Archived from the old tylerhannan.com blog. Originally published 2009-08-18.</p>
   </article>
+  <!-- related -->
+  <section aria-labelledby="related-h">
+    <p class="label" id="related-h">Nearest posts</p>
+    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">&#x27;/2009/08/heartland-processor-breach-3-indictments-announced/&#x27;</span>)), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
+   <span class="kw">FROM</span> posts
+   <span class="kw">WHERE</span> path != <span class="s">&#x27;/2009/08/heartland-processor-breach-3-indictments-announced/&#x27;</span>
+   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
+   <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
+    <div class="tbl near"><table>
+      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
+      <tbody><tr><td class="d">0.72</td><td><a href="/2009/02/another-processor-breach-say-it-isnt-so/">Another Processor Breach: say it isn&#x27;t so</a></td><td class="e">/2009/02/another-processor-breach-say-it-isnt-so/</td></tr><tr><td class="d">0.69</td><td><a href="/2009/01/payment-processor-breach-a-stream-of-consciousness-rant/">Payment Processor Breach: a stream of consciousness rant</a></td><td class="e">/2009/01/payment-processor-breach-a-stream-of-consciousness-rant/</td></tr><tr><td class="d">0.64</td><td><a href="/2008/08/wells-fargo-data-breach-what-have-we-learned/">Wells Fargo Data Breach: what have we learned?</a></td><td class="e">/2008/08/wells-fargo-data-breach-what-have-we-learned/</td></tr><tr><td class="d">0.62</td><td><a href="/2007/11/60-minutes-hi-tech-heist-an-analysis/">60 Minutes &quot;Hi-Tech Heist&quot;, an analysis</a></td><td class="e">/2007/11/60-minutes-hi-tech-heist-an-analysis/</td></tr><tr><td class="d">0.58</td><td><a href="/2007/11/pci-dss-a-podcast-overview/">PCI-DSS: a Podcast Overview</a></td><td class="e">/2007/11/pci-dss-a-podcast-overview/</td></tr></tbody>
+    </table></div>
+    <p class="foot">5 rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+  </section>
+  <script src="/run.js" defer></script>
+  <!-- /related -->
   <section id="contact" aria-labelledby="contact-h">
     <p class="label" id="contact-h">Contact</p>
     <div class="contact">

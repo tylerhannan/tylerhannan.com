@@ -35,6 +35,22 @@
     </div>
     <p class="note">Archived from the old tylerhannan.com blog. Originally published 2009-09-15.</p>
   </article>
+  <!-- related -->
+  <section aria-labelledby="related-h">
+    <p class="label" id="related-h">Nearest posts</p>
+    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">&#x27;/2009/09/shared-items-september-15-2009/&#x27;</span>)), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
+   <span class="kw">FROM</span> posts
+   <span class="kw">WHERE</span> path != <span class="s">&#x27;/2009/09/shared-items-september-15-2009/&#x27;</span>
+   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
+   <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
+    <div class="tbl near"><table>
+      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
+      <tbody><tr><td class="d">0.69</td><td><a href="/2009/09/shared-items-september-13-2009/">Shared Items - September 13, 2009</a></td><td class="e">/2009/09/shared-items-september-13-2009/</td></tr><tr><td class="d">0.67</td><td><a href="/2009/11/payments-software-technology-november-23-2009/">Payments, Software &amp; Technology - November 23, 2009</a></td><td class="e">/2009/11/payments-software-technology-november-23-2009/</td></tr><tr><td class="d">0.67</td><td><a href="/2009/12/payments-software-technology-december-17-2009/">Payments, Software &amp; Technology - December 17, 2009</a></td><td class="e">/2009/12/payments-software-technology-december-17-2009/</td></tr><tr><td class="d">0.66</td><td><a href="/2009/12/payments-software-technology-december-29-2009/">Payments, Software &amp; Technology - December 29, 2009</a></td><td class="e">/2009/12/payments-software-technology-december-29-2009/</td></tr><tr><td class="d">0.65</td><td><a href="/2010/01/payments-software-technology-january-7-2010/">Payments, Software &amp; Technology - January 7, 2010</a></td><td class="e">/2010/01/payments-software-technology-january-7-2010/</td></tr></tbody>
+    </table></div>
+    <p class="foot">5 rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+  </section>
+  <script src="/run.js" defer></script>
+  <!-- /related -->
   <section id="contact" aria-labelledby="contact-h">
     <p class="label" id="contact-h">Contact</p>
     <div class="contact">

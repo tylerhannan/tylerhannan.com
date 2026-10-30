@@ -37,6 +37,16 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
     </table></div>
     <p class="foot" id="near-foot"></p>
 
+    <div class="query" data-run style="margin-top:28px"><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> request)), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
+   <span class="kw">FROM</span> pages
+   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
+   <span class="kw">LIMIT</span> <span class="n">3</span>;</div>
+    <div class="tbl near"><table>
+      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
+      <tbody id="sem"><tr><td colspan="3" class="d">Embedding…</td></tr></tbody>
+    </table></div>
+    <p class="foot" id="sem-foot"></p>
+
   </section>
 
   <section id="contact" aria-labelledby="contact-h">
@@ -87,6 +97,28 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
     }).join('');
     foot.textContent=best.length+' rows in set. 1 means every bit of what you typed is in the title.';
   }).catch(function(){ near.innerHTML=''; foot.textContent='0 rows in set. (the data is also missing, which is impressive.)'; });
+
+  // By meaning: the words are embedded just now (EmbeddingGemma on Workers AI, src/worker.js) and become the
+  // one-row `request` table run.js sends along; every page was embedded ahead of time with the same model
+  // (scripts/embed.py). Vectors are 128 Int8, base64. Again the table is computed here, the same way.
+  var sem=document.getElementById('sem'), semFoot=document.getElementById('sem-foot');
+  var vec=function(b){ var s=atob(b), v=new Float32Array(s.length); for(var i=0;i<s.length;i++) v[i]=(s.charCodeAt(i)<<24)>>24; return v; };
+  function cosine(a,b){ var d=0,x=0,y=0; for(var i=0;i<a.length;i++){ d+=a[i]*b[i]; x+=a[i]*a[i]; y+=b[i]*b[i]; } return d/Math.sqrt(x*y); }
+  window.siteRequest=words?get('/api/embed?q='+encodeURIComponent(words)).then(function(r){ return {path:path,words:words,e:r.embedding}; }):null;
+  if(!window.siteRequest){ sem.innerHTML=''; semFoot.textContent='0 rows in set. There are no words in this URL to embed.'; return; }
+  Promise.all([window.siteRequest,get('/embeddings.json'),get('/archive/posts.json'),get('/talks.json')]).then(function(r){
+    var q=vec(r[0].e), all=r[1].vectors||{}, zero=new Float32Array(r[1].dims||q.length);
+    // the same rows and vectors as the `pages` table in run.js
+    var pages=[{title:'Home',path:'/'},{title:'Photos',path:'/photos/'},{title:'Writing archive',path:'/archive/'}]
+      .concat(r[2].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,v:all[p.path]}; })
+      .concat((r[3].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:u,title:t.title+' · '+t.event,v:all[u]}; }));
+    var best=pages.map(function(p){ return {p:p, m:Math.round(cosine(p.v?vec(p.v):zero,q)*100)/100}; })
+      .sort(function(a,b){ return (isNaN(a.m)-isNaN(b.m)) || b.m-a.m || (a.p.path<b.p.path?-1:a.p.path>b.p.path?1:0); }).slice(0,3);
+    sem.innerHTML=best.map(function(b){
+      return '<tr><td class="d">'+b.m.toFixed(2)+'</td><td><a href="'+esc(b.p.path)+'">'+esc(b.p.title)+'</a></td><td class="e">'+esc(b.p.path)+'</td></tr>';
+    }).join('');
+    semFoot.textContent=best.length+' rows in set. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.';
+  }).catch(function(){ sem.innerHTML=''; semFoot.textContent='0 rows in set. The embedding service is not answering, so only spelling works today.'; });
 })();
 </script>
 <script src="/run.js" defer></script>

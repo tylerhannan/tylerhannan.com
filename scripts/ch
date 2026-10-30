@@ -17,6 +17,7 @@ site's run buttons work, so you can check an edit before you push it. Type help 
 
 Stdlib only. Nothing is committed or pushed: review with git diff, then commit as usual.
 """
+import base64
 import datetime
 import difflib
 import json
@@ -324,10 +325,21 @@ REMOTE = {
     "photos": ("date Date, file String, title String, place Nullable(String), camera Nullable(String), "
                "alt Nullable(String), focus Nullable(String)",
                lambda: [dict(p, date=day(p.get("date"))) for p in load(TABLES["photos"])["photos"] if p.get("file")]),
-    "posts": ("date Date, title String, path String",
-              lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"])
+    "posts": ("date Date, title String, path String, e String",
+              lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"], e=vector(p["path"]))
                        for p in json.loads((ROOT / "public/archive/posts.json").read_text(encoding="utf-8"))["posts"]]),
 }
+# Tables whose rows carry a base64 embedding (scripts/embed.py), unpacked into `embedding` as in run.js
+VEC = {"posts": "* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), "
+                "range(1, length(base64Decode(e)) + 1)) AS embedding"}
+
+
+def vector(path, _cache={}):
+    if "v" not in _cache:
+        f = ROOT / "public/embeddings.json"
+        _cache["v"] = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {"dims": 0, "vectors": {}}
+    d = _cache["v"]
+    return d["vectors"].get(path) or base64.b64encode(bytes(d["dims"])).decode()
 
 
 def remote(q, t0):
@@ -338,7 +350,7 @@ def remote(q, t0):
         if re.search(rf"\b{name}\b", q, re.I):
             cols = [c.split()[0] for c in schema.split(", ")]
             vals = ", ".join("(" + ", ".join(lit(r.get(c)) for c in cols) + ")" for r in rows())
-            ctes.append(f"{name} AS (SELECT * FROM values({lit(schema)}, {vals}))")
+            ctes.append(f"{name} AS (SELECT {VEC.get(name, '*')} FROM values({lit(schema)}, {vals}))")
     if ctes:
         q = ("WITH " + ", ".join(ctes) + ", " + re.sub(r"^WITH\s+", "", q, flags=re.I) if re.match(r"WITH\b", q, re.I)
              else "WITH " + ", ".join(ctes) + " " + q) if re.match(r"(SELECT|WITH)\b", q, re.I) else q

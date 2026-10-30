@@ -82,6 +82,22 @@ I tend to listen to music in the office and keeping the aids in with my IEMs isn
     </div>
     <p class="note">Archived from the old tylerhannan.com blog. Originally published 2011-12-19.</p>
   </article>
+  <!-- related -->
+  <section aria-labelledby="related-h">
+    <p class="label" id="related-h">Nearest posts</p>
+    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">&#x27;/2011/12/and-i-heard-her-whisper-a-story-of-hearing-loss/&#x27;</span>)), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
+   <span class="kw">FROM</span> posts
+   <span class="kw">WHERE</span> path != <span class="s">&#x27;/2011/12/and-i-heard-her-whisper-a-story-of-hearing-loss/&#x27;</span>
+   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
+   <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
+    <div class="tbl near"><table>
+      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
+      <tbody><tr><td class="d">0.55</td><td><a href="/2011/06/aoife-liron-hannan-the-story-of-a-childs-heart/">Aoife Liron Hannan:  the story of a child&#x27;s heart</a></td><td class="e">/2011/06/aoife-liron-hannan-the-story-of-a-childs-heart/</td></tr><tr><td class="d">0.51</td><td><a href="/2011/10/kickstarter-a-data-analysis-exercise/">Kickstarter:  a data analysis exercise</a></td><td class="e">/2011/10/kickstarter-a-data-analysis-exercise/</td></tr><tr><td class="d">0.48</td><td><a href="/2010/11/defrag-conference-the-backchannel/">Defrag Conference, the backchannel</a></td><td class="e">/2010/11/defrag-conference-the-backchannel/</td></tr><tr><td class="d">0.48</td><td><a href="/2012/12/thank-you-for-your-service/">Thank You For Your Service</a></td><td class="e">/2012/12/thank-you-for-your-service/</td></tr><tr><td class="d">0.46</td><td><a href="/2011/03/project-completion-or-where-has-tyler-been/">Project Completion -or- Where has Tyler been?</a></td><td class="e">/2011/03/project-completion-or-where-has-tyler-been/</td></tr></tbody>
+    </table></div>
+    <p class="foot">5 rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+  </section>
+  <script src="/run.js" defer></script>
+  <!-- /related -->
   <section id="contact" aria-labelledby="contact-h">
     <p class="label" id="contact-h">Contact</p>
     <div class="contact">

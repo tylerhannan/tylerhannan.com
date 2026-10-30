@@ -1,6 +1,6 @@
 # tylerhannan.com
 
-Static site, no build step. Everything served lives in `public/`. Hosted on Cloudflare Workers (`wrangler.jsonc`); every push to `main` deploys.
+Static site, no build step. Everything served lives in `public/`. Hosted on Cloudflare Workers (`wrangler.jsonc`); every push to `main` deploys. The one bit of server code is `src/worker.js`, which serves `/api/embed` for the 404 page (see [Embeddings](#embeddings)).
 
 Preview locally (pages fetch JSON, so opening the files directly won't work):
 
@@ -65,7 +65,7 @@ SELECT date, title FROM talks WHERE youtube IS NULL ORDER BY date DESC LIMIT 5;
 
 ## Runnable queries
 
-The query boxes on the home, photos, archive and 404 pages run on real ClickHouse. Click **▶ run** to execute the query, or **edit** to change it first (⌘/Ctrl+Enter runs it while editing).
+The query boxes on the home, photos, archive, post and 404 pages run on real ClickHouse. Click **▶ run** to execute the query, or **edit** to change it first (⌘/Ctrl+Enter runs it while editing).
 
 ![Editing the talks query to add a date range, then querying the playground's UK house prices dataset](docs/runnable-queries.gif)
 
@@ -77,3 +77,13 @@ ClickHouse accepts SQL over plain HTTP, so `public/run.js` sends each query from
 - Errors come back from ClickHouse as they are, minus the long list of expected tokens on syntax errors.
 
 The `play` user can't change settings, read from URLs, use `format()`, or create temporary tables, so the inline data uses `values()`. Every query shown on the site has to be valid ClickHouse SQL, which is why the grouped talks views use `groupArray()`. To make a new query box runnable, give it `data-run` (`<div class="query" data-run>`) and load `/run.js` on the page. `DESCRIBE tyler` stays decorative.
+
+## Embeddings
+
+The 404 page finds pages by meaning as well as spelling, and every old post ends with its nearest posts. Both are `cosineDistance` queries over embeddings, made like this:
+
+- **Pages, ahead of time:** `python3 scripts/embed.py` collects every row of the `pages` table (home, photos, archive, posts with their text, talks) and embeds them with ClickHouse's [`aiEmbed`](https://clickhouse.com/docs/sql-reference/functions/ai-functions) in `clickhouse local`. It uses [EmbeddingGemma](https://ollama.com/library/embeddinggemma) running in Ollama, through Ollama's OpenAI-compatible endpoint, so it's free and nothing leaves your machine. It keeps the first 128 of the 768 dimensions (the model is trained so a prefix still works), scales them to Int8, and writes `public/embeddings.json` (about 60 KB). In the same run, ClickHouse works out each post's nearest posts, and the script writes them into the post pages and `public/archive/related.json`, which the importer reads on a re-import. It takes a few seconds. Run it again after adding posts or talks: a page without a vector gets zeros and sorts last.
+- **The missed URL, live:** the 404 page calls `/api/embed?q=<words from the URL>`. `src/worker.js` embeds them with the same model on Cloudflare Workers AI (`@cf/google/embeddinggemma-300m`), truncates and scales them the same way, and caches the answer for a day. Input is capped at 200 characters.
+- **The query:** `run.js` sends the vectors as base64 strings and unpacks them into an `embedding Array(Float32)` column on `posts` and `pages`, so the whole site's vectors stay well inside the playground's 256 KB query limit. On the 404 page the live vector is a one-row `request` table.
+
+Setup, once: `brew install ollama && brew services start ollama && ollama pull embeddinggemma`, then ClickHouse via [clickhousectl](https://clickhouse.com/docs/concepts/features/interfaces/cli) (`curl -fsSL https://clickhouse.com/cli | sh`, then `clickhousectl local use latest`). The Homebrew cask's binary is quarantined by macOS; clickhousectl's isn't.
