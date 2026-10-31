@@ -46,9 +46,9 @@
   <section aria-labelledby="how-h">
     <p class="label" id="how-h">How it works</p>
     <ol class="how-list">
-      <li>Ahead of time, ClickHouse's <code>aiEmbed</code> turned every page into 128 numbers using EmbeddingGemma, a small embedding model running on a laptop.</li>
+      <li>Ahead of time, ClickHouse's <code>aiEmbed</code> turned every page, talk, demo and photo into 128 numbers, using EmbeddingGemma running on my laptop.</li>
       <li>When you search, a Cloudflare Worker runs the same model on your words.</li>
-      <li>Your vector and the site's go to play.clickhouse.com, where <code>cosineDistance</code> ranks the pages by how close they are in meaning. Press ▶ run on the query to watch it happen.</li>
+      <li>Your browser ranks the pages by how close their numbers are to yours. Press ▶ run and the same query runs on play.clickhouse.com instead.</li>
     </ol>
   </section>
 
