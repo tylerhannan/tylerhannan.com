@@ -53,7 +53,7 @@
       return cte('pages','path String, title String, e String',rows,['path','title','e'],VEC); }); },
     // what was just searched for (or the 404 page's missed URL), embedded live by search.js: {words, e}
     request:function(){
-      if(!window.siteRequest) return Promise.reject(new Error('There is no request table yet: search for something first (the home page search box, or the 404 page).'));
+      if(!window.siteRequest) return Promise.reject(new Error('There is no request table yet: search for something first (on /search/, or the 404 page).'));
       return window.siteRequest.then(function(q){ return cte('request','words String, e String',[q],['words','e'],VEC); }); }
   };
 

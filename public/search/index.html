@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search · Tyler Hannan</title>
+<meta name="description" content="Search Tyler Hannan&#x27;s talks, demos and old posts by what they&#x27;re about, with embeddings and ClickHouse.">
+<link rel="canonical" href="https://tylerhannan.com/search/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tyler Hannan">
+<meta property="og:title" content="Search · Tyler Hannan">
+<meta property="og:description" content="Search Tyler Hannan&#x27;s talks, demos and old posts by what they&#x27;re about, with embeddings and ClickHouse.">
+<meta property="og:url" content="https://tylerhannan.com/search/">
+<meta property="og:image" content="https://tylerhannan.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@tylerhannan">
+<meta name="theme-color" content="#181818">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="/style.css">
+<script src="/site.js"></script>
+<script src="/search.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <section style="padding-top:24px">
+    <h1 class="label">Search</h1>
+    <p class="tag" style="margin:0 0 16px">Search talks, demos and old posts by what they're about, even when the words don't match. Your words are turned into a vector, and ClickHouse finds the nearest ones.</p>
+    <form class="query search" id="search-form" role="search"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="streaming data into clickhouse, payments APIs, agents…" aria-label="Search talks, demos and posts by meaning" autofocus></form>
+    <div id="search-out" hidden>
+      <div class="query" data-run id="search-sql" style="margin-top:16px"></div>
+      <div class="tbl near"><table>
+        <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
+        <tbody id="search-rows"></tbody>
+      </table></div>
+      <p class="foot" id="search-foot" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section aria-labelledby="how-h">
+    <p class="label" id="how-h">How it works</p>
+    <ol class="how-list">
+      <li>Ahead of time, ClickHouse's <code>aiEmbed</code> turned every page into 128 numbers using EmbeddingGemma, a small embedding model running on a laptop.</li>
+      <li>When you search, a Cloudflare Worker runs the same model on your words.</li>
+      <li>Your vector and the site's go to play.clickhouse.com, where <code>cosineDistance</code> ranks the pages by how close they are in meaning. Press ▶ run on the query to watch it happen.</li>
+    </ol>
+  </section>
+
+  <section id="contact" aria-labelledby="contact-h">
+    <p class="label" id="contact-h">Contact</p>
+    <div class="contact">
+      <span><span id="email">tyler@tylerhannan.com</span><button class="copy" id="copy" type="button">copy</button></span>
+      <a href="https://www.linkedin.com/in/tylerhannan/">linkedin</a>
+      <a href="https://twitter.com/tylerhannan">x / twitter</a>
+    </div>
+  </section>
+
+  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
+</div>
+<script>
+// search.js embeds the words (EmbeddingGemma on Workers AI) and makes them the `request` table the query reads;
+// the rows shown are computed the same way in the browser. ?q=words searches; ?like=<path> (a talk's
+// "more like this" on the home page) ranks against that page's stored vector instead.
+(function(){
+  var out=document.getElementById('search-out'), rows=document.getElementById('search-rows'), foot=document.getElementById('search-foot');
+  var sql=document.getElementById('search-sql'), LIMIT=10;
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
+  var k=function(w){ return '<span class="kw">'+w+'</span>'; }, n=function(v){ return '<span class="n">'+v+'</span>'; };
+  // the query for the rows below: nearest to the searched words, or to one page
+  function query(path){
+    var s=path==null?'':'<span class="s">'+esc(lit(path))+'</span>';
+    sql.innerHTML='<span class="p">:) </span>'+k('WITH')+'\n     ('+k('SELECT')+' embedding '+k('FROM')+(path==null?' request':' pages '+k('WHERE')+' path = '+s)+') '+k('AS')+' words\n   '+
+      k('SELECT')+' '+k('round')+'('+n(1)+' - '+k('cosineDistance')+'(embedding, words), '+n(2)+') '+k('AS')+' similarity, title, path\n   '+k('FROM')+' pages\n'+
+      (path==null?'':'   '+k('WHERE')+' path != '+s+'\n')+'   '+k('ORDER BY')+' similarity '+k('DESC')+', path\n   '+k('LIMIT')+' '+n(LIMIT)+';';
+  }
+  function start(){ out.hidden=false; rows.innerHTML='<tr><td colspan="3" class="d">Embedding…</td></tr>'; foot.textContent=''; }
+  function show(best,note){
+    rows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.similarity.toFixed(2)+'</td><td><a href="'+esc(b.path)+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.path)+'</td></tr>'; }).join('');
+    foot.textContent=best.length+' rows in set. '+note;
+  }
+  function fail(){ rows.innerHTML=''; foot.textContent='0 rows in set. The embedding service is not answering right now; try again in a bit.'; }
+  var q=new URLSearchParams(location.search), like=q.get('like');
+  var box=siteSearchBox({form:document.getElementById('search-form'), input:document.getElementById('search-q'), box:sql, limit:LIMIT,
+    start:function(){ query(null); start(); },
+    done:function(best,words){ show(best,'request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.'); },
+    fail:fail});
+  if(like&&!(q.get('q')||'').trim()) sitePages().then(function(pages){
+    var me=pages.filter(function(p){ return p.key===like; })[0], title=me?me.title:like;
+    box.run(title,{start:function(){ query(like); start(); }, search:function(){ return siteSimilar(like,LIMIT); },
+      done:function(best){ show(best,'The pages nearest to “'+title+'”, using the embedding ClickHouse\'s aiEmbed made for it ahead of time.'); }, fail:fail});
+  });
+})();
+</script>
+<script src="/run.js" defer></script>
+</body>
+</html>

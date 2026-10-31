@@ -26,7 +26,6 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <link rel="stylesheet" href="/style.css">
 <script src="/site.js"></script>
-<script src="/search.js"></script>
 </head>
 <body>
 
@@ -54,24 +53,8 @@
 
   <section id="search" aria-labelledby="search-h">
     <p class="label" id="search-h">Search</p>
-    <p class="bio" style="margin:0 0 16px">Search talks, demos and old posts by what they're about, even when the words don't match. Your words are turned into a vector, and ClickHouse finds the nearest ones.</p>
-    <form class="query search" id="search-form" role="search"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="payments APIs, real-time analytics, agents…" aria-label="Search talks, demos and posts by meaning"></form>
-    <details class="how">
-      <summary>how it works</summary>
-      <ol>
-        <li>Ahead of time, ClickHouse's <code>aiEmbed</code> turned every page into 128 numbers using EmbeddingGemma, a small embedding model running on a laptop.</li>
-        <li>When you search, a Cloudflare Worker runs the same model on your words.</li>
-        <li>Your vector and the site's go to play.clickhouse.com, where <code>cosineDistance</code> ranks the pages by how close they are in meaning. Press ▶ run to watch it happen.</li>
-      </ol>
-    </details>
-    <div id="search-out" hidden>
-      <div class="query" data-run id="search-sql" style="margin-top:16px"></div>
-      <div class="tbl near"><table>
-        <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
-        <tbody id="search-rows"></tbody>
-      </table></div>
-      <p class="foot" id="search-foot" aria-live="polite"></p>
-    </div>
+    <form class="query search" role="search" action="/search/" method="get"><span class="p">:) </span><input type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" required placeholder="search talks, demos and posts by meaning…" aria-label="Search talks, demos and posts by meaning"></form>
+    <p class="foot">Finds things by what they're about, even when the words don't match. <a href="/search/">How it works</a></p>
   </section>
 
   <section id="talks" aria-labelledby="talks-h">
@@ -220,7 +203,7 @@
     if(t.youtube) links.push('<a href="'+yt(t.youtube)+'">watch on youtube ↗</a>');
     if(t.url&&(!t.youtube||t.url.indexOf(t.youtube)<0)) links.push('<a href="'+esc(t.url)+'">'+(/youtube\.com\/playlist/.test(t.url)?'all episodes':'event page')+' ↗</a>');
     if(t.repo) links.push('<a href="'+esc(t.repo)+'">code ↗</a>');
-    links.push('<a href="#search" class="similar" data-key="'+esc(siteAnchor.talk(t))+'" data-title="'+esc(t.title)+'">more like this ↓</a>');
+    links.push('<a href="/search/?like='+encodeURIComponent(siteAnchor.talk(t))+'">more like this →</a>');
     var meta=[t.event,t.location,t.type].filter(Boolean).map(esc).join(' · ');
     var html='<tr class="x"><td></td><td colspan="3">'+meta+(t.note?'<br>'+esc(t.note):'')+'<div class="links">'+links.join('')+'</div>'+(withVideo&&t.youtube&&!framed?embed(t.youtube,t.title):'')+'</td></tr>';
     tr.insertAdjacentHTML('afterend',html); tr.nextElementSibling.dataset.g=tr.dataset.g||''; btn.setAttribute('aria-expanded','true');
@@ -280,45 +263,6 @@
   });
   fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();openAnchor();})
     .catch(function(){document.getElementById('rows').innerHTML='<tr><td colspan="4" class="d">Couldn\'t load talks.json. Check that it sits next to index.html.</td></tr>';});
-})();
-</script>
-<script>
-// Search: search.js embeds the words (EmbeddingGemma on Workers AI) and makes them the `request` table the query
-// reads; the rows shown are computed the same way in the browser. "more like this" on a talk uses its stored vector.
-(function(){
-  var out=document.getElementById('search-out'), rows=document.getElementById('search-rows'), foot=document.getElementById('search-foot');
-  var sql=document.getElementById('search-sql'), input=document.getElementById('search-q');
-  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
-  var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
-  var k=function(w){ return '<span class="kw">'+w+'</span>'; }, n=function(v){ return '<span class="n">'+v+'</span>'; };
-  // the query for the rows below: nearest to the searched words, or to one page (a talk's "more like this")
-  function query(path){
-    var src=path==null?'('+k('SELECT')+' embedding '+k('FROM')+' request) '+k('AS')+' words'
-      :'('+k('SELECT')+' embedding '+k('FROM')+' pages '+k('WHERE')+' path = <span class="s">'+esc(lit(path))+'</span>) '+k('AS')+' words';
-    sql.innerHTML='<span class="p">:) </span>'+k('WITH')+'\n     '+src+'\n   '+k('SELECT')+' '+k('round')+'('+n(1)+' - '+k('cosineDistance')+'(embedding, words), '+n(2)+') '+k('AS')+' similarity, title, path\n   '+
-      k('FROM')+' pages\n'+(path==null?'':'   '+k('WHERE')+' path != <span class="s">'+esc(lit(path))+'</span>\n')+'   '+k('ORDER BY')+' similarity '+k('DESC')+', path\n   '+k('LIMIT')+' '+n(5)+';';
-  }
-  function start(){ out.hidden=false; rows.innerHTML='<tr><td colspan="3" class="d">Embedding…</td></tr>'; foot.textContent=''; }
-  function show(best,note){
-    rows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.similarity.toFixed(2)+'</td><td><a href="'+esc(b.path)+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.path)+'</td></tr>'; }).join('');
-    foot.textContent=best.length+' rows in set. '+note;
-  }
-  var box=siteSearchBox({form:document.getElementById('search-form'), input:input, box:sql, limit:5, hash:'#search',
-    start:function(){ query(null); start(); },
-    done:function(best,words){ show(best,'request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.'); },
-    fail:function(){ rows.innerHTML=''; foot.textContent='0 rows in set. The embedding service is not answering right now; try again in a bit.'; }});
-  // a talk's "more like this" link (in its expanded row): data-key is its path in the pages table
-  document.addEventListener('click',function(e){
-    var a=e.target.closest('.similar'); if(!a) return;
-    e.preventDefault();
-    var key=a.dataset.key, title=a.dataset.title;
-    input.value='';
-    try{ history.replaceState(null,'',location.pathname+'#search'); }catch(_){}
-    box.run(title,{start:function(){ query(key); start(); }, search:function(){ return siteSimilar(key,5); },
-      done:function(best){ show(best,'The pages nearest to “'+title+'”, using the embedding ClickHouse\'s aiEmbed made for it ahead of time.'); }});
-    document.getElementById('search').scrollIntoView({behavior:'smooth',block:'start'});
-  });
-  query(null);
 })();
 </script>
 <script src="/run.js" defer></script>
