@@ -20,8 +20,9 @@
       var row=function(path,title,k){ return {key:path,path:path,title:title,v:r[3][k]?vec(r[3][k]):null}; };
       return [{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}].concat(r[0].posts||[])
         .map(function(p){ return row(dec(p.path),p.title,p.path); })
-        .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return row(u,t.title+' · '+t.event,u); }))
-        .concat((r[2].demos||[]).map(function(d){ return row(d.repo,d.name+' · demo',d.repo); }));
+        // talks and demos: path is their row on the home page (site.js); vectors are keyed by their own link
+        .concat((r[1].talks||[]).map(function(t){ return row(siteAnchor.talk(t),t.title+' · '+t.event,t.url||'https://www.youtube.com/watch?v='+t.youtube); }))
+        .concat((r[2].demos||[]).map(function(d){ return row(siteAnchor.demo(d),d.name+' · demo',d.repo); }));
     }); },
     posts:function(){ return Promise.all([get('/archive/posts.json'),vectors()]).then(function(r){
       return (r[0].posts||[]).map(function(p){ return {key:p.path,path:p.path,title:p.title,date:p.date,v:r[1][p.path]?vec(r[1][p.path]):null}; });

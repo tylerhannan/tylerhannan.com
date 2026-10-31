@@ -47,8 +47,9 @@
       var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
       var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}]
         .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,e:r[3](p.path)}; })
-        .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:u,title:t.title+' · '+t.event,e:r[3](u)}; }))
-        .concat((r[2].demos||[]).map(function(d){ return {path:d.repo,title:d.name+' · demo',e:r[3](d.repo)}; }));
+        // talks and demos: path is their row on the home page (site.js); vectors are keyed by their own link
+        .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:siteAnchor.talk(t),title:t.title+' · '+t.event,e:r[3](u)}; }))
+        .concat((r[2].demos||[]).map(function(d){ return {path:siteAnchor.demo(d),title:d.name+' · demo',e:r[3](d.repo)}; }));
       return cte('pages','path String, title String, e String',rows,['path','title','e'],VEC); }); },
     // what was just searched for (or the 404 page's missed URL), embedded live by search.js: {words, e}
     request:function(){

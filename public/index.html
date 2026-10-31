@@ -220,7 +220,7 @@
     if(t.youtube) links.push('<a href="'+yt(t.youtube)+'">watch on youtube ↗</a>');
     if(t.url&&(!t.youtube||t.url.indexOf(t.youtube)<0)) links.push('<a href="'+esc(t.url)+'">'+(/youtube\.com\/playlist/.test(t.url)?'all episodes':'event page')+' ↗</a>');
     if(t.repo) links.push('<a href="'+esc(t.repo)+'">code ↗</a>');
-    links.push('<a href="#search" class="similar" data-key="'+esc(t.url||'https://www.youtube.com/watch?v='+t.youtube)+'" data-title="'+esc(t.title)+'">more like this ↓</a>');
+    links.push('<a href="#search" class="similar" data-key="'+esc(siteAnchor.talk(t))+'" data-title="'+esc(t.title)+'">more like this ↓</a>');
     var meta=[t.event,t.location,t.type].filter(Boolean).map(esc).join(' · ');
     var html='<tr class="x"><td></td><td colspan="3">'+meta+(t.note?'<br>'+esc(t.note):'')+'<div class="links">'+links.join('')+'</div>'+(withVideo&&t.youtube&&!framed?embed(t.youtube,t.title):'')+'</td></tr>';
     tr.insertAdjacentHTML('afterend',html); tr.nextElementSibling.dataset.g=tr.dataset.g||''; btn.setAttribute('aria-expanded','true');
@@ -253,12 +253,32 @@
   fetch('demos.json').then(function(r){return r.json()}).then(function(d){
     var ds=d.demos||[];
     document.getElementById('demo-rows').innerHTML=ds.map(function(x){
-      return '<tr><td><a href="'+esc(x.repo)+'">'+esc(x.name)+' ↗</a></td><td>'+esc(x.about)+'</td>'+(x.event?'<td class="e">'+esc(x.event)+'</td>':'<td class="d">NULL</td>')+'</tr>';
+      return '<tr id="'+esc(siteAnchor.demo(x).slice(2))+'"><td><a href="'+esc(x.repo)+'">'+esc(x.name)+' ↗</a></td><td>'+esc(x.about)+'</td>'+(x.event?'<td class="e">'+esc(x.event)+'</td>':'<td class="d">NULL</td>')+'</tr>';
     }).join('');
     document.getElementById('demo-foot').textContent=ds.length+' row'+(ds.length===1?'':'s')+' in set. Code for each is on GitHub.';
+    if(location.hash.indexOf('#demo-')===0) openAnchor();
   }).catch(function(){document.getElementById('demo-rows').innerHTML='<tr><td colspan="3" class="d">Couldn\'t load demos.json.</td></tr>';});
 
-  fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();})
+  // /#talk-… and /#demo-… (site.js siteAnchor; search results and the 404 page link here) open that row:
+  // filters reset, its group unfolds, the row expands, and it's briefly highlighted.
+  function flash(tr){ tr.scrollIntoView({behavior:'smooth',block:'center'}); tr.classList.add('hit'); setTimeout(function(){ tr.classList.remove('hit'); },2500); }
+  function openAnchor(){
+    var h='/'+location.hash, t=h.indexOf('/#talk-')===0&&talks.filter(function(x){ return siteAnchor.talk(x)===h; })[0];
+    if(t){
+      state.type='all'; state.video=false;
+      var g=GROUPS[state.group]; if(g&&folded[state.group]) delete folded[state.group][g.key(t)];
+      render();
+      var i=render.rows.indexOf(t), btn=document.querySelector('.t[data-i="'+i+'"]'); if(!btn) return;
+      if(btn.getAttribute('aria-expanded')!=='true') toggle(i,false);
+      flash(btn.closest('tr'));
+    } else if(h.indexOf('/#demo-')===0){ var d=document.getElementById(location.hash.slice(1)); if(d) flash(d); }
+  }
+  window.addEventListener('hashchange',openAnchor);
+  document.addEventListener('click',function(e){  // the same link twice doesn't change the hash, so open it here
+    var a=e.target.closest('a[href^="/#talk-"],a[href^="/#demo-"]'); if(!a||e.metaKey||e.ctrlKey||e.shiftKey) return;
+    e.preventDefault(); if(location.hash!==a.hash) history.pushState(null,'',a.hash); openAnchor();
+  });
+  fetch('talks.json').then(function(r){return r.json()}).then(function(d){talks=d.talks||[];render();vids();openAnchor();})
     .catch(function(){document.getElementById('rows').innerHTML='<tr><td colspan="4" class="d">Couldn\'t load talks.json. Check that it sits next to index.html.</td></tr>';});
 })();
 </script>
