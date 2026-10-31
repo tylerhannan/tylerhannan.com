@@ -28,7 +28,8 @@
     <pre class="err">Received exception from server (version 404.0.0):
 Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may have moved when this site stopped being WordPress, or it never existed. (PAGE_NOT_FOUND)</pre>
 
-    <div class="query" data-run style="margin-top:28px"><span class="p">:) </span><span class="kw">WITH</span>
+    <p class="label" style="margin-top:36px">Closest by spelling</p>
+    <div class="query" data-run><span class="p">:) </span><span class="kw">WITH</span>
      <span class="s" id="req3">''</span> <span class="kw">AS</span> words
    <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="kw">ngramSearchCaseInsensitive</span>(title, words), <span class="n">2</span>) <span class="kw">AS</span> match, title, path
    <span class="kw">FROM</span> pages
@@ -40,7 +41,8 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
     </table></div>
     <p class="foot" id="near-foot"></p>
 
-    <div class="query" data-run style="margin-top:28px"><span class="p">:) </span><span class="kw">WITH</span>
+    <p class="label" style="margin-top:36px">Closest by meaning</p>
+    <div class="query" data-run><span class="p">:) </span><span class="kw">WITH</span>
      (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> request) <span class="kw">AS</span> words
    <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, words), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
    <span class="kw">FROM</span> pages
