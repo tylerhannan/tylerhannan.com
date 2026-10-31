@@ -338,7 +338,7 @@ PAGE = """<!doctype html>
     </div>
   </section>
 
-  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
+  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/search/">search</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
 </div>
 </body>
 </html>

@@ -127,7 +127,7 @@ tr.x .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px;font-family:
 .desc{width:100%;border-collapse:collapse;font:14px var(--mono);margin-top:4px}
 .desc td{padding:8px 12px 8px 0;border-bottom:1px solid var(--line)}
 .desc td:first-child{color:var(--muted);width:9em;white-space:nowrap}
-.bio{max-width:62ch;margin:20px 0 0;font-size:17px}
+.bio{margin:20px 0 0;font-size:17px}  /* full width, like the boxes above it */
 
 .contact{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;font:15px var(--mono);margin-top:4px}
 .copy{font:12px var(--mono);background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 9px;cursor:pointer;margin-left:8px}

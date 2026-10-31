@@ -48,9 +48,9 @@
       var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}]
         .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,e:r[3](p.path)}; })
         // talks and demos: path is their row on the home page (site.js); vectors are keyed by their own link
-        .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:siteAnchor.talk(t),title:t.title+' · '+t.event,e:r[3](u)}; }))
+        .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:siteAnchor.talk(t),title:t.title+' · '+t.event,event:t.event,e:r[3](u)}; }))
         .concat((r[2].demos||[]).map(function(d){ return {path:siteAnchor.demo(d),title:d.name+' · demo',e:r[3](d.repo)}; }));
-      return cte('pages','path String, title String, e String',rows,['path','title','e'],VEC); }); },
+      return cte('pages','path String, title String, event Nullable(String), e String',rows,['path','title','event','e'],VEC); }); },
     // what was just searched for (or the 404 page's missed URL), embedded live by search.js: {words, e}
     request:function(){
       if(!window.siteRequest) return Promise.reject(new Error('There is no request table yet: search for something first (on /search/, or the 404 page).'));

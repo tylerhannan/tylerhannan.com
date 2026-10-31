@@ -61,7 +61,7 @@
     </div>
   </section>
 
-  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
+  <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/search/">search</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
 </div>
 <script>
 // search.js embeds the words (EmbeddingGemma on Workers AI) and makes them the `request` table the query reads;
@@ -78,7 +78,8 @@
     var s=path==null?'':'<span class="s">'+esc(lit(path))+'</span>';
     sql.innerHTML='<span class="p">:) </span>'+k('WITH')+'\n     ('+k('SELECT')+' embedding '+k('FROM')+(path==null?' request':' pages '+k('WHERE')+' path = '+s)+') '+k('AS')+' words\n   '+
       k('SELECT')+' '+k('round')+'('+n(1)+' - '+k('cosineDistance')+'(embedding, words), '+n(2)+') '+k('AS')+' similarity, title, path\n   '+k('FROM')+' pages\n'+
-      (path==null?'':'   '+k('WHERE')+' path != '+s+'\n')+'   '+k('ORDER BY')+' similarity '+k('DESC')+', path\n   '+k('LIMIT')+' '+n(LIMIT)+';';
+      (path==null?'':'   '+k('WHERE')+' path != '+s+'\n')+'   '+k('ORDER BY')+' similarity '+k('DESC')+', path\n   '+
+      k('LIMIT')+' '+n(1)+' '+k('BY')+' '+k('ifNull')+'(event, path)  <span class="c">-- one result per event</span>\n   '+k('LIMIT')+' '+n(LIMIT)+';';
   }
   function start(){ out.hidden=false; rows.innerHTML='<tr><td colspan="3" class="d">Embedding…</td></tr>'; foot.textContent=''; }
   function show(best,note){
@@ -87,13 +88,13 @@
   }
   function fail(){ rows.innerHTML=''; foot.textContent='0 rows in set. The embedding service is not answering right now; try again in a bit.'; }
   var q=new URLSearchParams(location.search), like=q.get('like');
-  var box=siteSearchBox({form:document.getElementById('search-form'), input:document.getElementById('search-q'), box:sql, limit:LIMIT,
+  var box=siteSearchBox({form:document.getElementById('search-form'), input:document.getElementById('search-q'), box:sql, limit:LIMIT, byEvent:true,
     start:function(){ query(null); start(); },
     done:function(best,words){ show(best,'request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.'); },
     fail:fail});
   if(like&&!(q.get('q')||'').trim()) sitePages().then(function(pages){
     var me=pages.filter(function(p){ return p.key===like; })[0], title=me?me.title:like;
-    box.run(title,{start:function(){ query(like); start(); }, search:function(){ return siteSimilar(like,LIMIT); },
+    box.run(title,{start:function(){ query(like); start(); }, search:function(){ return siteSimilar(like,LIMIT,'pages',true); },
       done:function(best){ show(best,'The pages nearest to “'+title+'”, using the embedding ClickHouse\'s aiEmbed made for it ahead of time.'); }, fail:fail});
   });
   if(!sql.innerHTML) query(null);  // shown before the first search too, like every other page's query
