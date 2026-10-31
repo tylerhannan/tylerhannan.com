@@ -20,7 +20,7 @@
     var vals=rows.map(function(r){return '('+cols.map(function(c){return lit(r[c])}).join(', ')+')'}).join(', ');
     return name+' AS (SELECT '+(select||'*')+' FROM values('+lit(schema)+', '+(vals||'')+'))';
   }
-  // Embeddings travel as base64 strings (128 Int8 each, from public/embeddings.json) and are unpacked here, so
+  // Embeddings travel as base64 strings (384 Int8 each, from public/embeddings.json) and are unpacked here, so
   // the whole site's vectors fit in the playground's 256 KB query limit. A page without one gets zeros.
   var VEC='* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), range(1, length(base64Decode(e)) + 1)) AS embedding';
   function vectors(){ return load('/embeddings.json').then(function(d){
@@ -42,14 +42,16 @@
     demos:function(){ return load('/demos.json').then(function(d){
       var rows=(d.demos||[]).map(function(x){var o={};for(var k in x)o[k]=x[k];o.date=day(x.date);return o});
       return cte('demos','date Date, name String, about String, event Nullable(String), repo String',rows,['date','name','about','event','repo']); }); },
-    // every page on the site plus every talk and demo, for search and the 404 page (search.js has the same rows)
-    pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),load('/demos.json'),vectors()]).then(function(r){
+    // every page on the site plus every talk, demo and photo, for search and the 404 page (search.js has the same rows)
+    pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),load('/demos.json'),vectors(),load('/photos.json')]).then(function(r){
       var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
       var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}]
         .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,e:r[3](p.path)}; })
         // talks and demos: path is their row on the home page (site.js); vectors are keyed by their own link
         .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:siteAnchor.talk(t),title:t.title+' · '+t.event,event:t.event,e:r[3](u)}; }))
-        .concat((r[2].demos||[]).map(function(d){ return {path:siteAnchor.demo(d),title:d.name+' · demo',e:r[3](d.repo)}; }));
+        .concat((r[2].demos||[]).map(function(d){ return {path:siteAnchor.demo(d),title:d.name+' · demo',e:r[3](d.repo)}; }))
+        // photos: path opens the photo in the gallery's viewer
+        .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return {path:'/photos/#'+p.file.replace(/\.[^.]+$/,''),title:p.title+' · photo',e:r[3]('/photos/'+p.file)}; }));
       return cte('pages','path String, title String, event Nullable(String), e String',rows,['path','title','event','e'],VEC); }); },
     // what was just searched for (or the 404 page's missed URL), embedded live by search.js: {words, e}
     request:function(){

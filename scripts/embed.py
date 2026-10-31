@@ -13,8 +13,9 @@ What it does:
     plus every photo (from its title, alt text and place),
     with a post's text taken from its HTML
   - runs aiEmbed(…, 'embeddinggemma') over them in clickhouse local, through Ollama's OpenAI-compatible endpoint
-  - keeps the first 128 of EmbeddingGemma's 768 dimensions (it's trained so that a prefix still works) and
-    scales each to Int8, then writes public/embeddings.json: {path: base64 of the 128 bytes}
+  - keeps the first 384 of EmbeddingGemma's 768 dimensions (it's trained so that a prefix still works) and
+    scales each to Int8, then writes public/embeddings.json: {path: base64 of the 384 bytes}. 128 was too lossy
+    for one-word searches ("neon" missed the neon photos); 768 would push the pages table past play's 256 KB query limit
   - runs the "nearest posts" query from each post page in clickhouse local, on exactly those Int8 vectors, writes
     public/archive/related.json, and puts the results into every post page (the importer does too, on re-import)
 
@@ -39,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from import_wordpress import PUBLIC, excerpt, related_section  # noqa: E402
 
 MODEL = "embeddinggemma"
-DIMS = 128
+DIMS = 384
 OLLAMA = os.environ.get("OLLAMA_URL", "http://localhost:11434") + "/v1/embeddings"
 RELATED = 5
 

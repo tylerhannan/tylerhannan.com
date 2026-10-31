@@ -32,7 +32,7 @@
   <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <section style="padding-top:24px">
     <h1 class="label">Search</h1>
-    <form class="query search" id="search-form" role="search"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="streaming data into clickhouse, payments APIs, agents…" aria-label="Search talks, demos and posts by meaning"></form>
+    <form class="query search" id="search-form" role="search"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="streaming data into clickhouse, payments APIs, agents…" aria-label="Search talks, demos, posts and photos by meaning"></form>
     <div class="query" data-run id="search-sql" style="margin-top:16px"></div>
     <div id="search-out" hidden>
       <div class="tbl near"><table>
@@ -46,7 +46,7 @@
   <section aria-labelledby="how-h">
     <p class="label" id="how-h">How it works</p>
     <ol class="how-list">
-      <li>Ahead of time, ClickHouse's <code>aiEmbed</code> turned every page, talk, demo and photo into 128 numbers, using EmbeddingGemma running on my laptop.</li>
+      <li>Ahead of time, ClickHouse's <code>aiEmbed</code> turned every page, talk, demo and photo into 384 numbers, using EmbeddingGemma running on my laptop.</li>
       <li>When you search, a Cloudflare Worker runs the same model on your words.</li>
       <li>Your browser ranks the pages by how close their numbers are to yours. Press ▶ run and the same query runs on play.clickhouse.com instead.</li>
     </ol>

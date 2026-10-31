@@ -1,10 +1,10 @@
 // tylerhannan.com: the static site in public/ (Workers static assets) plus one endpoint for the 404 page.
 //
 // GET /api/embed?q=some+words embeds the words with EmbeddingGemma on Workers AI and returns them in the same
-// shape as public/embeddings.json (scripts/embed.py): the first 128 dimensions, scaled to Int8, base64.
+// shape as public/embeddings.json (scripts/embed.py): the first 384 dimensions, scaled to Int8, base64.
 // The site's pages were embedded with the same model (through Ollama), so the two are comparable.
 const MODEL = '@cf/google/embeddinggemma-300m';
-const DIMS = 128;
+const DIMS = 384;
 const MAX_CHARS = 200;  // a URL's worth of words; keeps the endpoint from being a free embedding API
 
 const json = (body, status, headers) => new Response(JSON.stringify(body) + '\n', {
@@ -19,7 +19,8 @@ export default {
     const q = (url.searchParams.get('q') || '').replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
     if (!q) return json({ error: 'Add ?q=some words' }, 400);
 
-    const key = new Request(url.origin + '/api/embed?q=' + encodeURIComponent(q));
+    // the cache key names the size, so answers cached before a change of DIMS are never served
+    const key = new Request(url.origin + '/api/embed?d=' + DIMS + '&q=' + encodeURIComponent(q));
     const hit = await caches.default.match(key);
     if (hit) return hit;
 

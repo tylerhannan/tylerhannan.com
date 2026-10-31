@@ -8,7 +8,7 @@
   var get=function(u){ return cache[u]||(cache[u]=fetch(u).then(function(r){ if(!r.ok) throw new Error(u+': HTTP '+r.status); return r.json(); })
     .catch(function(e){ delete cache[u]; throw e; })); };
   var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
-  // 128 Int8, base64 (the same unpacking run.js does in SQL)
+  // 384 Int8, base64 (the same unpacking run.js does in SQL)
   var vec=function(b){ var s=atob(b), v=new Float32Array(s.length); for(var i=0;i<s.length;i++) v[i]=(s.charCodeAt(i)<<24)>>24; return v; };
   function cosine(a,b){ var d=0,x=0,y=0; for(var i=0;i<a.length;i++){ d+=a[i]*b[i]; x+=a[i]*a[i]; y+=b[i]*b[i]; } return d/Math.sqrt(x*y); }
   var vectors=function(){ return get('/embeddings.json').then(function(d){ return d.vectors||{}; },function(){ return {}; }); };
@@ -16,13 +16,15 @@
   // The rows of run.js's tables, each with its vector (v is null for anything scripts/embed.py hasn't seen yet)
   // and `key`, the column the SQL breaks ties on (path, or file for photos).
   var TABLES={
-    pages:function(){ return Promise.all([get('/archive/posts.json'),get('/talks.json'),get('/demos.json'),vectors()]).then(function(r){
+    pages:function(){ return Promise.all([get('/archive/posts.json'),get('/talks.json'),get('/demos.json'),vectors(),get('/photos.json')]).then(function(r){
       var row=function(path,title,k,event){ return {key:path,path:path,title:title,event:event||null,v:r[3][k]?vec(r[3][k]):null}; };
       return [{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}].concat(r[0].posts||[])
         .map(function(p){ return row(dec(p.path),p.title,p.path); })
         // talks and demos: path is their row on the home page (site.js); vectors are keyed by their own link
         .concat((r[1].talks||[]).map(function(t){ return row(siteAnchor.talk(t),t.title+' · '+t.event,t.url||'https://www.youtube.com/watch?v='+t.youtube,t.event); }))
-        .concat((r[2].demos||[]).map(function(d){ return row(siteAnchor.demo(d),d.name+' · demo',d.repo); }));
+        .concat((r[2].demos||[]).map(function(d){ return row(siteAnchor.demo(d),d.name+' · demo',d.repo); }))
+        // photos: path opens the photo in the gallery's viewer
+        .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return row('/photos/#'+p.file.replace(/\.[^.]+$/,''),p.title+' · photo','/photos/'+p.file); }));
     }); },
     posts:function(){ return Promise.all([get('/archive/posts.json'),vectors()]).then(function(r){
       return (r[0].posts||[]).map(function(p){ return {key:p.path,path:p.path,title:p.title,date:p.date,v:r[1][p.path]?vec(r[1][p.path]):null}; });
@@ -45,7 +47,8 @@
   }
   // Embed the words, make them the `request` table, and rank a table's rows against them.
   window.siteSearch=function(words,limit,table,byEvent){
-    var req=get('/api/embed?q='+encodeURIComponent(words)).then(function(r){ return {words:words,e:r.embedding}; });
+    // d= matches src/worker.js's DIMS, so a browser never reuses an answer cached at another size
+    var req=get('/api/embed?d=384&q='+encodeURIComponent(words)).then(function(r){ return {words:words,e:r.embedding}; });
     window.siteRequest=req;
     return Promise.all([req,TABLES[table||'pages']()]).then(function(r){ return rank(r[1],vec(r[0].e),limit,null,byEvent); });
   };
