@@ -62,8 +62,10 @@ textarea.query:focus{outline:2px solid var(--accent);outline-offset:2px}
 .search:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .search input{flex:1;min-width:0;font:inherit;color:var(--fg);background:none;border:0;padding:0;margin:0;outline:none;-webkit-appearance:none;appearance:none}
 .search input::placeholder{color:var(--muted);opacity:1}
-.how-list{margin:0;padding-left:20px;max-width:62ch;color:var(--muted);line-height:1.6}
-.how-list li+li{margin-top:6px}
+.how-list{list-style:none;counter-reset:step;margin:0;padding:0;max-width:62ch;color:var(--muted);line-height:1.5}
+.how-list li{counter-increment:step;padding-left:32px}
+.how-list li::before{content:counter(step) ".";display:inline-block;width:32px;margin-left:-32px;font:13px var(--mono)}
+.how-list li+li{margin-top:12px}
 .how-list code{font:14px var(--mono)}
 .result .null{color:var(--muted)}
 .result .raw{font:13px/1.5 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;margin:0}
