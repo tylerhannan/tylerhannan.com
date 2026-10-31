@@ -32,13 +32,9 @@
   <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <section style="padding-top:24px">
     <p class="label">Writing archive</p>
-    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> date, title
-   <span class="kw">FROM</span> posts
-   <span class="kw">ORDER BY</span> date <span class="kw">DESC</span>;</div>
-    <p class="tag" style="margin-top:16px">Older posts from the WordPress years, kept so the links still work. Some of it has aged better than the rest.</p>
-    <form class="query search" id="search-form" role="search" style="margin-top:20px"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="search the posts by meaning: credit card fees, developer communities…" aria-label="Search the posts by meaning"></form>
-    <div id="search-out" hidden>
-      <div class="query" data-run id="search-sql" style="margin-top:16px"><span class="p">:) </span><span class="kw">WITH</span>
+    <form class="query search" id="search-form" role="search" style="margin-bottom:16px"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="search the posts by meaning: credit card fees, developer communities…" aria-label="Search the posts by meaning"></form>
+    <div id="search-out" hidden style="margin-bottom:28px">
+      <div class="query" data-run id="search-sql"><span class="p">:) </span><span class="kw">WITH</span>
      (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> request) <span class="kw">AS</span> words
    <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, words), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, date
    <span class="kw">FROM</span> posts
@@ -50,6 +46,10 @@
       </table></div>
       <p class="foot" id="search-foot" aria-live="polite"></p>
     </div>
+    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> date, title
+   <span class="kw">FROM</span> posts
+   <span class="kw">ORDER BY</span> date <span class="kw">DESC</span>;</div>
+    <p class="tag" style="margin-top:16px">Older posts from the WordPress years, kept so the links still work. Some of it has aged better than the rest.</p>
     <div id="list"></div>
     <p class="foot" id="foot"></p>
   </section>

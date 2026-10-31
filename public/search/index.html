@@ -32,10 +32,9 @@
   <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
   <section style="padding-top:24px">
     <h1 class="label">Search</h1>
-    <p class="tag" style="margin:0 0 16px">Search talks, demos and old posts by what they're about, even when the words don't match. Your words are turned into a vector, and ClickHouse finds the nearest ones.</p>
-    <form class="query search" id="search-form" role="search"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="streaming data into clickhouse, payments APIs, agents…" aria-label="Search talks, demos and posts by meaning" autofocus></form>
+    <form class="query search" id="search-form" role="search"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="streaming data into clickhouse, payments APIs, agents…" aria-label="Search talks, demos and posts by meaning"></form>
+    <div class="query" data-run id="search-sql" style="margin-top:16px"></div>
     <div id="search-out" hidden>
-      <div class="query" data-run id="search-sql" style="margin-top:16px"></div>
       <div class="tbl near"><table>
         <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
         <tbody id="search-rows"></tbody>
@@ -97,6 +96,7 @@
     box.run(title,{start:function(){ query(like); start(); }, search:function(){ return siteSimilar(like,LIMIT); },
       done:function(best){ show(best,'The pages nearest to “'+title+'”, using the embedding ClickHouse\'s aiEmbed made for it ahead of time.'); }, fail:fail});
   });
+  if(!sql.innerHTML) query(null);  // shown before the first search too, like every other page's query
 })();
 </script>
 <script src="/run.js" defer></script>
