@@ -1,4 +1,5 @@
-// tylerhannan.com: the static site in public/ (Workers static assets) plus one endpoint for the 404 page.
+// tylerhannan.com: the static site in public/ (Workers static assets) plus one endpoint for search
+// (public/search.js: the search, photos and archive pages, and the 404 page).
 //
 // GET /api/embed?q=some+words embeds the words with EmbeddingGemma on Workers AI and returns them in the same
 // shape as public/embeddings.json (scripts/embed.py): the first 384 dimensions, scaled to Int8, base64.
