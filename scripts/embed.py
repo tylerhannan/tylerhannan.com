@@ -125,8 +125,9 @@ def main():
         tmp = Path(tmp)
         (tmp / "docs.jsonl").write_text("".join(json.dumps(d, ensure_ascii=False) + "\n" for d in rows), encoding="utf-8")
         print(f"Embedding {len(rows)} pages with {MODEL} via Ollama…", flush=True)
-        # its own --path: clickhouse local otherwise keeps tables and named collections between runs
-        r = subprocess.run([ch, "local", "--path", str(tmp / "ch"), "--multiquery", SQL], cwd=tmp, capture_output=True, text=True)
+        # --tmp: by default clickhouse local keeps its tables and named collections between runs (by design, in
+        # ~/Library/Application Support/clickhouse-local), so CREATE would fail on the second run
+        r = subprocess.run([ch, "local", "--tmp", "--multiquery", SQL], cwd=tmp, capture_output=True, text=True)
         if r.returncode:
             sys.exit(r.stderr.strip() or f"clickhouse local exited with {r.returncode}")
         vectors = [json.loads(line) for line in (tmp / "vectors.jsonl").read_text(encoding="utf-8").splitlines()]
