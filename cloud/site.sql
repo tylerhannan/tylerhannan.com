@@ -1,9 +1,10 @@
 -- Semantic search for tylerhannan.com, all in SQL: ClickHouse reads the site, embeds it, keeps it up to date
 -- and answers searches. The Cloud counterpart of scripts/embed.py + src/worker.js + play.clickhouse.com.
 --
--- Written for ClickHouse Cloud's AI functions (private preview); tested on ClickHouse 26.11 OSS, with Ollama
--- standing in for the model provider (cloud/test.sh). Before running it on Cloud, check the two marked lines:
--- the named collection (Cloud may not need one) and the model name.
+-- Written for ClickHouse Cloud's AI functions (private preview), whose default embedding model there is
+-- Qwen3-Embedding-8B (as of Nov 2026; could change before GA). Cloud provides the model, so this file has no
+-- credentials or endpoint. Tested on ClickHouse 26.11 OSS by cloud/test.sh, which adds a named collection for
+-- Ollama and swaps in the small qwen3-embedding:0.6b (same family and prompt format).
 --
 --   site.docs      a view over the live site: every page, post, talk, demo and photo, as title + text
 --   site.pages     a snapshot of site.docs, with a hash of each row's text; cloud/refresh.sh refreshes it
@@ -12,13 +13,9 @@
 --   site.search    parameterized view: SELECT * FROM site.search(q = 'some words')
 --   site.related   parameterized view: SELECT * FROM site.related(path = '/2012/04/geektool/')
 --
--- Rows are built exactly as scripts/embed.py builds them, so the two pipelines embed the same text.
--- Only the model provider and the vector size differ: Cloud keeps all 768 dimensions as Float32
--- (play's 256 KB query limit is why the static site keeps 384 as Int8).
-
--- ▶ OSS: any OpenAI-compatible endpoint. Cloud: replace or drop, depending on what the preview provides.
-CREATE NAMED COLLECTION IF NOT EXISTS site_embed AS
-    provider = 'openai', endpoint = 'http://localhost:11434/v1/embeddings';
+-- Rows are built exactly as scripts/embed.py builds them, so the two pipelines embed the same text. The models
+-- differ: the static site uses EmbeddingGemma, cut to 384 Int8 dimensions to fit play's 256 KB query limit;
+-- here it's Qwen3-Embedding-8B with all 4096 dimensions as Float32. So the two give different results.
 
 CREATE DATABASE IF NOT EXISTS site;
 
@@ -89,19 +86,20 @@ CREATE TABLE IF NOT EXISTS site.vectors
 )
 ENGINE = ReplacingMergeTree ORDER BY (path, h);
 
--- After each snapshot, embed only what's new or changed (a refresh with no changes makes no model calls). EmbeddingGemma's document prompt.
--- ▶ Model name: 'embeddinggemma' in Ollama; on Cloud, whatever the preview offers (also in site.search below).
+-- After each snapshot, embed only what's new or changed (a refresh with no changes makes no model calls).
+-- Qwen3-Embedding takes documents as they are; only queries get an instruction (site.search).
 CREATE MATERIALIZED VIEW IF NOT EXISTS site.embed
 REFRESH EVERY 1 WEEK DEPENDS ON site.pages APPEND
 TO site.vectors
-AS SELECT path, h, aiEmbed('title: ' || title || ' | text: ' || text, 'embeddinggemma', map('credentials', 'site_embed')) AS v
+AS SELECT path, h, aiEmbed(title || '\n' || text, 'qwen3-embedding-8b') AS v
 FROM site.pages
 WHERE (path, h) NOT IN (SELECT path, h FROM site.vectors);
 
--- The search: EmbeddingGemma's query prompt, one row per event (a series like the release calls shows once)
+-- The search: Qwen3-Embedding's query format, one row per event (a series like the release calls shows once)
 CREATE OR REPLACE VIEW site.search AS
-SELECT round(1 - cosineDistance(v, aiEmbed('task: search result | query: ' || {q:String}, 'embeddinggemma',
-                                           map('credentials', 'site_embed'))), 2) AS similarity,
+SELECT round(1 - cosineDistance(v, aiEmbed('Instruct: Given a search query, find the pages, posts, talks, demos and '
+                                           || 'photos on a personal website that match it\nQuery: ' || {q:String},
+                                           'qwen3-embedding-8b')), 2) AS similarity,
        kind, title, path
 FROM site.vectors
 INNER JOIN site.pages USING (path, h)
