@@ -6,7 +6,8 @@
 -- the named collection (Cloud may not need one) and the model name.
 --
 --   site.docs      a view over the live site: every page, post, talk, demo and photo, as title + text
---   site.pages     a daily snapshot of site.docs, with a hash of each row's text
+--   site.pages     a snapshot of site.docs, with a hash of each row's text; cloud/refresh.sh refreshes it
+--                  after every deploy (weekly too, in case a deploy's refresh failed)
 --   site.vectors   embeddings; site.embed adds one only for a row that is new or whose text changed
 --   site.search    parameterized view: SELECT * FROM site.search(q = 'some words')
 --   site.related   parameterized view: SELECT * FROM site.related(path = '/2012/04/geektool/')
@@ -73,9 +74,9 @@ FROM
 ORDER BY src, i
 LIMIT 1 BY path;
 
--- A daily snapshot, so searches never wait on the site
+-- A snapshot, so searches never wait on the site
 CREATE MATERIALIZED VIEW IF NOT EXISTS site.pages
-REFRESH EVERY 1 DAY
+REFRESH EVERY 1 WEEK
 ENGINE = MergeTree ORDER BY path
 AS SELECT path, kind, title, event, text, cityHash64(title, text) AS h FROM site.docs;
 
@@ -88,10 +89,10 @@ CREATE TABLE IF NOT EXISTS site.vectors
 )
 ENGINE = ReplacingMergeTree ORDER BY (path, h);
 
--- After each snapshot, embed only what's new or changed. EmbeddingGemma's document prompt.
+-- After each snapshot, embed only what's new or changed (a refresh with no changes makes no model calls). EmbeddingGemma's document prompt.
 -- ▶ Model name: 'embeddinggemma' in Ollama; on Cloud, whatever the preview offers (also in site.search below).
 CREATE MATERIALIZED VIEW IF NOT EXISTS site.embed
-REFRESH EVERY 1 DAY DEPENDS ON site.pages APPEND
+REFRESH EVERY 1 WEEK DEPENDS ON site.pages APPEND
 TO site.vectors
 AS SELECT path, h, aiEmbed('title: ' || title || ' | text: ' || text, 'embeddinggemma', map('credentials', 'site_embed')) AS v
 FROM site.pages
