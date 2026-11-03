@@ -11,3 +11,5 @@ CLAUDE.local.md
 .env
 .env.*
 .dev.vars
+# …except the search pipeline, which is SQL we wrote
+!cloud/*.sql
