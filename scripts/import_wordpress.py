@@ -9,7 +9,8 @@ What it does:
   - reads the site's permalink structure from *_options, so each post keeps
     its old URL (e.g. /2012/05/my-post/) and old inbound links keep working
   - writes public/<permalink>/index.html for every post
-  - writes public/archive/posts.json, which the archive page lists
+  - writes public/archive/posts.json, which the archive page lists, and public/archive/text.json: each post's
+    text (up to 2000 characters), which scripts/embed.py and cloud/site.sql embed
   - rewrites links to the old domain's wp-content/uploads to /wp-content/uploads,
     so copy the old public_html/wp-content/uploads folder to public/wp-content/uploads
 
@@ -369,7 +370,7 @@ def main():
     related = PUBLIC / "archive" / "related.json"
     related = json.loads(related.read_text(encoding="utf-8")) if related.exists() else {}
 
-    index = []
+    index, texts = [], {}
     for p in posts:
         path = permalink(structure, p)
         title = html.unescape(p.get("post_title") or "Untitled")
@@ -385,6 +386,7 @@ def main():
         out.write_text(PAGE.format(title=html.escape(title), date=date, content=body, head=post_head(title, date, path, body),
                                    related=related_section(path, related[path]) if related.get(path) else ""), encoding="utf-8")
         index.append({"date": date, "title": title, "path": path})
+        texts[path] = excerpt(body, 2000)
 
     index.sort(key=lambda x: x["date"], reverse=True)
     urls = [("/", None), ("/search/", None), ("/photos/", None), ("/archive/", None)] + [(x["path"], x["date"]) for x in index]
@@ -392,6 +394,9 @@ def main():
         "".join(f"  <url><loc>{SITE}{u}</loc>" + (f"<lastmod>{d}</lastmod>" if d else "") + "</url>\n" for u, d in urls) +
         "</urlset>\n", encoding="utf-8")
     (PUBLIC / "archive" / "posts.json").write_text(json.dumps({"posts": index}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # one post per line, in posts.json's order; ClickHouse reads it with url(…, JSONEachRow) as one row
+    (PUBLIC / "archive" / "text.json").write_text('{"posts": [\n' + ",\n".join(
+        json.dumps({"path": x["path"], "text": texts[x["path"]]}, ensure_ascii=False) for x in index) + "\n]}\n", encoding="utf-8")
 
     print(f"Imported {len(index)} posts from {table}.")
     if spam:
