@@ -1,5 +1,5 @@
 #!/bin/sh
-# The local half of the comparison (cloud/service.py is the Cloud half). Runs cloud/site.sql end to end on this machine: clickhouse local reads public/ from a local web server
+# The local half of the comparison (cloud/README.md has the Cloud half). Runs cloud/site.sql end to end on this machine: clickhouse local reads public/ from a local web server
 # (instead of https://tylerhannan.com) and embeds through Ollama with qwen3-embedding:0.6b. Then it checks that
 # site.pages holds exactly the rows scripts/embed.py embeds, and runs a search and a "nearest posts" query.
 #
@@ -25,7 +25,7 @@ MODEL=${MODEL:-qwen3-embedding:0.6b}
 ch() { "$CH" local --path "$TMP/db" --ai_function_embedding_default_credentials site_embed "$@"; }
 echo "Creating the tables and views, then waiting for the first refresh (embeds every row)…"
 # creating the views runs their first refresh; wait for it in the same process, since refresh stats live in
-# memory (cloud/service.py up prints the same numbers for Cloud)
+# memory
 cat >> "$TMP/site.sql" <<'SQL'
 SYSTEM WAIT VIEW site.pages;
 SYSTEM WAIT VIEW site.embed;
