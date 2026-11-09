@@ -29,15 +29,47 @@ clickhouse local --path ./db --ai_function_embedding_default_credentials site_em
 
 ## Cloud
 
+Everything here is a terminal command; nothing needs the Cloud console after the API key.
+
 ```sh
 clickhousectl cloud auth login --api-key … --api-secret …
 clickhousectl cloud service create --name tylerhannan-search --private-preview-terms-checked  # prints the password once
 clickhousectl cloud service get --name tylerhannan-search    # wait for "running"; shows the host
 
-clickhouse client --secure --host <host> --password <password> --queries-file cloud/site.sql
+HOST=<host>
+clickhouse client --secure --host $HOST --password <password> --queries-file cloud/site.sql
 ```
 
-The service runs the first refresh by itself and the rest on schedule, so there's no refresh step here.
+The service runs the first refresh by itself, and later ones on a schedule and after each push (below).
+
+Two users, each allowed one job. `site.sql` made their roles: `site_search` reads the views and their tables, one
+model call per query; `site_refresh` refreshes the views. The passwords go straight from here into the places
+that use them, and nowhere else:
+
+```sh
+SEARCH_PW=$(openssl rand -hex 24); REFRESH_PW=$(openssl rand -hex 24)
+clickhouse client --secure --host $HOST --password <password> --multiquery --query "
+  CREATE USER IF NOT EXISTS site_search IDENTIFIED BY '$SEARCH_PW' DEFAULT ROLE site_search;
+  GRANT site_search TO site_search;
+  CREATE USER IF NOT EXISTS site_refresh IDENTIFIED BY '$REFRESH_PW' DEFAULT ROLE site_refresh;
+  GRANT site_refresh TO site_refresh;"
+
+# the Worker's /api/search (src/worker.js); takes effect on the next deploy of main
+echo "https://$HOST:8443" | npx wrangler secret put CLICKHOUSE_URL
+echo "$SEARCH_PW" | npx wrangler secret put CLICKHOUSE_SEARCH_PASSWORD
+
+# the GitHub Action that refreshes after a push (.github/workflows/search-refresh.yml)
+gh secret set CLICKHOUSE_URL --body "https://$HOST:8443"
+gh secret set CLICKHOUSE_REFRESH_PASSWORD --body "$REFRESH_PW"
+unset SEARCH_PW REFRESH_PW
+```
+
+Try it as the search user, the way the Worker calls it:
+
+```sh
+curl "https://$HOST:8443/?param_q=neon%20signs%20at%20night" -H "X-ClickHouse-User: site_search" \
+  -H "X-ClickHouse-Key: …" --data-binary "SELECT * FROM site.search(q = {q:String}) FORMAT PrettyCompact"
+```
 
 ## Both: search, timings, model calls
 
@@ -57,10 +89,18 @@ WHERE type = 'QueryFinish' AND query LIKE '%site.search(%' ORDER BY event_time D
 
 On Cloud, read the system tables through `clusterAllReplicas(default, system.…)`, because a service has several replicas.
 
-## After each deploy
+## After each push
 
-The Workers Build deploy command is `npx wrangler deploy && sh cloud/refresh.sh`, which sends
-`SYSTEM REFRESH VIEW` to the service over its HTTP interface. Without credentials it skips.
+`.github/workflows/search-refresh.yml` runs `cloud/refresh.sh` when a push changes something the search reads.
+It waits until the site serves the pushed files, then sends `SYSTEM REFRESH VIEW` over the HTTP interface as
+`site_refresh`. Only new or changed rows are embedded. Without the secrets it skips.
+
+## Two things found while testing (26.11)
+
+- Written inline, `aiEmbed` on the search words ran once per row of `site.vectors`: 269 embeddings of the same
+  words per search. In a scalar subquery it runs once. `site.search` does that.
+- `aiEmbed` fails inside a `SQL SECURITY DEFINER` view ("query context has expired"), even for the user who made
+  it. So the views are ordinary ones, and the search role is limited by its settings profile instead.
 
 ## Tear down
 

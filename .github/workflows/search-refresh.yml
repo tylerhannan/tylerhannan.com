@@ -1,0 +1,35 @@
+# After a push that changes what the Cloud search reads, have ClickHouse re-read the site and embed what changed
+# (cloud/refresh.sh, cloud/site.sql). Secrets, set with the gh CLI (cloud/README.md):
+#   CLICKHOUSE_URL                 https://<host>:8443
+#   CLICKHOUSE_REFRESH_PASSWORD    the site_refresh user's password
+name: Refresh the Cloud search
+on:
+  push:
+    branches: [main, cloud-ai-functions]
+    paths:
+      - public/index.html
+      - public/photos/index.html
+      - public/archive/index.html
+      - public/archive/posts.json
+      - public/archive/text.json
+      - public/talks.json
+      - public/demos.json
+      - public/photos.json
+      - cloud/site.sql
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: search-refresh
+  cancel-in-progress: true
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: sh cloud/refresh.sh
+        env:
+          CLICKHOUSE_URL: ${{ secrets.CLICKHOUSE_URL }}
+          CLICKHOUSE_USER: site_refresh
+          CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_REFRESH_PASSWORD }}

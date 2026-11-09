@@ -97,11 +97,13 @@ AS SELECT path, h, aiEmbed(title || '\n' || text, 'qwen3-embedding-8b') AS v
 FROM site.pages
 WHERE (path, h) NOT IN (SELECT path, h FROM site.vectors);
 
--- The search: Qwen3-Embedding's query format, one row per event (a series like the release calls shows once)
+-- The search: Qwen3-Embedding's query format, one row per event (a series like the release calls shows once).
+-- The search words are embedded once, in a scalar subquery: written inline, aiEmbed would run once per row of
+-- site.vectors (it isn't constant-folded), 269 embeddings of the same words per search.
 CREATE OR REPLACE VIEW site.search AS
-SELECT round(1 - cosineDistance(v, aiEmbed('Instruct: Given a search query, find the pages, posts, talks, demos and '
-                                           || 'photos on a personal website that match it\nQuery: ' || {q:String},
-                                           'qwen3-embedding-8b')), 2) AS similarity,
+WITH (SELECT aiEmbed('Instruct: Given a search query, find the pages, posts, talks, demos and photos on a personal '
+                     || 'website that match it\nQuery: ' || {q:String}, 'qwen3-embedding-8b')) AS query_vector
+SELECT round(1 - cosineDistance(v, query_vector), 2) AS similarity,
        kind, title, path
 FROM site.vectors
 INNER JOIN site.pages USING (path, h)
@@ -109,7 +111,7 @@ ORDER BY similarity DESC, path
 LIMIT 1 BY ifNull(event, path)
 LIMIT 10;
 
--- Nearest posts to a post: no model call at all, just the stored vectors
+-- Nearest posts to a post: no model call at all, just the stored vectors.
 CREATE OR REPLACE VIEW site.related AS
 WITH (SELECT any(v) FROM site.vectors INNER JOIN site.pages USING (path, h) WHERE path = {path:String}) AS me
 SELECT round(1 - cosineDistance(v, me), 2) AS similarity, title, path
@@ -118,3 +120,21 @@ INNER JOIN site.pages USING (path, h)
 WHERE kind = 'post' AND path != {path:String}
 ORDER BY similarity DESC, path
 LIMIT 5;
+
+-- Who may do what. The Worker searches (src/worker.js, /api/search); the GitHub Action refreshes after a push
+-- (.github/workflows/search-refresh.yml). The users and their passwords are made at setup: cloud/README.md.
+-- The searcher reads the views and the tables under them (the site's own public content). There's no separate
+-- privilege for AI functions yet, and aiEmbed fails inside SQL SECURITY DEFINER views (26.11), so instead its
+-- profile makes it read-only with one model call per query: enough for a search, useless as a free embedding API.
+CREATE ROLE IF NOT EXISTS site_search;
+GRANT SELECT ON site.search TO site_search;
+GRANT SELECT ON site.related TO site_search;
+GRANT SELECT ON site.vectors TO site_search;
+GRANT SELECT ON site.pages TO site_search;
+CREATE SETTINGS PROFILE IF NOT EXISTS site_search
+    SETTINGS readonly = 1, ai_function_max_api_calls_per_query = 1, max_execution_time = 10
+    TO site_search;
+
+CREATE ROLE IF NOT EXISTS site_refresh;
+GRANT SYSTEM VIEWS ON site.* TO site_refresh;
+GRANT SELECT ON site.pages TO site_refresh;
