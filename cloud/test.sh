@@ -19,7 +19,7 @@ sleep 1
 # Cloud provides the model; here Ollama does, with the small model of the same family
 MODEL=${MODEL:-qwen3-embedding:0.6b}
 { echo "CREATE NAMED COLLECTION IF NOT EXISTS site_embed AS provider = 'openai', endpoint = 'http://localhost:11434/v1/embeddings';"
-  sed -e "s|'https://tylerhannan.com' AS base|'http://127.0.0.1:$PORT' AS base|" -e "s|'qwen3-embedding-8b'|'$MODEL'|g" cloud/site.sql
+  sed -e "s|'[^']*' AS base|'http://127.0.0.1:$PORT' AS base|" -e "s|'qwen3-embedding-8b'|'$MODEL'|g" cloud/site.sql
 } > "$TMP/site.sql"
 
 ch() { "$CH" local --path "$TMP/db" --ai_function_embedding_default_credentials site_embed "$@"; }

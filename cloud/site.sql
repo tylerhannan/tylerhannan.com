@@ -19,10 +19,11 @@
 
 CREATE DATABASE IF NOT EXISTS site;
 
--- Everything the site is, read from the site itself
+-- Everything the site is, read from the site itself. While this is being tested, that's the cloud-ai-functions
+-- branch on GitHub (main and the live site don't have archive/text.json); 'https://tylerhannan.com' once merged.
 CREATE OR REPLACE VIEW site.docs AS
 WITH
-    'https://tylerhannan.com' AS base,
+    'https://raw.githubusercontent.com/tylerhannan/tylerhannan.com/cloud-ai-functions/public' AS base,
     -- " · ".join(x for x in (...) if x)
     (parts) -> arrayStringConcat(arrayFilter(x -> x != '', parts), ' · ') AS joined,
     (html) -> decodeHTMLComponent(extract(html, '<meta name="description" content="([^"]*)"')) AS description
@@ -30,11 +31,11 @@ SELECT path, kind, title, event, text
 FROM
 (
     SELECT 0 AS src, 1 AS i, '/' AS path, 'page' AS kind, 'Home' AS title, NULL AS event,
-           description(raw_blob) AS text FROM url(base || '/', RawBLOB)
+           description(raw_blob) AS text FROM url(base || '/index.html', RawBLOB)
     UNION ALL
-    SELECT 0, 2, '/photos/', 'page', 'Photos', NULL, description(raw_blob) FROM url(base || '/photos/', RawBLOB)
+    SELECT 0, 2, '/photos/', 'page', 'Photos', NULL, description(raw_blob) FROM url(base || '/photos/index.html', RawBLOB)
     UNION ALL
-    SELECT 0, 3, '/archive/', 'page', 'Writing archive', NULL, description(raw_blob) FROM url(base || '/archive/', RawBLOB)
+    SELECT 0, 3, '/archive/', 'page', 'Writing archive', NULL, description(raw_blob) FROM url(base || '/archive/index.html', RawBLOB)
     UNION ALL
     -- posts: titles from posts.json, text from text.json (both written by scripts/import_wordpress.py)
     SELECT 1, i, JSONExtractString(p, 'path'), 'post', JSONExtractString(p, 'title'), NULL,
@@ -69,7 +70,8 @@ FROM
     WHERE JSONExtractString(ph, 'file') != ''
 )
 ORDER BY src, i
-LIMIT 1 BY path;
+LIMIT 1 BY path
+SETTINGS max_http_get_redirects = 1;  -- the live site redirects /index.html to /
 
 -- A snapshot, so searches never wait on the site
 CREATE MATERIALIZED VIEW IF NOT EXISTS site.pages
