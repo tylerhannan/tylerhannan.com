@@ -1,5 +1,6 @@
 -- Semantic search for tylerhannan.com, all in SQL: ClickHouse reads the site, embeds it, keeps it up to date
--- and answers searches. The Cloud counterpart of scripts/embed.py + src/worker.js + play.clickhouse.com.
+-- and answers searches. The Worker (src/worker.js) only holds a password and caches; play.clickhouse.com still
+-- runs the queries anyone can edit, over the compact vectors below.
 --
 -- Written for ClickHouse Cloud's AI functions (private preview), whose default embedding model there is
 -- Qwen3-Embedding-8B (as of Nov 2026; could change before GA). Cloud provides the model, so this file has no
@@ -13,9 +14,9 @@
 --   site.search    parameterized view: SELECT * FROM site.search(q = 'some words')
 --   site.related   parameterized view: SELECT * FROM site.related(path = '/2012/04/geektool/')
 --
--- Rows are built exactly as scripts/embed.py builds them, so the two pipelines embed the same text. The models
--- differ: the static site uses EmbeddingGemma, cut to 384 Int8 dimensions to fit play's 256 KB query limit;
--- here it's Qwen3-Embedding-8B with all 4096 dimensions as Float32. So the two give different results.
+-- Vectors are Qwen3-Embedding-8B, all 4096 dimensions as Float32, for site.search; site.compact serves the first
+-- 384 as Int8 for play, whose 256 KB query limit can't carry more. (Until Nov 2026 the site used EmbeddingGemma
+-- through a Python script on a laptop; this replaced it.)
 
 CREATE DATABASE IF NOT EXISTS site;
 
@@ -48,7 +49,7 @@ FROM
         FROM url(base || '/archive/text.json', RawBLOB)
     ) AS t
     UNION ALL
-    -- talks: keyed by their link (two talks can share a playlist link; the first one wins, as in embed.py)
+    -- talks: keyed by their link (two talks can share a playlist link; the first one wins)
     SELECT 2, i,
            ifNull(nullIf(JSONExtract(t, 'url', 'Nullable(String)'), ''), 'https://www.youtube.com/watch?v=' || JSONExtractString(t, 'youtube')),
            'talk', JSONExtractString(t, 'title'), JSONExtractString(t, 'event'),
@@ -121,6 +122,25 @@ WHERE kind = 'post' AND path != {path:String}
 ORDER BY similarity DESC, path
 LIMIT 5;
 
+-- The same vectors, small enough for play.clickhouse.com: the first 384 of 4096 dimensions (Qwen3-Embedding is
+-- trained so a prefix still works), scaled to Int8 and base64-encoded. The Worker serves this as /embeddings.json
+-- for the pages whose queries anyone can run on play (photos, archive, 404, each post's nearest posts).
+-- 384 keeps play's 256 KB limit with room for ~160 more pages; tested against the full size, it keeps the results.
+CREATE OR REPLACE VIEW site.compact AS
+SELECT path, base64Encode(arrayStringConcat(arrayMap(x -> char(if(x < 0, toInt16(x) + 256, x)), q))) AS e
+FROM
+(
+    SELECT path, arrayMap(x -> toInt8(round(x * 127 / arrayMax(arrayMap(abs, s)))), s) AS q
+    FROM (SELECT path, arraySlice(v, 1, 384) AS s FROM site.vectors INNER JOIN site.pages USING (path, h))
+);
+
+-- Search words, embedded as site.search does and packed as site.compact is, for play-side searches (/api/embed)
+CREATE OR REPLACE VIEW site.query_vector AS
+WITH (SELECT arraySlice(aiEmbed('Instruct: Given a search query, find the pages, posts, talks, demos and photos on '
+                                || 'a personal website that match it\nQuery: ' || {q:String}, 'qwen3-embedding-8b'), 1, 384)) AS s
+SELECT base64Encode(arrayStringConcat(arrayMap(x -> char(if(x < 0, toInt16(x) + 256, x)),
+                                               arrayMap(x -> toInt8(round(x * 127 / arrayMax(arrayMap(abs, s)))), s)))) AS e;
+
 -- Who may do what. The Worker searches (src/worker.js, /api/search); the GitHub Action refreshes after a push
 -- (.github/workflows/search-refresh.yml). The users (site_searcher, site_refresher) and their passwords are made
 -- at setup: cloud/README.md. Users and roles get different names: GRANT site_search TO site_search is ambiguous.
@@ -133,6 +153,8 @@ GRANT SELECT ON site.search TO site_search;
 GRANT SELECT ON site.related TO site_search;
 GRANT SELECT ON site.vectors TO site_search;
 GRANT SELECT ON site.pages TO site_search;
+GRANT SELECT ON site.compact TO site_search;
+GRANT SELECT ON site.query_vector TO site_search;
 -- Cloud's built-in model is reached through this named collection; a user other than default needs the grant
 GRANT NAMED COLLECTION ON clickhouse_inference_embeddings TO site_search;
 CREATE SETTINGS PROFILE IF NOT EXISTS site_search

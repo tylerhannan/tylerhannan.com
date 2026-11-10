@@ -57,18 +57,14 @@
   <!-- related -->
   <section aria-labelledby="related-h">
     <p class="label" id="related-h">Nearest posts</p>
-    <div class="query" data-run><span class="p">:) </span><span class="kw">WITH</span>
+    <div class="query" data-run="auto"><span class="p">:) </span><span class="kw">WITH</span>
      (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">&#x27;/2009/09/hosted-payments-page-a-demonstration/&#x27;</span>) <span class="kw">AS</span> this_post
    <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, this_post), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
    <span class="kw">FROM</span> posts
    <span class="kw">WHERE</span> path != <span class="s">&#x27;/2009/09/hosted-payments-page-a-demonstration/&#x27;</span>
    <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
    <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
-    <div class="tbl near"><table>
-      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
-      <tbody><tr><td class="d">0.74</td><td><a href="/2009/07/hosted-payment-page-and-pci-compliance/">Hosted Payment Page and PCI Compliance</a></td><td class="e">/2009/07/hosted-payment-page-and-pci-compliance/</td></tr><tr><td class="d">0.68</td><td><a href="/2010/06/driving-innovation-in-payments-platform-updates/">Driving Innovation in Payments:  Platform Updates</a></td><td class="e">/2010/06/driving-innovation-in-payments-platform-updates/</td></tr><tr><td class="d">0.67</td><td><a href="/2010/07/consistency-in-customer-experience-single-sign-on/">Consistency In Customer Experience:  Single-Sign On</a></td><td class="e">/2010/07/consistency-in-customer-experience-single-sign-on/</td></tr><tr><td class="d">0.66</td><td><a href="/2010/06/commerce-service-bus-powering-payments-innovation/">Commerce Service Bus:  Powering Payments Innovation</a></td><td class="e">/2010/06/commerce-service-bus-powering-payments-innovation/</td></tr><tr><td class="d">0.66</td><td><a href="/2010/06/payments-api-blog-a-launch-post/">Payments API Blog: a launch post</a></td><td class="e">/2010/06/payments-api-blog-a-launch-post/</td></tr></tbody>
-    </table></div>
-    <p class="foot">5 rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+    <p class="foot">Each post's embedding is from Qwen3-Embedding-8B, made in ClickHouse Cloud with aiEmbed.</p>
   </section>
   <script src="/run.js" defer></script>
   <!-- /related -->

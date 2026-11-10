@@ -1,75 +1,85 @@
-// tylerhannan.com: the static site in public/ (Workers static assets) plus one endpoint for search
-// (public/search.js: the search, photos and archive pages, and the 404 page).
+// tylerhannan.com: the static site in public/ (Workers static assets) plus three endpoints, all answered by
+// ClickHouse Cloud (cloud/site.sql). The service embeds and ranks; this Worker holds the password of site_searcher
+// (a user that may only read the site's tables, one model call of one text per query) and caches the answers.
 //
-// GET /api/embed?q=some+words embeds the words with EmbeddingGemma on Workers AI and returns them in the same
-// shape as public/embeddings.json (scripts/embed.py): the first 384 dimensions, scaled to Int8, base64.
-// The site's pages were embedded with the same model (through Ollama), so the two are comparable.
+// GET /api/search?q=words  the search: site.search embeds the words and ranks every page, at full size (4096 dims)
+// GET /api/embed?q=words   the words embedded and packed for play.clickhouse.com (site.query_vector): the first 384
+//                          dimensions as Int8, base64. search.js turns them into the `request` table
+// GET /embeddings.json     every page's vector packed the same way (site.compact), for the queries anyone can run
+//                          on play: photos, archive, the 404 page, each post's nearest posts (run.js, search.js)
 //
-// GET /api/search?q=some+words is the ClickHouse Cloud version (cloud/site.sql): the service embeds the words and
-// searches in one query, as a user that may only read the site's tables, with one model call per query. This
-// Worker only holds that user's password and caches answers. Not configured (no CLICKHOUSE_URL): 503.
-const MODEL = '@cf/google/embeddinggemma-300m';
+// Not configured (no CLICKHOUSE_URL / CLICKHOUSE_SEARCH_PASSWORD, e.g. wrangler dev without .dev.vars): 503.
+const MODEL = 'qwen3-embedding-8b';
 const DIMS = 384;
-const MAX_CHARS = 200;  // a URL's worth of words; keeps the endpoint from being a free embedding API
+const MAX_CHARS = 200;  // a URL's worth of words
+const DAY = 86400;
 
 const json = (body, status, headers) => new Response(JSON.stringify(body) + '\n', {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff', ...headers },
 });
 
-const cached = async (key, ctx, make) => {
+// Answers are cached at the edge; the key names the model and size, so a change of either never serves old ones
+async function cached(key, ctx, make) {
   const hit = await caches.default.match(key);
   if (hit) return hit;
   const res = await make();
   if (res.status === 200) ctx.waitUntil(caches.default.put(key, res.clone()));
   return res;
-};
-
-// The Cloud search: one parameterized query; the words travel as a query parameter, never inside the SQL
-async function search(q, url, env, ctx) {
-  if (!env.CLICKHOUSE_URL || !env.CLICKHOUSE_SEARCH_PASSWORD) return json({ error: 'Cloud search is not set up' }, 503);
-  return cached(new Request(url.origin + '/api/search?v=1&q=' + encodeURIComponent(q)), ctx, async () => {
-    // query parameters are read in ClickHouse's escaped format, so a backslash has to be doubled (q has no tabs or
-    // newlines: whitespace was collapsed above)
-    const r = await fetch(env.CLICKHOUSE_URL + '/?param_q=' + encodeURIComponent(q.replace(/\\/g, '\\\\')), {
-      method: 'POST',
-      headers: { 'X-ClickHouse-User': env.CLICKHOUSE_SEARCH_USER || 'site_searcher',
-                 'X-ClickHouse-Key': env.CLICKHOUSE_SEARCH_PASSWORD },
-      body: 'SELECT similarity, kind, title, path FROM site.search(q = {q:String}) FORMAT JSONEachRow',
-    });
-    const text = await r.text();
-    if (!r.ok) return json({ error: 'ClickHouse: ' + text.slice(0, 300) }, 502);
-    const results = text.split('\n').filter(Boolean).map((line) => JSON.parse(line));
-    return json({ q, results }, 200, { 'Cache-Control': 'public, max-age=86400' });
-  });
 }
+
+// One query as site_searcher. The words travel as a query parameter, never inside the SQL. Parameters are read in
+// ClickHouse's escaped format, so backslashes are doubled (q has no tabs or newlines: whitespace is collapsed).
+async function clickhouse(env, sql, q) {
+  const r = await fetch(env.CLICKHOUSE_URL + '/' + (q == null ? '' : '?param_q=' + encodeURIComponent(q.replace(/\\/g, '\\\\'))), {
+    method: 'POST',
+    headers: { 'X-ClickHouse-User': env.CLICKHOUSE_SEARCH_USER || 'site_searcher', 'X-ClickHouse-Key': env.CLICKHOUSE_SEARCH_PASSWORD },
+    body: sql,
+  });
+  const text = await r.text();
+  if (!r.ok) throw new Error('ClickHouse: ' + text.slice(0, 300));
+  return text.split('\n').filter(Boolean).map((line) => JSON.parse(line));
+}
+
+const ROUTES = {
+  '/api/search': {
+    words: true, ttl: DAY,
+    answer: async (env, q) => ({ q, results: await clickhouse(env,
+      'SELECT similarity, kind, title, path FROM site.search(q = {q:String}) FORMAT JSONEachRow', q) }),
+  },
+  '/api/embed': {
+    words: true, ttl: DAY,
+    answer: async (env, q) => {
+      const [row] = await clickhouse(env, 'SELECT e FROM site.query_vector(q = {q:String}) FORMAT JSONEachRow', q);
+      return { model: MODEL, dims: DIMS, q, embedding: row.e };
+    },
+  },
+  '/embeddings.json': {
+    words: false, ttl: 3600,  // an hour, so a refresh after a push shows up soon
+    answer: async (env) => {
+      const vectors = {};
+      for (const row of await clickhouse(env, 'SELECT path, e FROM site.compact ORDER BY path FORMAT JSONEachRow')) vectors[row.path] = row.e;
+      return { model: MODEL, dims: DIMS, vectors };
+    },
+  },
+};
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname !== '/api/embed' && url.pathname !== '/api/search') return env.ASSETS.fetch(request);
+    const route = ROUTES[url.pathname];
+    if (!route) return env.ASSETS.fetch(request);
     if (request.method !== 'GET') return json({ error: 'GET only' }, 405, { Allow: 'GET' });
-    const q = (url.searchParams.get('q') || '').replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
-    if (!q) return json({ error: 'Add ?q=some words' }, 400);
-    if (url.pathname === '/api/search') return search(q, url, env, ctx);
+    if (!env.CLICKHOUSE_URL || !env.CLICKHOUSE_SEARCH_PASSWORD) return json({ error: 'Search is not set up' }, 503);
 
-    // the cache key names the size, so answers cached before a change of DIMS are never served
-    const key = new Request(url.origin + '/api/embed?d=' + DIMS + '&q=' + encodeURIComponent(q));
-    const hit = await caches.default.match(key);
-    if (hit) return hit;
-
-    let v;
-    try {
-      // EmbeddingGemma's query prompt; the pages used its document prompt ("title: … | text: …")
-      const r = await env.AI.run(MODEL, { text: ['task: search result | query: ' + q] });
-      v = r.data[0].slice(0, DIMS);
-    } catch (e) {
-      return json({ error: 'Workers AI: ' + (e && e.message || e) }, 502);
-    }
-    const max = Math.max(...v.map(Math.abs)) || 1;  // the same scaling as scripts/embed.py
-    const bytes = Uint8Array.from(v, (x) => Math.round(x * 127 / max) & 0xFF);
-    const res = json({ model: MODEL, dims: DIMS, q, embedding: btoa(String.fromCharCode(...bytes)) }, 200,
-      { 'Cache-Control': 'public, max-age=86400' });
-    ctx.waitUntil(caches.default.put(key, res.clone()));
-    return res;
+    const q = route.words ? (url.searchParams.get('q') || '').replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS) : null;
+    if (route.words && !q) return json({ error: 'Add ?q=some words' }, 400);
+    const key = new Request(url.origin + url.pathname + '?m=' + MODEL + '&d=' + DIMS + (q == null ? '' : '&q=' + encodeURIComponent(q)));
+    return cached(key, ctx, async () => {
+      try {
+        return json(await route.answer(env, q), 200, { 'Cache-Control': 'public, max-age=' + route.ttl });
+      } catch (e) {
+        return json({ error: String(e && e.message || e) }, 502);
+      }
+    });
   },
 };

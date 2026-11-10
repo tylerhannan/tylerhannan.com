@@ -84,7 +84,7 @@
   }
 
   // Search by what's in a shot: search.js embeds the words and the grid takes the order of this query.
-  // Each photo's vector comes from its title, alt text and place (scripts/embed.py). An empty search goes back to by-date.
+  // Each photo's vector comes from its title, alt text and place (ClickHouse Cloud, cloud/site.sql). An empty search goes back to by-date.
   var sqlBox=document.getElementById('photo-sql'), byDate=sqlBox.innerHTML, input=document.getElementById('search-q');
   var BY_MEANING='<span class="p">:) </span><span class="kw">WITH</span>\n     (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> request) <span class="kw">AS</span> words\n   <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, words), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, place\n   <span class="kw">FROM</span> photos\n   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, file;';
   var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
@@ -93,7 +93,7 @@
     start:function(){ sqlBox.innerHTML=BY_MEANING; document.getElementById('photo-foot').textContent='Embedding…'; },
     done:function(best,words){
       rank={}; best.forEach(function(b){ rank[b.key]=b.similarity; });
-      note=best.length+' rows in set, nearest first. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI; each photo was embedded from its title, description and place with ClickHouse\'s aiEmbed.';
+      note=best.length+' rows in set, nearest first. request is '+lit(words)+', embedded just now by Qwen3-Embedding-8B in ClickHouse Cloud; each photo was embedded from its title, description and place with ClickHouse\'s aiEmbed.';
       if(list.length) render();  // a ?q= search can finish before photos.json; its render picks this up
     },
     fail:function(){ document.getElementById('photo-foot').textContent='The embedding service is not answering right now; try again in a bit.'; }});

@@ -38,18 +38,14 @@
   <!-- related -->
   <section aria-labelledby="related-h">
     <p class="label" id="related-h">Nearest posts</p>
-    <div class="query" data-run><span class="p">:) </span><span class="kw">WITH</span>
+    <div class="query" data-run="auto"><span class="p">:) </span><span class="kw">WITH</span>
      (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">&#x27;/2008/08/what-is-most-important-in-business-a-thought-exercise/&#x27;</span>) <span class="kw">AS</span> this_post
    <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, this_post), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
    <span class="kw">FROM</span> posts
    <span class="kw">WHERE</span> path != <span class="s">&#x27;/2008/08/what-is-most-important-in-business-a-thought-exercise/&#x27;</span>
    <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
    <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
-    <div class="tbl near"><table>
-      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
-      <tbody><tr><td class="d">0.60</td><td><a href="/2008/10/platform-core-to-the-business-not-a-feature/">Platform: core to the business, not a feature</a></td><td class="e">/2008/10/platform-core-to-the-business-not-a-feature/</td></tr><tr><td class="d">0.56</td><td><a href="/2008/12/innovation-a-perspective-on-value/">Innovation: a perspective on value</a></td><td class="e">/2008/12/innovation-a-perspective-on-value/</td></tr><tr><td class="d">0.56</td><td><a href="/2011/10/innovation-a-thought-exercise/">Innovation:  a thought exercise</a></td><td class="e">/2011/10/innovation-a-thought-exercise/</td></tr><tr><td class="d">0.55</td><td><a href="/2008/10/small-business-in-the-united-states/">Small Business in the United States</a></td><td class="e">/2008/10/small-business-in-the-united-states/</td></tr><tr><td class="d">0.55</td><td><a href="/2009/08/payment-application-security-does-it-matter/">Payment Application Security:  does it matter?</a></td><td class="e">/2009/08/payment-application-security-does-it-matter/</td></tr></tbody>
-    </table></div>
-    <p class="foot">5 rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+    <p class="foot">Each post's embedding is from Qwen3-Embedding-8B, made in ClickHouse Cloud with aiEmbed.</p>
   </section>
   <script src="/run.js" defer></script>
   <!-- /related -->

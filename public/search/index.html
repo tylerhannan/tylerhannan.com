@@ -46,8 +46,8 @@
   <section aria-labelledby="how-h">
     <p class="label" id="how-h">How it works</p>
     <ol class="how-list">
-      <li>Ahead of time, ClickHouse's <code>aiEmbed</code> turned every page, talk, demo and photo caption into 384 numbers, using EmbeddingGemma running on my laptop.</li>
-      <li>When you search, a Cloudflare Worker runs the same model on your words.</li>
+      <li>Whenever I push a change, ClickHouse Cloud reads the site and its <code>aiEmbed</code> turns every page, talk, demo and photo caption into numbers, using Qwen3-Embedding-8B. This page uses the first 384 of them.</li>
+      <li>When you search, the same service runs the same model on your words.</li>
       <li>Your browser ranks the pages by how close their numbers are to yours. Press ▶ run and the same query runs on play.clickhouse.com instead.</li>
     </ol>
   </section>
@@ -64,7 +64,7 @@
   <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/search/">search</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
 </div>
 <script>
-// search.js embeds the words (EmbeddingGemma on Workers AI) and makes them the `request` table the query reads;
+// search.js embeds the words (Qwen3-Embedding-8B in ClickHouse Cloud) and makes them the `request` table the query reads;
 // the rows shown are computed the same way in the browser. ?q=words searches; ?like=<path> (a talk's
 // "more like this" on the home page) ranks against that page's stored vector instead.
 (function(){
@@ -90,7 +90,7 @@
   var q=new URLSearchParams(location.search), like=q.get('like');
   var box=siteSearchBox({form:document.getElementById('search-form'), input:document.getElementById('search-q'), box:sql, limit:LIMIT, byEvent:true,
     start:function(){ query(null); start(); },
-    done:function(best,words){ show(best,'request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.'); },
+    done:function(best,words){ show(best,'request is '+lit(words)+', embedded just now by Qwen3-Embedding-8B in ClickHouse Cloud. Every page was embedded with the same model by ClickHouse\'s aiEmbed.'); },
     fail:fail});
   if(like&&!(q.get('q')||'').trim()) sitePages().then(function(pages){
     var me=pages.filter(function(p){ return p.key===like; })[0], title=me?me.title:like;

@@ -91,7 +91,7 @@
     start:function(){ out.hidden=false; rows.innerHTML='<tr><td colspan="3" class="d">Embedding…</td></tr>'; foot.textContent=''; },
     done:function(best,words){
       rows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.similarity.toFixed(2)+'</td><td><a href="'+esc(b.path)+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.date)+'</td></tr>'; }).join('');
-      foot.textContent=best.length+' rows in set. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every post was embedded with the same model by ClickHouse\'s aiEmbed.';
+      foot.textContent=best.length+' rows in set. request is '+lit(words)+', embedded just now by Qwen3-Embedding-8B in ClickHouse Cloud. Every post was embedded with the same model by ClickHouse\'s aiEmbed.';
     },
     fail:function(){ rows.innerHTML=''; foot.textContent='0 rows in set. The embedding service is not answering right now; try again in a bit.'; }});
 })();

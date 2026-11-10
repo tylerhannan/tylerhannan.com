@@ -329,16 +329,24 @@ REMOTE = {
               lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"], e=vector(p["path"]))
                        for p in json.loads((ROOT / "public/archive/posts.json").read_text(encoding="utf-8"))["posts"]]),
 }
-# Tables whose rows carry a base64 embedding (scripts/embed.py), unpacked into `embedding` as in run.js
+# Tables whose rows carry a base64 embedding (made by ClickHouse Cloud, cloud/site.sql; the site serves them as
+# /embeddings.json), unpacked into `embedding` as in run.js
 _UNPACK = ("* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), "
            "range(1, length(base64Decode(e)) + 1)) AS embedding")
 VEC = {"posts": _UNPACK, "photos": _UNPACK}
 
 
+EMBEDDINGS = os.environ.get("EMBEDDINGS_URL", "https://tylerhannan.com/embeddings.json")
+
+
 def vector(path, _cache={}):
-    if "v" not in _cache:
-        f = ROOT / "public/embeddings.json"
-        _cache["v"] = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {"dims": 0, "vectors": {}}
+    if "v" not in _cache:  # fetched once; without it, every embedding is zeros (the queries still run)
+        try:
+            req = urllib.request.Request(EMBEDDINGS, headers={"User-Agent": "scripts/ch"})
+            _cache["v"] = json.loads(urllib.request.urlopen(req, timeout=30).read().decode("utf-8"))
+        except Exception as e:
+            print(f"ch: couldn't fetch {EMBEDDINGS} ({e}); embeddings are zeros", file=sys.stderr)
+            _cache["v"] = {"dims": 0, "vectors": {}}
     d = _cache["v"]
     return d["vectors"].get(path) or base64.b64encode(bytes(d["dims"])).decode()
 

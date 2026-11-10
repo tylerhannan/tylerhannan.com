@@ -25,7 +25,8 @@ clickhouse local --path ./db --ai_function_embedding_default_credentials site_em
   SYSTEM REFRESH VIEW site.embed; SYSTEM WAIT VIEW site.embed"
 ```
 
-`cloud/test.sh` does this against a local copy of the site, and also checks that the rows match `scripts/embed.py`'s.
+`cloud/test.sh` does this against a local copy of the site, and also checks that every page, post, talk, demo and
+photo in the site's JSON became a row.
 
 ## Cloud
 

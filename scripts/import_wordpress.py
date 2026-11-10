@@ -10,7 +10,7 @@ What it does:
     its old URL (e.g. /2012/05/my-post/) and old inbound links keep working
   - writes public/<permalink>/index.html for every post
   - writes public/archive/posts.json, which the archive page lists, and public/archive/text.json: each post's
-    text (up to 2000 characters), which scripts/embed.py and cloud/site.sql embed
+    text (up to 2000 characters), which ClickHouse Cloud reads and embeds (cloud/site.sql)
   - rewrites links to the old domain's wp-content/uploads to /wp-content/uploads,
     so copy the old public_html/wp-content/uploads folder to public/wp-content/uploads
 
@@ -279,27 +279,22 @@ def post_head(title, date, path, body):
     ])
 
 
-def related_section(path, items):
-    """The post page's "nearest posts" query and its result (from scripts/embed.py), runnable like the home page's."""
+def related_section(path):
+    """The post page's "nearest posts" query. run.js runs it on play.clickhouse.com when it comes into view, over
+    the vectors ClickHouse Cloud made (/embeddings.json, cloud/site.sql); anyone can edit and rerun it."""
     e = lambda v: html.escape(str(v), quote=True)
     p = e("'" + path.replace("\\", "\\\\").replace("'", "\\'") + "'")
-    rows = "".join(f'<tr><td class="d">{i["similarity"]:.2f}</td><td><a href="{e(i["path"])}">{e(i["title"])}</a></td>'
-                   f'<td class="e">{e(unquote(i["path"]))}</td></tr>' for i in items)
     return f"""  <!-- related -->
   <section aria-labelledby="related-h">
     <p class="label" id="related-h">Nearest posts</p>
-    <div class="query" data-run><span class="p">:) </span><span class="kw">WITH</span>
+    <div class="query" data-run="auto"><span class="p">:) </span><span class="kw">WITH</span>
      (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">{p}</span>) <span class="kw">AS</span> this_post
    <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, this_post), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
    <span class="kw">FROM</span> posts
    <span class="kw">WHERE</span> path != <span class="s">{p}</span>
    <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
-   <span class="kw">LIMIT</span> <span class="n">{len(items)}</span>;</div>
-    <div class="tbl near"><table>
-      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
-      <tbody>{rows}</tbody>
-    </table></div>
-    <p class="foot">{len(items)} rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+   <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
+    <p class="foot">Each post's embedding is from Qwen3-Embedding-8B, made in ClickHouse Cloud with aiEmbed.</p>
   </section>
   <script src="/run.js" defer></script>
   <!-- /related -->
@@ -366,10 +361,6 @@ def main():
     spam = [p for p in posts if p["post_date"][:4] > LAST_REAL_YEAR]
     posts = [p for p in posts if p["post_date"][:4] <= LAST_REAL_YEAR]
 
-    # nearest posts by embedding, from scripts/embed.py (run it again after an import that adds posts)
-    related = PUBLIC / "archive" / "related.json"
-    related = json.loads(related.read_text(encoding="utf-8")) if related.exists() else {}
-
     index, texts = [], {}
     for p in posts:
         path = permalink(structure, p)
@@ -384,7 +375,7 @@ def main():
         out.parent.mkdir(parents=True, exist_ok=True)
         body = clean(p.get("post_content") or "", hosts)
         out.write_text(PAGE.format(title=html.escape(title), date=date, content=body, head=post_head(title, date, path, body),
-                                   related=related_section(path, related[path]) if related.get(path) else ""), encoding="utf-8")
+                                   related=related_section(path)), encoding="utf-8")
         index.append({"date": date, "title": title, "path": path})
         texts[path] = excerpt(body, 2000)
 

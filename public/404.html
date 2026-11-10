@@ -104,7 +104,7 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
   if(!words){ sem.innerHTML=''; semFoot.textContent='0 rows in set. There are no words in this URL to embed.'; return; }
   siteSearch(words,3).then(function(best){
     sem.innerHTML=best.map(function(b){ return row(b.similarity.toFixed(2),b); }).join('');
-    semFoot.textContent=best.length+' rows in set. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.';
+    semFoot.textContent=best.length+' rows in set. request is '+lit(words)+', embedded just now by Qwen3-Embedding-8B in ClickHouse Cloud. Every page was embedded with the same model by ClickHouse\'s aiEmbed.';
   }).catch(function(){ sem.innerHTML=''; semFoot.textContent='0 rows in set. The embedding service is not answering, so only spelling works today.'; });
 })();
 </script>

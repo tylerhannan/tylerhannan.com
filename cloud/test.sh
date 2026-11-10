@@ -1,7 +1,7 @@
 #!/bin/sh
 # The local half of the comparison (cloud/README.md has the Cloud half). Runs cloud/site.sql end to end on this machine: clickhouse local reads public/ from a local web server
 # (instead of https://tylerhannan.com) and embeds through Ollama with qwen3-embedding:0.6b. Then it checks that
-# site.pages holds exactly the rows scripts/embed.py embeds, and runs a search and a "nearest posts" query.
+# site.pages has one row for everything in the site's JSON, and runs a search and a "nearest posts" query.
 #
 #   sh cloud/test.sh ["search words"]
 #
@@ -36,14 +36,17 @@ ch --multiquery --queries-file "$TMP/site.sql"
 
 ch --query "SELECT path, kind, title, text FROM site.pages FORMAT JSONEachRow" > "$TMP/pages.jsonl"
 python3 - "$TMP/pages.jsonl" <<'EOF'
+# Every page, post, talk link, demo and photo in the site's JSON should be one row, and every post should have text
 import json, sys
-sys.path.insert(0, "scripts")
-from embed import docs
-want = {d["path"]: d for d in docs()}
-got = {r["path"]: r for r in map(json.loads, open(sys.argv[1], encoding="utf-8"))}
-bad = [p for p in want.keys() | got.keys() if want.get(p) != got.get(p)]
-print(f"site.pages: {len(got)} rows; embed.py: {len(want)} rows; different: {len(bad)}", *bad[:5], sep="\n  ")
-sys.exit(1 if bad else 0)
+load = lambda f: json.load(open("public/" + f, encoding="utf-8"))
+talks = {t.get("url") or "https://www.youtube.com/watch?v=" + t["youtube"] for t in load("talks.json")["talks"]}
+want = {"page": 3, "post": len(load("archive/posts.json")["posts"]), "talk": len(talks),
+        "demo": len(load("demos.json")["demos"]), "photo": sum(1 for p in load("photos.json")["photos"] if p.get("file"))}
+rows = [json.loads(line) for line in open(sys.argv[1], encoding="utf-8")]
+got = {k: sum(r["kind"] == k for r in rows) for k in want}
+empty = [r["path"] for r in rows if r["kind"] == "post" and not r["text"]]
+print("site.pages rows by kind:", got, "" if got == want else f"(expected {want})", f"; posts without text: {len(empty)}")
+sys.exit(0 if got == want and not empty else 1)
 EOF
 ch --query "SELECT count() AS vectors, any(length(v)) AS dims FROM site.vectors FORMAT PrettyCompactMonoBlock"
 
@@ -53,6 +56,5 @@ ch --multiquery --query "SYSTEM REFRESH VIEW site.pages; SYSTEM WAIT VIEW site.p
 
 echo "Search: $Q"
 ch --param_q "$Q" --query "SELECT * FROM site.search(q = {q:String}) FORMAT PrettyCompactMonoBlock"
-echo "Nearest posts to /2012/04/geektool/, then the static page's (EmbeddingGemma, 384 Int8 dims):"
+echo "Nearest posts to /2012/04/geektool/:"
 ch --query "SELECT * FROM site.related(path = '/2012/04/geektool/') FORMAT PrettyCompactMonoBlock"
-python3 -c "import json; [print('  ', r['similarity'], r['title']) for r in json.load(open('public/archive/related.json'))['/2012/04/geektool/']]"

@@ -1,7 +1,9 @@
 // Makes the query boxes runnable against real ClickHouse (the public, read-only play.clickhouse.com).
-// Boxes opt in with data-run. The site's own data is sent inline as CTEs (talks, photos, posts, pages, demos),
-// so `FROM talks` works; anything else on the playground (SHOW TABLES, its demo datasets) works too.
-// posts and pages also carry an `embedding` (scripts/embed.py), and the 404 page adds a `request` table.
+// Boxes opt in with data-run; data-run="auto" also runs once when the box first scrolls into view (each post's
+// nearest posts). The site's own data is sent inline as CTEs (talks, photos, posts, pages, demos), so
+// `FROM talks` works; anything else on the playground (SHOW TABLES, its demo datasets) works too.
+// posts, photos and pages also carry an `embedding` (made by ClickHouse Cloud, cloud/site.sql), and the 404 page
+// adds a `request` table.
 (function(){
   var ENDPOINT='https://play.clickhouse.com/?user=play';
   var MAX_ROWS=500;  // the playground allows far more; a browser table doesn't need it
@@ -20,8 +22,9 @@
     var vals=rows.map(function(r){return '('+cols.map(function(c){return lit(r[c])}).join(', ')+')'}).join(', ');
     return name+' AS (SELECT '+(select||'*')+' FROM values('+lit(schema)+', '+(vals||'')+'))';
   }
-  // Embeddings travel as base64 strings (384 Int8 each, from public/embeddings.json) and are unpacked here, so
-  // the whole site's vectors fit in the playground's 256 KB query limit. A page without one gets zeros.
+  // Embeddings travel as base64 strings (384 Int8 each, from /embeddings.json, which the Worker serves from
+  // ClickHouse Cloud) and are unpacked here, so the whole site's vectors fit in the playground's 256 KB query
+  // limit. A page without one gets zeros.
   var VEC='* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), range(1, length(base64Decode(e)) + 1)) AS embedding';
   function vectors(){ return load('/embeddings.json').then(function(d){
     var zero=btoa(new Array((d.dims||0)+1).join('\0'));
@@ -167,6 +170,12 @@
     });
     // a page that rewrites this box's query (the talks filters) can say the shown result is now out of date
     box.addEventListener('query-changed',function(){ if(!ta&&!out.hidden&&!ctrl){ out.hidden=true; out.innerHTML=''; status.textContent=''; } });
+    // data-run="auto": run once when it first comes into view, so play only sees the query from people who scroll to it
+    if(box.getAttribute('data-run')==='auto'){
+      if(!('IntersectionObserver' in window)){ run(); return; }
+      var seen=new IntersectionObserver(function(es){ if(es.some(function(e){ return e.isIntersecting; })){ seen.disconnect(); if(!ctrl&&out.hidden) run(); } },{rootMargin:'200px'});
+      seen.observe(wrap);
+    }
   }
   function init(){ document.querySelectorAll('.query[data-run]').forEach(setup); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();

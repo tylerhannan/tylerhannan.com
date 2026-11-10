@@ -1,6 +1,7 @@
 // Search by meaning, for the search boxes (home, photos, archive) and the 404 page.
-// The words are embedded just now by EmbeddingGemma on Workers AI (/api/embed, src/worker.js) and compared with
-// the vectors in /embeddings.json, made ahead of time with the same model (scripts/embed.py). The words also
+// The words are embedded just now by ClickHouse Cloud (/api/embed, src/worker.js, cloud/site.sql) and compared
+// with the vectors in /embeddings.json, which the same service made with the same model, Qwen3-Embedding-8B,
+// cut to 384 Int8 dimensions so they fit in a query to play.clickhouse.com. The words also
 // become the one-row `request` table that run.js sends to ClickHouse, so the query shown next to the results
 // returns the same rows; the rows on the page are computed here, the same way, without the round trip.
 (function(){
@@ -13,7 +14,7 @@
   function cosine(a,b){ var d=0,x=0,y=0; for(var i=0;i<a.length;i++){ d+=a[i]*b[i]; x+=a[i]*a[i]; y+=b[i]*b[i]; } return d/Math.sqrt(x*y); }
   var vectors=function(){ return get('/embeddings.json').then(function(d){ return d.vectors||{}; },function(){ return {}; }); };
 
-  // The rows of run.js's tables, each with its vector (v is null for anything scripts/embed.py hasn't seen yet)
+  // The rows of run.js's tables, each with its vector (v is null for anything ClickHouse hasn't embedded yet)
   // and `key`, the column the SQL breaks ties on (path, or file for photos).
   var TABLES={
     pages:function(){ return Promise.all([get('/archive/posts.json'),get('/talks.json'),get('/demos.json'),vectors(),get('/photos.json')]).then(function(r){
@@ -56,7 +57,7 @@
   window.siteSimilar=function(key,limit,table,byEvent){
     return TABLES[table||'pages']().then(function(rows){
       var me=rows.filter(function(p){ return p.key===key&&p.v; })[0];
-      if(!me) throw new Error('No embedding for '+key+' yet (run scripts/embed.py).');
+      if(!me) throw new Error('No embedding for '+key+' yet: it is made after the next push.');
       return rank(rows,me.v,limit,key,byEvent);
     });
   };
