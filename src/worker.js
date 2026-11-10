@@ -28,7 +28,9 @@ const cached = async (key, ctx, make) => {
 async function search(q, url, env, ctx) {
   if (!env.CLICKHOUSE_URL || !env.CLICKHOUSE_SEARCH_PASSWORD) return json({ error: 'Cloud search is not set up' }, 503);
   return cached(new Request(url.origin + '/api/search?v=1&q=' + encodeURIComponent(q)), ctx, async () => {
-    const r = await fetch(env.CLICKHOUSE_URL + '/?param_q=' + encodeURIComponent(q), {
+    // query parameters are read in ClickHouse's escaped format, so a backslash has to be doubled (q has no tabs or
+    // newlines: whitespace was collapsed above)
+    const r = await fetch(env.CLICKHOUSE_URL + '/?param_q=' + encodeURIComponent(q.replace(/\\/g, '\\\\')), {
       method: 'POST',
       headers: { 'X-ClickHouse-User': env.CLICKHOUSE_SEARCH_USER || 'site_searcher',
                  'X-ClickHouse-Key': env.CLICKHOUSE_SEARCH_PASSWORD },
