@@ -30,7 +30,7 @@ async function search(q, url, env, ctx) {
   return cached(new Request(url.origin + '/api/search?v=1&q=' + encodeURIComponent(q)), ctx, async () => {
     const r = await fetch(env.CLICKHOUSE_URL + '/?param_q=' + encodeURIComponent(q), {
       method: 'POST',
-      headers: { 'X-ClickHouse-User': env.CLICKHOUSE_SEARCH_USER || 'site_search',
+      headers: { 'X-ClickHouse-User': env.CLICKHOUSE_SEARCH_USER || 'site_searcher',
                  'X-ClickHouse-Key': env.CLICKHOUSE_SEARCH_PASSWORD },
       body: 'SELECT similarity, kind, title, path FROM site.search(q = {q:String}) FORMAT JSONEachRow',
     });

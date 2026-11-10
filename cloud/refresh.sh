@@ -5,7 +5,7 @@
 # It first waits until the site serves exactly the files in this checkout (the deploy, or GitHub's raw cache, can
 # lag the push by a few minutes), then refreshes. The site's address comes from site.sql (SITE_BASE overrides it).
 #
-# Needs CLICKHOUSE_URL (https://<host>:8443) and CLICKHOUSE_PASSWORD for the site_refresh user; without them it
+# Needs CLICKHOUSE_URL (https://<host>:8443) and CLICKHOUSE_PASSWORD for the site_refresher user; without them it
 # says so and exits 0. That user can only refresh the views and count their rows (cloud/README.md).
 set -eu
 cd "$(dirname "$0")/.."
@@ -27,7 +27,7 @@ for i in $(seq 60); do
 done
 
 run() {  # one statement per request; the password goes in a header, not the URL
-  curl -sS --fail-with-body "$CLICKHOUSE_URL/" -H "X-ClickHouse-User: ${CLICKHOUSE_USER:-site_refresh}" \
+  curl -sS --fail-with-body "$CLICKHOUSE_URL/" -H "X-ClickHouse-User: ${CLICKHOUSE_USER:-site_refresher}" \
        -H "X-ClickHouse-Key: $CLICKHOUSE_PASSWORD" --data-binary "$1"
 }
 run "SYSTEM REFRESH VIEW site.pages"

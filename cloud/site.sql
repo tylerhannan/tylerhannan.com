@@ -122,17 +122,22 @@ ORDER BY similarity DESC, path
 LIMIT 5;
 
 -- Who may do what. The Worker searches (src/worker.js, /api/search); the GitHub Action refreshes after a push
--- (.github/workflows/search-refresh.yml). The users and their passwords are made at setup: cloud/README.md.
+-- (.github/workflows/search-refresh.yml). The users (site_searcher, site_refresher) and their passwords are made
+-- at setup: cloud/README.md. Users and roles get different names: GRANT site_search TO site_search is ambiguous.
 -- The searcher reads the views and the tables under them (the site's own public content). There's no separate
--- privilege for AI functions yet, and aiEmbed fails inside SQL SECURITY DEFINER views (26.11), so instead its
--- profile makes it read-only with one model call per query: enough for a search, useless as a free embedding API.
+-- privilege for AI functions yet, and aiEmbed fails inside SQL SECURITY DEFINER views (26.8 Cloud, 26.11 OSS), so
+-- instead its profile makes it read-only with one model call of one text per query: enough for a search, useless
+-- as a free embedding API. (The calls cap alone isn't enough: one call can carry a whole batch of texts.)
 CREATE ROLE IF NOT EXISTS site_search;
 GRANT SELECT ON site.search TO site_search;
 GRANT SELECT ON site.related TO site_search;
 GRANT SELECT ON site.vectors TO site_search;
 GRANT SELECT ON site.pages TO site_search;
+-- Cloud's built-in model is reached through this named collection; a user other than default needs the grant
+GRANT NAMED COLLECTION ON clickhouse_inference_embeddings TO site_search;
 CREATE SETTINGS PROFILE IF NOT EXISTS site_search
-    SETTINGS readonly = 1, ai_function_max_api_calls_per_query = 1, max_execution_time = 10
+    SETTINGS readonly = 1, ai_function_max_api_calls_per_query = 1, ai_function_embedding_max_batch_size = 1,
+             max_execution_time = 10
     TO site_search;
 
 CREATE ROLE IF NOT EXISTS site_refresh;
