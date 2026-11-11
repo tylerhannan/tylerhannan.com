@@ -108,23 +108,23 @@
       'Elapsed: '+(st.elapsed!=null?st.elapsed:ms/1000).toFixed(3)+' sec.'+(st.rows_read!=null?' Processed '+st.rows_read.toLocaleString()+' rows.':'')+' Ran on play.clickhouse.com.</p>';
   }
 
-  // UI: a quiet "▶ run · edit" in the box's top-right corner (outside the box element, so pages that
+  // UI: small "run" and "edit" buttons in the box's top-right corner (outside the box element, so pages that
   // re-render the query text, like the talks filters, don't wipe it), and a compact result below.
   function setup(box){
     var wrap=document.createElement('div'); wrap.className='qwrap';
     box.before(wrap); wrap.appendChild(box);
     var bar=document.createElement('div'); bar.className='runbar';
-    bar.innerHTML='<button type="button" class="run" title="Run on play.clickhouse.com">▶ run</button><button type="button" class="edit">edit</button>';
+    bar.innerHTML='<button type="button" class="run" title="Run on play.clickhouse.com">run</button><button type="button" class="edit">edit</button>';
     wrap.appendChild(bar);
     var out=document.createElement('div'); out.className='result'; out.hidden=true;
     var status=document.createElement('span'); status.className='vh'; status.setAttribute('aria-live','polite');  // short announcements only
     wrap.after(out); out.after(status);
     var ta=null, runBtn=bar.querySelector('.run'), editBtn=bar.querySelector('.edit'), ctrl=null, runId=0;
-    function finish(){ ctrl=null; runBtn.textContent='▶ run'; runBtn.title='Run on play.clickhouse.com'; }
+    function finish(){ ctrl=null; runBtn.textContent='run'; runBtn.title='Run on play.clickhouse.com'; }
     function run(){
       if(ctrl){ ctrl.abort(); return; }  // the button doubles as "cancel" while a query runs
       var q=ta?ta.value:box.innerText, id=++runId, mine=new AbortController(); ctrl=mine;
-      runBtn.textContent='■ cancel'; runBtn.title='Stop this query';
+      runBtn.textContent='cancel'; runBtn.title='Stop this query';
       out.hidden=false; out.innerHTML='<p class="foot">Running on play.clickhouse.com…</p>'; status.textContent='Running query';
       var t0=performance.now();
       build(q).then(function(b){

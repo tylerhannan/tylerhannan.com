@@ -63,7 +63,7 @@
 
   // A search box: o.form holds o.input, o.box is the runnable query showing the SQL, and the page draws the rows.
   // o.start(words) as a search begins, o.done(rows, words) with the ranked rows, o.fail(words) if it can't.
-  // ?q= in the URL searches on load; a new search makes any ▶ run result for the old one go away.
+  // ?q= in the URL searches on load; a new search makes any run result for the old one go away.
   // run(words, x) searches from code; x can replace o's start/search/done/fail for that one run.
   window.siteSearchBox=function(o){
     var n=0;

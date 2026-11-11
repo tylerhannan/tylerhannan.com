@@ -87,13 +87,13 @@
 
   <section id="play" aria-labelledby="play-h">
     <p class="label" id="play-h">Run your own</p>
-    <p class="bio" style="margin-top:0">Every query on this page is live. ▶ run sends it to <a href="https://play.clickhouse.com/">play.clickhouse.com</a>, ClickHouse's free public playground, with this site's tables (talks, demos, photos, posts) attached. Edit any of them, or point one at the playground's own data, like every public GitHub event since 2011:</p>
+    <p class="bio" style="margin-top:0">Every query on this page is live. Run sends it to <a href="https://play.clickhouse.com/">play.clickhouse.com</a>, ClickHouse's free public playground, with this site's tables (talks, demos, photos, posts) attached. Edit any of them, or point one at the playground's own data, like every public GitHub event since 2011:</p>
     <div class="query" data-run style="margin-top:16px"><span class="p">:) </span><span class="kw">SELECT</span> event_type, <span class="kw">formatReadableQuantity</span>(<span class="kw">count</span>()) <span class="kw">AS</span> events
    <span class="kw">FROM</span> github_events
    <span class="kw">GROUP BY</span> event_type
    <span class="kw">ORDER BY</span> <span class="kw">count</span>() <span class="kw">DESC</span>
    <span class="kw">LIMIT</span> <span class="n">5</span>;</div>
-    <p class="foot">That's about 11 billion rows. Press ▶ run, then try <span class="kw">SHOW TABLES</span> to see what else is there.</p>
+    <p class="foot">That's about 11 billion rows. Press run, then try <span class="kw">SHOW TABLES</span> to see what else is there.</p>
   </section>
 
 
