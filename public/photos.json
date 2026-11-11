@@ -1,6 +1,39 @@
 {
   "photos": [
     {
+      "file": "lotus-pillars.jpg",
+      "title": "Lotus Pillars",
+      "place": "ITC Gardenia, Bengaluru, India",
+      "date": "2026-09",
+      "camera": "Rolleiflex 2.8e",
+      "alt": "An open-air pavilion at night, its white pillars carved with lotus petals lit warm from below, red chairs and two people talking inside, framed by dark leaves."
+    },
+    {
+      "file": "kijk-je-naar-mij.jpg",
+      "title": "Kijk Je Naar Mij?",
+      "place": "Museumplein, Amsterdam, Netherlands",
+      "date": "2026-09",
+      "camera": "Leica M6 · Summicron 50mm f/2",
+      "alt": "Black-and-white: two people take a photo of themselves in a scratched mirrored wall that reflects the Concertgebouw and people sitting on Museumplein; stickers read \"Froukje, kijk je naar mij?\""
+    },
+    {
+      "file": "rijksmuseum-passage.jpg",
+      "title": "Rijksmuseum Passage",
+      "place": "Amsterdam, Netherlands",
+      "date": "2026-09",
+      "camera": "Leica M6 · Summicron 50mm f/2",
+      "alt": "Black-and-white: the dark passage under the Rijksmuseum, its arched windows and iron gates framing a cyclist and crowds on the bright square beyond."
+    },
+    {
+      "file": "main-stage.jpg",
+      "title": "Main Stage",
+      "place": "Amsterdam, Netherlands",
+      "date": "2026-09",
+      "camera": "Leica M6 · Summicron 50mm f/2",
+      "alt": "Black-and-white: a beam of stage light falls through a gap in dark curtains onto a sign reading \"Open House Main Stage\".",
+      "focus": "bottom"
+    },
+    {
       "file": "rain-vortex.jpg",
       "title": "Rain Vortex",
       "place": "Jewel Changi, Singapore",
