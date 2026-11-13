@@ -18,7 +18,7 @@
 
   // ---- the site's data as ClickHouse tables ----
   var day=function(d){ d=String(d||''); return d.length===4?d+'-01-01':d.length===7?d+'-01':d.slice(0,10); };
-  var lit=function(v){ return typeof v==='boolean'?(v?'true':'false'):v==null||v===''&&v!==0?'NULL':typeof v==='number'?String(v):"'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
+  var lit=function(v){ return typeof v==='boolean'?(v?'true':'false'):v==null?'NULL':typeof v==='number'?String(v):"'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
   function cte(name,schema,rows,cols,select){
     var vals=rows.map(function(r){return '('+cols.map(function(c){return lit(r[c])}).join(', ')+')'}).join(', ');
     return name+' AS (SELECT '+(select||'*')+' FROM values('+lit(schema)+', '+(vals||'')+'))';
@@ -74,7 +74,7 @@
     return /^WITH\b/i.test(q) ? 'WITH '+ctes.join(', ')+', '+q.replace(/^WITH\s+/i,'') : 'WITH '+ctes.join(', ')+' '+q;
   }
   function build(q){
-    q=q.replace(/^\s*:\)\s*/,'').replace(/;\s*$/,'');
+    q=q.replace(/^\s*:\)\s*/,'').replace(/;(?:\s*(?:--[^\n]*|\/\*[\s\S]*?\*\/))*\s*$/,'');  // a trailing ';' and any comments after it
     q=q.replace(/^(?:\s*(?:--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/))+/,'').trim();  // leading comments
     var names=Object.keys(TABLES).filter(function(n){return new RegExp('\\b'+n+'\\b','i').test(q)});
     return Promise.all(names.map(function(n){return TABLES[n]()})).then(function(ctes){

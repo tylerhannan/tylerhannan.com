@@ -3,17 +3,18 @@
 
     python3 scripts/strip_metadata.py photo.jpg [more.jpg ...]   (rewrites in place)
 
-Keeps APP0 (JFIF), APP2 (ICC colour profile) and Adobe APP14 (colour transform), and replaces EXIF
+Keeps APP0 (JFIF), APP2 only for the ICC colour profile, and Adobe APP14 (colour transform), and replaces EXIF
 with a minimal block holding only the Orientation tag. Everything else goes: EXIF (GPS, camera and lens
 serial numbers, owner), XMP (Lightroom location, keywords), IPTC/APP13 (city, sublocation, country),
-comments and any other application segments. Allow-listing means new kinds of metadata are dropped too.
+comments, other application segments (MPF too), and anything after the end of the image.
+Allow-listing means new kinds of metadata are dropped too.
 
 Stdlib only. Exits non-zero, leaving the file untouched, if the file isn't a JPEG it can parse.
 """
 import struct
 import sys
 
-KEEP = {0xE0, 0xE2, 0xEE}  # APP0 JFIF, APP2 ICC profile, APP14 Adobe
+KEEP = {0xE0: b"JFIF\0", 0xE2: b"ICC_PROFILE\0", 0xEE: b"Adobe"}  # APPn worth keeping, by signature
 
 
 def orientation(exif):
@@ -49,23 +50,37 @@ def strip(data):
         raise ValueError("not a JPEG")
     out, i, orient = [b"\xff\xd8"], 2, None
     while True:
-        if i + 4 > len(data) or data[i] != 0xFF:
+        if i + 2 > len(data) or data[i] != 0xFF:
             raise ValueError("unexpected data at byte %d" % i)
         marker = data[i + 1]
-        if marker == 0xDA:  # start of scan: the rest is image data
+        if marker == 0xFF:  # fill byte
+            i += 1
+            continue
+        if marker == 0xD9:  # end of image: anything after it (e.g. an MPF second image with its own EXIF) goes
+            out.append(b"\xff\xd9")
             break
+        if i + 4 > len(data):
+            raise ValueError("truncated segment at byte %d" % i)
         n = struct.unpack(">H", data[i + 2:i + 4])[0]
         seg = data[i:i + 2 + n]
         if len(seg) != 2 + n:
             raise ValueError("truncated segment at byte %d" % i)
         if marker == 0xE1 and orient is None:
             orient = orientation(seg[4:])
-        if marker in KEEP or not (0xE0 <= marker <= 0xEF or marker == 0xFE):
-            out.append(seg)  # keep wanted APPn and all non-metadata segments (tables, frame header)
+        metadata = 0xE0 <= marker <= 0xEF or marker == 0xFE
+        if not metadata or seg[4:].startswith(KEEP.get(marker, b"\x00\x00 never")):
+            out.append(seg)
         i += 2 + n
+        if marker == 0xDA:  # start of scan: copy the image data up to the next real marker
+            j = i
+            while j + 1 < len(data) and not (data[j] == 0xFF and data[j + 1] not in (0x00, 0xFF) and not 0xD0 <= data[j + 1] <= 0xD7):
+                j += 1
+            if j + 1 >= len(data):
+                raise ValueError("image data never ends")
+            out.append(data[i:j])
+            i = j
     if orient and orient != 1:
         out.insert(1, orientation_app1(orient))
-    out.append(data[i:])
     return b"".join(out)
 
 

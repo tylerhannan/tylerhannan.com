@@ -25,7 +25,9 @@ import os
 import re
 import sys
 import time
+import unicodedata
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -54,7 +56,7 @@ def err(code, name, msg):
 # ---- schemas ----------------------------------------------------------------------------------------
 # mode: req = must have a value; null = always written, may be null; opt = left out of the JSON when
 # null/false; empty = written as "" when unset (photos.json style).
-TALK_TYPES = ("keynote", "talk", "webinar", "video", "podcast", "host")
+TALK_TYPES = ("keynote", "talk", "webinar", "video", "interview", "host")
 FOCUS = ("top", "bottom", "left", "right")
 
 
@@ -304,7 +306,7 @@ def done(msg, t0, hint=None):
 def lit(v):
     if isinstance(v, bool):
         return "true" if v else "false"
-    if v is None or v == "":
+    if v is None:
         return "NULL"
     if isinstance(v, (int, float)):
         return str(v)
@@ -332,10 +334,35 @@ REMOTE = {
                 lambda: [dict(date=day(w["date"]), title=w["title"], venue=w["venue"], url=w["url"], coauthors=w.get("coauthors"), e=vector(w["url"]))
                          for w in json.loads((ROOT / "public/writing.json").read_text(encoding="utf-8"))["writing"]]),
 }
+def slug(s):
+    s = "".join(c for c in unicodedata.normalize("NFD", str(s or "")) if not "\u0300" <= c <= "\u036f")
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
+
+def pages():  # same rows as run.js and search.js
+    pub = lambda f: json.loads((ROOT / "public" / f).read_text(encoding="utf-8"))
+    rows = [dict(path=urllib.parse.unquote(p["path"]), title=p["title"], event=None, e=vector(p["path"]))
+            for p in [{"path": "/", "title": "Home"}, {"path": "/photos/", "title": "Photos"},
+                      {"path": "/archive/", "title": "Writing archive"}] + pub("archive/posts.json")["posts"]]
+    for t in pub("talks.json")["talks"]:
+        rows.append(dict(path="/#talk-" + slug(t["date"] + " " + t["event"]), title=t["title"] + " · " + t["event"],
+                         event=t["event"], e=vector(t.get("url") or "https://www.youtube.com/watch?v=" + t["youtube"])))
+    for d in pub("demos.json")["demos"]:
+        rows.append(dict(path="/#demo-" + slug(d["name"]), title=d["name"] + " · demo", event=None, e=vector(d["repo"])))
+    for p in pub("photos.json")["photos"]:
+        if p.get("file"):
+            rows.append(dict(path="/photos/#" + re.sub(r"\.[^.]+$", "", p["file"]), title=p["title"] + " · photo",
+                             event=None, e=vector("/photos/" + p["file"])))
+    for w in pub("writing.json")["writing"]:
+        rows.append(dict(path=w["url"], title=w["title"] + " · " + w["venue"], event=None, e=vector(w["url"])))
+    return rows
+
+
+REMOTE["pages"] = ("path String, title String, event Nullable(String), e String", pages)
 # Tables whose rows carry a base64 embedding (scripts/embed.py), unpacked into `embedding` as in run.js
 _UNPACK = ("* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), "
            "range(1, length(base64Decode(e)) + 1)) AS embedding")
-VEC = {"posts": _UNPACK, "photos": _UNPACK, "writing": _UNPACK}
+VEC = {"posts": _UNPACK, "photos": _UNPACK, "writing": _UNPACK, "pages": _UNPACK}
 
 
 def vector(path, _cache={}):
@@ -348,7 +375,7 @@ def vector(path, _cache={}):
 
 def remote(q, t0):
     q = re.sub(r";\s*$", "", q.strip())
-    q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts|writing)\b", r"\1", q, flags=re.I)  # as in local statements
+    q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts|writing|pages)\b", r"\1", q, flags=re.I)  # as in local statements
     ctes = []
     for name, (schema, rows) in REMOTE.items():
         if re.search(rf"\b{name}\b", q, re.I):
@@ -356,8 +383,16 @@ def remote(q, t0):
             vals = ", ".join("(" + ", ".join(lit(r.get(c)) for c in cols) + ")" for r in rows())
             ctes.append(f"{name} AS (SELECT {VEC.get(name, '*')} FROM values({lit(schema)}, {vals}))")
     if ctes:
-        q = ("WITH " + ", ".join(ctes) + ", " + re.sub(r"^WITH\s+", "", q, flags=re.I) if re.match(r"WITH\b", q, re.I)
-             else "WITH " + ", ".join(ctes) + " " + q) if re.match(r"(SELECT|WITH)\b", q, re.I) else q
+        w = lambda sel: ("WITH " + ", ".join(ctes) + ", " + re.sub(r"^WITH\s+", "", sel, flags=re.I)
+                         if re.match(r"WITH\b", sel, re.I) else "WITH " + ", ".join(ctes) + " " + sel)
+        m = re.match(r"(EXPLAIN(?:\s+(?:AST|SYNTAX|QUERY\s+TREE|PLAN|PIPELINE|ESTIMATE))?)\s+((?:SELECT|WITH)\b.*)$", q, re.I | re.S)
+        d = re.match(r"(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(\w+)\s*(FORMAT\s+\w+)?\s*$", q, re.I)
+        if re.match(r"(SELECT|WITH)\b", q, re.I):
+            q = w(q)
+        elif m:
+            q = m.group(1) + " " + w(m.group(2))
+        elif d and d.group(2).lower() in REMOTE:
+            q = f"{d.group(1)} ({w('SELECT * FROM ' + d.group(2).lower())}) {d.group(3) or ''}".strip()
     mine = not re.search(r"\bFORMAT\s+\w+\s*$", q, re.I)
     if mine:
         q += "\nFORMAT PrettyCompactMonoBlock"
@@ -383,7 +418,7 @@ def remote(q, t0):
 
 # ---- parser ------------------------------------------------------------------------------------------
 TOK = re.compile(r"""(?P<str>'(?:[^'\\]|\\.|'')*')|(?P<num>\d+(?:\.\d+)?)|(?P<id>[A-Za-z_][A-Za-z0-9_]*)"""
-                 r"""|(?P<q>`[^`]*`|"[^"]*")|(?P<op><>|!=|[(),=;*.<>-])""", re.S)
+                 r"""|(?P<q>`[^`]*`|"[^"]*")|(?P<op><>|!=|\|\||::|[^\sA-Za-z0-9_'"`])""", re.S)
 SKIP = re.compile(r"(?:\s+|--[^\n]*|/\*.*?\*/)*", re.S)
 
 
@@ -588,7 +623,7 @@ class Session:
         if w == "SHOW":
             if p.kw("TABLES"):
                 p.end()
-                rows = [[n, s["file"]] for n, s in TABLES.items()] + [["posts", "public/archive/posts.json (SELECT only)"], ["writing", "public/writing.json (SELECT only)"]]
+                rows = [[n, s["file"]] for n, s in TABLES.items()] + [["posts", "public/archive/posts.json (SELECT only)"], ["writing", "public/writing.json (SELECT only)"], ["pages", "every page, talk, demo, photo and post (SELECT only)"]]
                 pretty(["name", "file"], rows)
                 return done(f"{len(rows)} rows in set.", t0)
             return remote(p.s[start:p.i] + " " + p.rest_of_statement(p.i), t0)

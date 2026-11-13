@@ -16,6 +16,7 @@ What it does:
 Only the Python standard library is used. Re-running it is safe; it overwrites.
 """
 import html
+from html.parser import HTMLParser
 import json
 import re
 import sys
@@ -199,10 +200,6 @@ def clean(content, old_hosts):
     content = re.sub(r"\[embed\]([\s\S]*?)\[/embed\]",
                      lambda m: '<p><a href="%s">%s</a></p>' % (html.escape(m.group(1).strip(), quote=True), html.escape(m.group(1).strip())), content)
     content = re.sub(r"\[/?(gallery|audio|video)[^\]]*\]", "", content)
-    content = re.sub(r"<script[\s\S]*?</script>", "", content, flags=re.I)  # dead third-party widgets
-    # the database was hacked once, so don't trust it: no inline event handlers, no javascript: links
-    content = re.sub(r"""\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)""", "", content, flags=re.I)
-    content = re.sub(r"""(href|src)\s*=\s*(["'])\s*javascript:[^"']*\2""", r'\1="#"', content, flags=re.I)
     # files the old theme served outside wp-content, rescued from the old host before it went away
     content = re.sub(r'https?://(?:www\.)?tylerhannan\.com/(?:style|images)/(%s)' % "|".join(map(re.escape, OLD_SITE_FILES)),
                      r"/wp-content/uploads/recovered/\1", content)
@@ -227,7 +224,95 @@ def clean(content, old_hosts):
     content = re.sub(r'(?:\s*<br\s*/?>)*\s*(<span class="lost">[^<]*</span>)(?:\s*<br\s*/?>)*', r"\n\1\n", content)
     for rel, absolute in RELATIVE_FIXUPS.items():
         content = content.replace('href="%s' % rel, 'href="%s' % absolute)
-    return autop(content)
+    return autop(sanitize(content))
+
+
+# The database was hacked once, so the finished HTML goes through a parser, not regexes: no scripts,
+# no event handlers or srcdoc, no javascript:/data: URLs, and iframes only from known video players.
+DROP = {"script", "object", "embed", "applet", "base", "form", "meta", "link"}
+PLAYERS = ("https://www.youtube-nocookie.com/embed/", "https://player.vimeo.com/video/")
+
+
+class Sanitizer(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.out, self.skip = [], []
+
+    def bad_url(self, v):
+        v = re.sub(r"[\x00-\x20]+", "", html.unescape((v or "").replace(AMP, "&"))).lower()
+        return v.startswith(("javascript:", "vbscript:", "data:"))
+
+    def tag(self, name, attrs, raw, end=""):
+        if name in DROP or (name == "iframe" and not dict(attrs).get("src", "").startswith(PLAYERS)):
+            return None
+        keep = [(k, v) for k, v in attrs if not (k.startswith("on") or k == "srcdoc" or
+                (k in ("href", "src", "action", "formaction", "xlink:href", "poster") and self.bad_url(v)))]
+        if keep == attrs:
+            return raw
+        return "<" + name + "".join(f' {k}="{html.escape(v or "", quote=True)}"' if v is not None else f" {k}"
+                                    for k, v in keep) + end + ">"
+
+    def handle_starttag(self, name, attrs):
+        t = self.tag(name, attrs, self.get_starttag_text())
+        if t is None:
+            if name not in VOID:
+                self.skip.append(name)
+        elif not self.skip:
+            self.out.append(t)
+
+    def handle_startendtag(self, name, attrs):
+        t = self.tag(name, attrs, self.get_starttag_text(), " /")
+        if t is not None and not self.skip:
+            self.out.append(t)
+
+    def handle_endtag(self, name):
+        if self.skip:
+            if name == self.skip[-1]:
+                self.skip.pop()
+            return
+        if name not in DROP:
+            self.out.append(f"</{name}>")
+
+    def handle_data(self, d):
+        if not self.skip:
+            self.out.append(d)
+
+    def handle_entityref(self, n):
+        if not self.skip:
+            self.out.append(f"&{n};")
+
+    def handle_charref(self, n):
+        if not self.skip:
+            self.out.append(f"&#{n};")
+
+    def handle_comment(self, c):
+        if not self.skip:
+            self.out.append(f"<!--{c}-->")
+
+    def handle_decl(self, d):
+        if not self.skip:
+            self.out.append(f"<!{d}>")
+
+    def handle_pi(self, d):
+        if not self.skip:
+            self.out.append(f"<?{d}>")
+
+    def unknown_decl(self, d):
+        if not self.skip:
+            self.out.append(f"<![{d}]>")
+
+
+VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+
+
+AMP = "\ue000"  # stands in for & while parsing, so entities (and bare &s) come out exactly as written
+
+
+def sanitize(content):
+    s = Sanitizer()
+    s.feed(content.replace("&", AMP))
+    s.close()
+    return "".join(s.out).replace(AMP, "&")
 
 
 def permalink(structure, post):
