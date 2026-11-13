@@ -1,4 +1,4 @@
-// Search by meaning, for the search boxes (home, photos, archive) and the 404 page.
+// Search by meaning (and by spelling), for the search page, the photos and archive search boxes, and the 404 page.
 // The words are embedded just now by EmbeddingGemma on Workers AI (/api/embed, src/worker.js) and compared with
 // the vectors in /embeddings.json, made ahead of time with the same model (scripts/embed.py). The words also
 // become the one-row `request` table that run.js sends to ClickHouse, so the query shown next to the results
@@ -33,7 +33,7 @@
       return (r[0].photos||[]).filter(function(p){ return p.file; }).map(function(p){ var k='/photos/'+p.file; return {key:p.file,title:p.title,photo:p,v:r[1][k]?vec(r[1][k]):null}; });
     }); }
   };
-  window.sitePages=TABLES.pages;  // the 404 page's spelling query uses the same rows
+  window.sitePages=TABLES.pages;
 
   // ORDER BY similarity DESC (rounded to 2 places, as the SQL does), key; rows without a vector go last.
   // byEvent: LIMIT 1 BY ifNull(event, path), so a run of talks at one event (release calls) shows once.
@@ -58,6 +58,24 @@
       var me=rows.filter(function(p){ return p.key===key&&p.v; })[0];
       if(!me) throw new Error('No embedding for '+key+' yet (run scripts/embed.py).');
       return rank(rows,me.v,limit,key,byEvent);
+    });
+  };
+
+  // Search by spelling: ORDER BY round(ngramSearchCaseInsensitive(title, words), 2) DESC, path, as the
+  // spelling queries on the search and 404 pages do. ngramSearchCaseInsensitive(haystack, needle) in ClickHouse
+  // is the share of the needle's 4-byte grams (lowercased) that also appear in the haystack, 0 to 1.
+  var utf8=function(s){ return unescape(encodeURIComponent(s.toLowerCase())); };
+  function grams(s){ var m={},n=0; for(var i=0;i+4<=s.length;i++){ var g=s.substr(i,4); m[g]=(m[g]||0)+1; n++; } return {m:m,n:n}; }
+  function ngramSearch(hay,needle){
+    var N=grams(utf8(needle)), H=grams(utf8(hay)), hit=0, k;
+    if(!N.n) return 1;  // ClickHouse: a needle too short to have any 4-grams matches everything
+    for(k in N.m) hit+=Math.min(N.m[k],H.m[k]||0);
+    return hit/N.n;
+  }
+  window.siteSpelling=function(words,limit,table){
+    return TABLES[table||'pages']().then(function(rows){
+      return rows.map(function(p){ return {path:p.path,title:p.title,match:Math.round(ngramSearch(p.title,words)*100)/100}; })
+        .sort(function(a,b){ return b.match-a.match || (a.path<b.path?-1:a.path>b.path?1:0); }).slice(0,limit||rows.length);
     });
   };
 
