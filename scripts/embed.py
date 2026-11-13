@@ -59,11 +59,12 @@ def post_text(path):
 
 
 def docs():
-    """The rows of run.js's `pages` table, keyed the same way (path before decoding; a talk's url; a demo's repo)."""
+    """The rows of run.js's `pages` table, keyed the same way (path before decoding; a talk's url; a demo's repo; a post elsewhere's url)."""
     posts = json.loads((PUBLIC / "archive/posts.json").read_text(encoding="utf-8"))["posts"]
     talks = json.loads((PUBLIC / "talks.json").read_text(encoding="utf-8"))["talks"]
     demos = json.loads((PUBLIC / "demos.json").read_text(encoding="utf-8"))["demos"]
     photos = json.loads((PUBLIC / "photos.json").read_text(encoding="utf-8"))["photos"]
+    writing = json.loads((PUBLIC / "writing.json").read_text(encoding="utf-8"))["writing"]
     out = [{"path": "/", "kind": "page", "title": "Home", "text": describe("")},
            {"path": "/photos/", "kind": "page", "title": "Photos", "text": describe("photos")},
            {"path": "/archive/", "kind": "page", "title": "Writing archive", "text": describe("archive")}]
@@ -75,6 +76,9 @@ def docs():
     for d in demos:
         text = " · ".join(x for x in ("A demo: " + d["about"], d.get("event")) if x)
         out.append({"path": d["repo"], "kind": "demo", "title": d["name"], "text": text})
+    for w in writing:  # posts elsewhere: only the title is ours to embed, keyed by the post's url
+        text = " · ".join(x for x in ("A post on " + w["venue"], ("with " + w["coauthors"]) if w.get("coauthors") else None) if x)
+        out.append({"path": w["url"], "kind": "writing", "title": w["title"], "text": text})
     for p in photos:  # not pages, but the photos table gets vectors too, keyed by the photo's URL
         if p.get("file"):
             text = " · ".join(x for x in ("A photo: " + (p.get("alt") or p["title"]), p.get("place")) if x)

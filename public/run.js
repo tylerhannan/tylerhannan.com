@@ -1,7 +1,7 @@
 // Makes the query boxes runnable against real ClickHouse (the public, read-only play.clickhouse.com).
-// Boxes opt in with data-run. The site's own data is sent inline as CTEs (talks, photos, posts, pages, demos),
+// Boxes opt in with data-run. The site's own data is sent inline as CTEs (talks, photos, posts, writing, pages, demos),
 // so `FROM talks` works; anything else on the playground (SHOW TABLES, its demo datasets) works too.
-// posts and pages also carry an `embedding` (scripts/embed.py), and the 404 page adds a `request` table.
+// posts, writing and pages also carry an `embedding` (scripts/embed.py), and the 404 page adds a `request` table.
 (function(){
   var ENDPOINT='https://play.clickhouse.com/?user=play';
   var MAX_ROWS=500;  // the playground allows far more; a browser table doesn't need it
@@ -39,11 +39,15 @@
     posts:function(){ return Promise.all([load('/archive/posts.json'),vectors()]).then(function(r){
       var rows=(r[0].posts||[]).map(function(p){return {date:day(p.date),title:p.title,path:p.path,e:r[1](p.path)}});
       return cte('posts','date Date, title String, path String, e String',rows,['date','title','path','e'],VEC); }); },
+    // posts elsewhere (clickhouse.com, Hasura, Elastic, Basho…); vectors are keyed by their url
+    writing:function(){ return Promise.all([load('/writing.json'),vectors()]).then(function(r){
+      var rows=(r[0].writing||[]).map(function(w){ return {date:day(w.date),title:w.title,venue:w.venue,url:w.url,coauthors:w.coauthors||null,e:r[1](w.url)}; });
+      return cte('writing','date Date, title String, venue String, url String, coauthors Nullable(String), e String',rows,['date','title','venue','url','coauthors','e'],VEC); }); },
     demos:function(){ return load('/demos.json').then(function(d){
       var rows=(d.demos||[]).map(function(x){var o={};for(var k in x)o[k]=x[k];o.date=day(x.date);return o});
       return cte('demos','date Date, name String, about String, event Nullable(String), repo String',rows,['date','name','about','event','repo']); }); },
     // every page on the site plus every talk, demo and photo, for search and the 404 page (search.js has the same rows)
-    pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),load('/demos.json'),vectors(),load('/photos.json')]).then(function(r){
+    pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),load('/demos.json'),vectors(),load('/photos.json'),load('/writing.json')]).then(function(r){
       var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
       var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}]
         .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,e:r[3](p.path)}; })
@@ -51,7 +55,9 @@
         .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:siteAnchor.talk(t),title:t.title+' · '+t.event,event:t.event,e:r[3](u)}; }))
         .concat((r[2].demos||[]).map(function(d){ return {path:siteAnchor.demo(d),title:d.name+' · demo',e:r[3](d.repo)}; }))
         // photos: path opens the photo in the gallery's viewer
-        .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return {path:'/photos/#'+p.file.replace(/\.[^.]+$/,''),title:p.title+' · photo',e:r[3]('/photos/'+p.file)}; }));
+        .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return {path:'/photos/#'+p.file.replace(/\.[^.]+$/,''),title:p.title+' · photo',e:r[3]('/photos/'+p.file)}; }))
+        // writing elsewhere: path is the post itself
+        .concat((r[5].writing||[]).map(function(w){ return {path:w.url,title:w.title+' · '+w.venue,e:r[3](w.url)}; }));
       return cte('pages','path String, title String, event Nullable(String), e String',rows,['path','title','event','e'],VEC); }); },
     // what was just searched for (or the 404 page's missed URL), embedded live by search.js: {words, e}
     request:function(){
@@ -74,7 +80,7 @@
         return {sql: own ? withTables(ctes,q) : withTables(ctes,'SELECT * FROM (\n'+q+'\n) LIMIT '+(MAX_ROWS+1))+fmt, raw:own};
       if((m=q.match(/^(EXPLAIN(?:\s+(?:AST|SYNTAX|QUERY\s+TREE|PLAN|PIPELINE|ESTIMATE))?(?:\s+\w+\s*=\s*\w+(?:\s*,\s*\w+\s*=\s*\w+)*)?)\s+((?:SELECT|WITH)\b[\s\S]*)$/i)))
         return {sql: m[1]+' '+withTables(ctes,m[2])+fmt, raw:own};
-      if((m=q.match(/^(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(talks|photos|posts|pages|demos|request)\s*$/i)))  // a site table isn't a real table
+      if((m=q.match(/^(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(talks|photos|posts|writing|pages|demos|request)\s*$/i)))  // a site table isn't a real table
         return {sql: m[1]+' ('+withTables(ctes,'SELECT * FROM '+m[2].toLowerCase())+')'+fmt};
       return {sql:q+fmt, raw:own};  // SHOW, other DESCRIBE/EXPLAIN …
     });

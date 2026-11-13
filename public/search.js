@@ -16,7 +16,7 @@
   // The rows of run.js's tables, each with its vector (v is null for anything scripts/embed.py hasn't seen yet)
   // and `key`, the column the SQL breaks ties on (path, or file for photos).
   var TABLES={
-    pages:function(){ return Promise.all([get('/archive/posts.json'),get('/talks.json'),get('/demos.json'),vectors(),get('/photos.json')]).then(function(r){
+    pages:function(){ return Promise.all([get('/archive/posts.json'),get('/talks.json'),get('/demos.json'),vectors(),get('/photos.json'),get('/writing.json')]).then(function(r){
       var row=function(path,title,k,event){ return {key:path,path:path,title:title,event:event||null,v:r[3][k]?vec(r[3][k]):null}; };
       return [{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}].concat(r[0].posts||[])
         .map(function(p){ return row(dec(p.path),p.title,p.path); })
@@ -24,7 +24,9 @@
         .concat((r[1].talks||[]).map(function(t){ return row(siteAnchor.talk(t),t.title+' · '+t.event,t.url||'https://www.youtube.com/watch?v='+t.youtube,t.event); }))
         .concat((r[2].demos||[]).map(function(d){ return row(siteAnchor.demo(d),d.name+' · demo',d.repo); }))
         // photos: path opens the photo in the gallery's viewer
-        .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return row('/photos/#'+p.file.replace(/\.[^.]+$/,''),p.title+' · photo','/photos/'+p.file); }));
+        .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return row('/photos/#'+p.file.replace(/\.[^.]+$/,''),p.title+' · photo','/photos/'+p.file); }))
+        // writing elsewhere: path is the post itself
+        .concat((r[5].writing||[]).map(function(w){ return row(w.url,w.title+' · '+w.venue,w.url); }));
     }); },
     posts:function(){ return Promise.all([get('/archive/posts.json'),vectors()]).then(function(r){
       return (r[0].posts||[]).map(function(p){ return {key:p.path,path:p.path,title:p.title,date:p.date,v:r[1][p.path]?vec(r[1][p.path]):null}; });

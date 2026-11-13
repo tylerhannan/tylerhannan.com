@@ -169,6 +169,7 @@ footer .fl{display:flex;gap:16px}
 .posts li{display:grid;grid-template-columns:5.5em minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .posts .d{font:14px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
 .posts a{text-decoration:none}
+.posts .v{font:12px var(--mono);color:var(--muted);white-space:nowrap}
 .empty-state{border:1px dashed var(--line);border-radius:8px;padding:20px;color:var(--muted);margin-top:16px}
 .empty-state code{font-family:var(--mono);color:var(--fg)}
 article{max-width:68ch}

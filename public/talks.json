@@ -75,11 +75,6 @@
     { "date": "2011-01", "title": "Payment Security & Payment Diversity Should Not Cost a Bundle", "event": "National Retail Federation", "location": "New York, US", "type": "talk", "url": "https://nrf.com/", "youtube": null },
     { "date": "2008-06", "title": "Understanding Electronic Commerce", "event": "ISV Innovation (Microsoft Channel 9)", "type": "webinar", "url": "https://channel9.msdn.com/", "youtube": null }
   ],
-  "writing": [
-    { "outlet": "Elastic blog", "url": "https://www.elastic.co/blog/author/tyler-hannan" },
-    { "outlet": "RT Insights", "url": "https://www.rtinsights.com/author/tyler-hannan/" },
-    { "outlet": "O'Reilly", "url": "https://www.oreilly.com/pub/au/6513" }
-  ],
   "links": {
     "linkedin": "https://www.linkedin.com/in/tylerhannan/",
     "twitter": "https://twitter.com/tylerhannan"

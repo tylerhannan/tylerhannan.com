@@ -328,11 +328,14 @@ REMOTE = {
     "posts": ("date Date, title String, path String, e String",
               lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"], e=vector(p["path"]))
                        for p in json.loads((ROOT / "public/archive/posts.json").read_text(encoding="utf-8"))["posts"]]),
+    "writing": ("date Date, title String, venue String, url String, coauthors Nullable(String), e String",
+                lambda: [dict(date=day(w["date"]), title=w["title"], venue=w["venue"], url=w["url"], coauthors=w.get("coauthors"), e=vector(w["url"]))
+                         for w in json.loads((ROOT / "public/writing.json").read_text(encoding="utf-8"))["writing"]]),
 }
 # Tables whose rows carry a base64 embedding (scripts/embed.py), unpacked into `embedding` as in run.js
 _UNPACK = ("* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), "
            "range(1, length(base64Decode(e)) + 1)) AS embedding")
-VEC = {"posts": _UNPACK, "photos": _UNPACK}
+VEC = {"posts": _UNPACK, "photos": _UNPACK, "writing": _UNPACK}
 
 
 def vector(path, _cache={}):
@@ -345,7 +348,7 @@ def vector(path, _cache={}):
 
 def remote(q, t0):
     q = re.sub(r";\s*$", "", q.strip())
-    q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts)\b", r"\1", q, flags=re.I)  # as in local statements
+    q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts|writing)\b", r"\1", q, flags=re.I)  # as in local statements
     ctes = []
     for name, (schema, rows) in REMOTE.items():
         if re.search(rf"\b{name}\b", q, re.I):
@@ -585,7 +588,7 @@ class Session:
         if w == "SHOW":
             if p.kw("TABLES"):
                 p.end()
-                rows = [[n, s["file"]] for n, s in TABLES.items()] + [["posts", "public/archive/posts.json (SELECT only)"]]
+                rows = [[n, s["file"]] for n, s in TABLES.items()] + [["posts", "public/archive/posts.json (SELECT only)"], ["writing", "public/writing.json (SELECT only)"]]
                 pretty(["name", "file"], rows)
                 return done(f"{len(rows)} rows in set.", t0)
             return remote(p.s[start:p.i] + " " + p.rest_of_statement(p.i), t0)
