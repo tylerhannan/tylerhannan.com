@@ -73,7 +73,7 @@
 (function(){
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var list=document.getElementById('list');
-  // the query above: the old posts here plus posts elsewhere (writing.json), newest first
+  // the query above: old posts plus posts elsewhere, newest first
   var json=function(u){ return fetch(u).then(function(r){ if(!r.ok) throw new Error(u); return r.json(); }); };
   Promise.all([json('/archive/posts.json'),json('/writing.json').catch(function(){ return {}; })]).then(function(r){
     var d=r[0], posts=(d.posts||[]).concat((r[1].writing||[]).map(function(w){ return {date:w.date,title:w.title,path:w.url,venue:w.venue}; }))
@@ -92,7 +92,7 @@
     document.getElementById('foot').textContent=posts.length+' rows in set.';
   }).catch(function(){ list.innerHTML='<div class="empty-state">Couldn\'t load posts.json.</div>'; });
 
-  // Search the posts by meaning (search.js): the words become the `request` table the query above reads.
+  // search the old posts by meaning
   var out=document.getElementById('search-out'), rows=document.getElementById('search-rows'), foot=document.getElementById('search-foot');
   var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
   siteSearchBox({form:document.getElementById('search-form'), input:document.getElementById('search-q'), box:document.getElementById('search-sql'), table:'posts', limit:10,

@@ -1,30 +1,25 @@
-// Makes the query boxes runnable against real ClickHouse (the public, read-only play.clickhouse.com).
-// Boxes opt in with data-run. The site's own data is sent inline as CTEs (talks, photos, posts, writing, pages, demos),
-// so `FROM talks` works; anything else on the playground (SHOW TABLES, its demo datasets) works too.
-// posts, writing and pages also carry an `embedding` (scripts/embed.py), and the 404 page adds a `request` table.
+// Makes every .query[data-run] box runnable on play.clickhouse.com, with the site's JSON sent along as tables.
 (function(){
   var ENDPOINT='https://play.clickhouse.com/?user=play';
-  var MAX_ROWS=500;  // the playground allows far more; a browser table doesn't need it
-  var MAX_BYTES=2e6; // and stop reading a response after ~2 MB, so a huge FORMAT TSV can't freeze the tab
-  // play's max_query_size: the site's tables travel inside the query, so check the size before sending.
-  // Over it, say so plainly instead of sending it to fail. (2026-11-13: the pages table is ~207 KB.)
+  var MAX_ROWS=500;  // a browser table doesn't need more
+  var MAX_BYTES=2e6; // stop reading after ~2 MB so a big result can't freeze the tab
+  // play's max_query_size, and the site's tables count toward it
   var MAX_QUERY=262144;
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var json={};
-  function load(url){  // cached per page; a failed fetch is forgotten so the next run retries
+  function load(url){  // cached; a failed fetch gets retried
     return json[url]||(json[url]=fetch(url).then(function(r){ if(!r.ok) throw new Error(url+': HTTP '+r.status); return r.json(); })
       .catch(function(e){ delete json[url]; throw e; }));
   }
 
-  // ---- the site's data as ClickHouse tables ----
+  // ---- the site's data as tables ----
   var day=function(d){ d=String(d||''); return d.length===4?d+'-01-01':d.length===7?d+'-01':d.slice(0,10); };
   var lit=function(v){ return typeof v==='boolean'?(v?'true':'false'):v==null?'NULL':typeof v==='number'?String(v):"'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
   function cte(name,schema,rows,cols,select){
     var vals=rows.map(function(r){return '('+cols.map(function(c){return lit(r[c])}).join(', ')+')'}).join(', ');
     return name+' AS (SELECT '+(select||'*')+' FROM values('+lit(schema)+', '+(vals||'')+'))';
   }
-  // Embeddings travel as base64 strings (384 Int8 each, from public/embeddings.json) and are unpacked here, so
-  // the whole site's vectors fit in the playground's 256 KB query limit. A page without one gets zeros.
+  // vectors travel as base64 Int8 to fit under 256 KB; a page without one gets zeros
   var VEC='* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), range(1, length(base64Decode(e)) + 1)) AS embedding';
   function vectors(){ return load('/embeddings.json').then(function(d){
     var zero=btoa(new Array((d.dims||0)+1).join('\0'));
@@ -42,54 +37,53 @@
     posts:function(){ return Promise.all([load('/archive/posts.json'),vectors()]).then(function(r){
       var rows=(r[0].posts||[]).map(function(p){return {date:day(p.date),title:p.title,path:p.path,e:r[1](p.path)}});
       return cte('posts','date Date, title String, path String, e String',rows,['date','title','path','e'],VEC); }); },
-    // posts elsewhere (clickhouse.com, Hasura, Elastic, Basho…); vectors are keyed by their url
+    // my posts on other sites
     writing:function(){ return Promise.all([load('/writing.json'),vectors()]).then(function(r){
       var rows=(r[0].writing||[]).map(function(w){ return {date:day(w.date),title:w.title,venue:w.venue,url:w.url,coauthors:w.coauthors||null,e:r[1](w.url)}; });
       return cte('writing','date Date, title String, venue String, url String, coauthors Nullable(String), e String',rows,['date','title','venue','url','coauthors','e'],VEC); }); },
     demos:function(){ return load('/demos.json').then(function(d){
       var rows=(d.demos||[]).map(function(x){var o={};for(var k in x)o[k]=x[k];o.date=day(x.date);return o});
       return cte('demos','date Date, name String, about String, event Nullable(String), repo String',rows,['date','name','about','event','repo']); }); },
-    // every page on the site plus every talk, demo and photo, for search and the 404 page (search.js has the same rows)
+    // every page, talk, demo, photo and post, for search and the 404 (same rows as search.js)
     pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),load('/demos.json'),vectors(),load('/photos.json'),load('/writing.json')]).then(function(r){
       var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
       var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}]
         .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,e:r[3](p.path)}; })
-        // talks and demos: path is their row on the home page (site.js); vectors are keyed by their own link
+        // talks and demos live on the home page; their vectors are keyed by their own link
         .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:siteAnchor.talk(t),title:t.title+' · '+t.event,event:t.event,e:r[3](u)}; }))
         .concat((r[2].demos||[]).map(function(d){ return {path:siteAnchor.demo(d),title:d.name+' · demo',e:r[3](d.repo)}; }))
-        // photos: path opens the photo in the gallery's viewer
+        // opens the photo in the viewer
         .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return {path:'/photos/#'+p.file.replace(/\.[^.]+$/,''),title:p.title+' · photo',e:r[3]('/photos/'+p.file)}; }))
-        // writing elsewhere: path is the post itself
         .concat((r[5].writing||[]).map(function(w){ return {path:w.url,title:w.title+' · '+w.venue,e:r[3](w.url)}; }));
       return cte('pages','path String, title String, event Nullable(String), e String',rows,['path','title','event','e'],VEC); }); },
-    // what was just searched for (or the 404 page's missed URL), embedded live by search.js: {words, e}
+    // the words just searched for, embedded by search.js
     request:function(){
       if(!window.siteRequest) return Promise.reject(new Error('There is no request table yet: search for something first (on /search/, or the 404 page).'));
       return window.siteRequest.then(function(q){ return cte('request','words String, e String',[q],['words','e'],VEC); }); }
   };
 
-  // Put the site tables in front of a query, merging with the query's own WITH if it has one.
+  // put the site tables in front of the query, merging any WITH
   function withTables(ctes,q){
     if(!ctes.length) return q;
     return /^WITH\b/i.test(q) ? 'WITH '+ctes.join(', ')+', '+q.replace(/^WITH\s+/i,'') : 'WITH '+ctes.join(', ')+' '+q;
   }
   function build(q){
-    q=q.replace(/^\s*:\)\s*/,'').replace(/;(?:\s*(?:--[^\n]*|\/\*[\s\S]*?\*\/))*\s*$/,'');  // a trailing ';' and any comments after it
+    q=q.replace(/^\s*:\)\s*/,'').replace(/;(?:\s*(?:--[^\n]*|\/\*[\s\S]*?\*\/))*\s*$/,'');  // trailing ';' and comments after it
     q=q.replace(/^(?:\s*(?:--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/))+/,'').trim();  // leading comments
     var names=Object.keys(TABLES).filter(function(n){return new RegExp('\\b'+n+'\\b','i').test(q)});
     return Promise.all(names.map(function(n){return TABLES[n]()})).then(function(ctes){
       var own=/\bFORMAT\s+\w+\s*$/i.test(q), fmt=own?'':' FORMAT JSONCompact', m;
-      if(/^(SELECT|WITH)\b/i.test(q))  // newlines keep a trailing -- comment from eating the wrapper
+      if(/^(SELECT|WITH)\b/i.test(q))  // newlines so a trailing -- comment can't eat the wrapper
         return {sql: own ? withTables(ctes,q) : withTables(ctes,'SELECT * FROM (\n'+q+'\n) LIMIT '+(MAX_ROWS+1))+fmt, raw:own};
       if((m=q.match(/^(EXPLAIN(?:\s+(?:AST|SYNTAX|QUERY\s+TREE|PLAN|PIPELINE|ESTIMATE))?(?:\s+\w+\s*=\s*\w+(?:\s*,\s*\w+\s*=\s*\w+)*)?)\s+((?:SELECT|WITH)\b[\s\S]*)$/i)))
         return {sql: m[1]+' '+withTables(ctes,m[2])+fmt, raw:own};
-      if((m=q.match(/^(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(talks|photos|posts|writing|pages|demos|request)\s*$/i)))  // a site table isn't a real table
+      if((m=q.match(/^(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(talks|photos|posts|writing|pages|demos|request)\s*$/i)))  // site tables aren't real tables
         return {sql: m[1]+' ('+withTables(ctes,'SELECT * FROM '+m[2].toLowerCase())+')'+fmt};
       return {sql:q+fmt, raw:own};  // SHOW, other DESCRIBE/EXPLAIN …
     });
   }
 
-  // Read the response body, but no more than MAX_BYTES of it.
+  // read at most MAX_BYTES
   function readCapped(r,ctrl){
     if(!r.body||!r.body.getReader) return r.text().then(function(t){ return {text:t,cut:false}; });
     var reader=r.body.getReader(), dec=new TextDecoder(), text='', n=0;
@@ -117,8 +111,7 @@
       'Elapsed: '+(st.elapsed!=null?st.elapsed:ms/1000).toFixed(3)+' sec.'+(st.rows_read!=null?' Processed '+st.rows_read.toLocaleString()+' rows.':'')+' Ran on play.clickhouse.com.</p>';
   }
 
-  // UI: small "run" and "edit" buttons in the box's top-right corner (outside the box element, so pages that
-  // re-render the query text, like the talks filters, don't wipe it), and a compact result below.
+  // run and edit sit outside the box, so pages that redraw the query don't wipe them
   function setup(box){
     var wrap=document.createElement('div'); wrap.className='qwrap';
     box.before(wrap); wrap.appendChild(box);
@@ -131,7 +124,7 @@
     var ta=null, runBtn=bar.querySelector('.run'), editBtn=bar.querySelector('.edit'), ctrl=null, runId=0;
     function finish(){ ctrl=null; runBtn.textContent='run'; runBtn.title='Run on play.clickhouse.com'; }
     function run(){
-      if(ctrl){ ctrl.abort(); return; }  // the button doubles as "cancel" while a query runs
+      if(ctrl){ ctrl.abort(); return; }  // doubles as cancel
       var q=ta?ta.value:box.innerText, id=++runId, mine=new AbortController(); ctrl=mine;
       runBtn.textContent='cancel'; runBtn.title='Stop this query';
       out.hidden=false; out.innerHTML='<p class="foot">Running on play.clickhouse.com…</p>'; status.textContent='Running query';
@@ -142,7 +135,7 @@
         return fetch(ENDPOINT,{method:'POST',body:b.sql,signal:mine.signal}).then(function(r){ return readCapped(r,mine).then(function(res){
           if(id!==runId) return;
           var ms=performance.now()-t0, text=res.text;
-          // errors can also arrive mid-stream after a 200, appended to the body
+          // errors can arrive mid-stream after a 200
           var tail=/(?:^|\n)(Code: \d+\. DB::Exception[\s\S]*)$/.exec(text);
           if(!r.ok||(tail&&!res.cut&&!b.raw)) throw new Error(((tail&&tail[1])||text).trim()||('HTTP '+r.status));
           if(res.cut&&!b.raw) throw new Error('The result is over '+MAX_BYTES/1e6+' MB. Add a LIMIT and run it again.');
@@ -153,8 +146,8 @@
         if(id!==runId) return;
         if(e&&e.name==='AbortError'){ out.innerHTML='<p class="foot">Cancelled.</p>'; status.textContent='Query cancelled'; return; }
         var msg=String(e&&e.message||e).replace(/\s*\(version [^()]*(\([^)]*\))?\)\s*$/,'');
-        msg=msg.replace(/\. Expected one of: [\s\S]*?(\([A-Z_]+\))?$/,'. $1');  // syntax errors list every possible token; drop it
-        // ClickHouse echoes the query it saw, including the inlined site data; show the user's query instead
+        msg=msg.replace(/\. Expected one of: [\s\S]*?(\([A-Z_]+\))?$/,'. $1');  // drop the list of every possible token
+        // ClickHouse echoes the inlined data; show the user's query instead
         msg=msg.replace(/failed at position \d+ \(([^)]*)\)(\s*\(line \d+, col \d+\))?: [\s\S]*?\. (\([A-Z_]+\))$/,'near "$1". $3');
         out.innerHTML='<pre class="err">'+esc(msg.length>600?msg.slice(0,600)+'…':msg)+'</pre>'; status.textContent='Query failed';
       }).then(function(){
@@ -176,7 +169,7 @@
       ta.addEventListener('keydown',function(e){ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); if(!ctrl) run(); } });
       box.hidden=true; box.after(ta); ta.focus(); editBtn.textContent='reset';
     });
-    // a page that rewrites this box's query (the talks filters) can say the shown result is now out of date
+    // the talks filters say when a shown result is out of date
     box.addEventListener('query-changed',function(){ if(!ta&&!out.hidden&&!ctrl){ out.hidden=true; out.innerHTML=''; status.textContent=''; } });
   }
   function init(){ document.querySelectorAll('.query[data-run]').forEach(setup); }

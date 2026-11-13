@@ -1,92 +1,78 @@
 # tylerhannan.com
 
-Static site, no build step. Everything served lives in `public/`. Hosted on Cloudflare Workers (`wrangler.jsonc`); every push to `main` deploys. The one bit of server code is `src/worker.js`, which serves `/api/embed` for the 404 page (see [Embeddings](#embeddings)).
+My site. It's a folder of HTML and JSON files in `public/`, with no build step and no database of its own. Every query box on it is real SQL that runs on [play.clickhouse.com](https://clickhouse.com/docs/get-started/sample-datasets/playground), the public ClickHouse playground, with the site's data sent along as tables. Search by meaning works the same way, with vectors made by ClickHouse's [`aiEmbed`](https://clickhouse.com/docs/reference/functions/regular-functions/ai-functions).
 
-Preview locally (pages fetch JSON, so opening the files directly won't work):
+It's hosted on Cloudflare Workers (`wrangler.jsonc`), and every push to `main` deploys. The only server code is `src/worker.js`, which embeds search words.
 
-```
-cd public && python3 -m http.server 8000
-```
-
-## Adding photos
-
-Export from Lightroom with:
-
-| Setting | Value |
-|---|---|
-| Format | JPEG, quality 90+ |
-| Color space | sRGB |
-| Size | Long edge 2000 px or larger (don't enlarge) |
-| Metadata | Copyright only, **Remove Location Info** checked |
-
-Then add each one:
+Preview locally:
 
 ```
-scripts/add-photo.sh ~/Pictures/Export/IMG_1234.jpg "Title" "Place" "YYYY-MM"
+cd public && python3 -m http.server 8000     # everything except search by meaning
+npx wrangler dev                              # everything, with real Workers AI
 ```
 
-The script shrinks the long edge to 2000 px (smaller photos stay as they are), makes a 600 px thumbnail for the grid, strips the metadata, saves them as `public/photos/<title>.jpg` and `public/photos/thumbs/<title>.jpg`, and adds the photo to the top of `public/photos.json`. The date is required, as `YYYY-MM`. Commit and push to publish.
+## How the query boxes work
 
-- `scripts/strip_metadata.py` keeps only the pixels, the colour profile and the orientation. GPS, place names (EXIF, XMP and IPTC), camera and lens serial numbers, owner and copyright all go, so fill in `camera` in `photos.json` if you want it shown. Ticking "Remove Location Info" in Lightroom is still a good habit.
-- The grid crops every photo to a 4:3 landscape box. The full-size viewer shows the whole photo. If the crop cuts off the subject, add `"focus": "top"` (or `bottom`, `left`, `right`) to that photo in `photos.json`.
-- Titles become filenames; the script refuses a title whose file already exists.
-- Optional fields in `photos.json`: `camera` (shown in the viewer caption) and `alt` (a short description for screen readers; the title is used if empty).
+ClickHouse speaks SQL over HTTP, and the playground has a read-only `play` user with no password that accepts requests from any website. So `public/run.js` is one `fetch()`: it POSTs the SQL to `https://play.clickhouse.com/?user=play`.
 
-## Talks
+The playground won't let me store anything, so the data comes along with the query. `run.js` looks at which of the site's tables your query mentions, turns each one into a CTE with `values()`, and puts it in front of your SQL:
 
-Edit `public/talks.json`. Each talk has `date`, `title`, `event`, `location`, `type` (keynote / talk / webinar / video / podcast / host, for MC and host slots), `url`, `youtube` (the 11-character video ID, or `null`), and optionally `note`, `mc` (`true` adds an "mc" tag for events Tyler also hosted) and `repo` (a public GitHub repo for the talk, shown as a "code ↗" link). To show a talk in **Highlighted videos** on the home page, give it `"highlight": 1` to `6` (the number sets its position).
-
-## Demos
-
-Edit `public/demos.json`. Each demo has `date`, `name`, `about` (one line), `event` (or `null`, e.g. for client work that can't be named) and `repo`. They show in the **Demos** section on the home page, newest first. A talk with a demo also gets `repo` in `talks.json`, which adds a "code" tag to its row.
-
-## Editing data with SQL
-
-`scripts/ch` is a tiny clickhouse-client for the site's JSON files, so you never hand-edit them:
-
-```sh
-scripts/ch                       # interactive: tylerhannan.com :) prompt, end statements with ;
-scripts/ch "DESCRIBE talks"      # one-off
-scripts/ch < changes.sql         # from a file
+```sql
+WITH talks AS (SELECT * FROM values('date Date, title String, …', (…), (…)))
+SELECT toYear(date) AS year, count() FROM talks GROUP BY year
 ```
+
+The tables are `talks`, `demos`, `photos`, `posts` (the old blog), `writing` (posts I wrote for other sites) and `pages` (all of it, for search). Anything else on the playground works too, like `SHOW TABLES` or `github_events`. Results are capped at 500 rows.
+
+To make a new box runnable, give it `data-run` (`<div class="query" data-run>`) and load `/run.js`. Every query shown on the site has to be valid ClickHouse SQL, which is why the grouped talk views use `groupArray()`.
+
+![Editing the talks query, then querying the playground's own data](docs/runnable-queries.gif)
+
+## Search
+
+The search page, the photos and writing pages, each talk's "more like this" and the 404 page all rank by meaning with `cosineDistance`. The search page and the 404 page rank by spelling too, with `ngramSearchCaseInsensitive`.
+
+- **Ahead of time:** `python3 scripts/embed.py` embeds every page (old posts with their text), talk, demo, photo caption and off-site post title with `aiEmbed` in `clickhouse local`, using EmbeddingGemma through Ollama. It keeps the first 384 of the 768 dimensions (128 missed the neon photos when I searched "neon"), squashes them to Int8, and writes `public/embeddings.json`. It also writes each old post's nearest posts. Re-run it after adding anything.
+- **When you search:** `/api/embed?q=…` (`src/worker.js`) embeds your words with the same model on Workers AI, scaled the same way, and caches the answer for a day.
+- **The ranking:** your browser does the same math as the SQL, so results show up right away. Press run and the exact query goes to the playground and returns the same rows.
+
+There's a limit, though. Every search sends the whole `pages` table along with the query, and the playground's `max_query_size` is 256 KB. It's about 202 KB today. `run.js` checks the size before sending and says "Not sent" if a query is too big, so you get a plain message instead of an error.
+
+Setup, once: `brew install ollama && brew services start ollama && ollama pull embeddinggemma`, then ClickHouse via [clickhousectl](https://clickhouse.com/docs/concepts/features/interfaces/cli) (`curl -fsSL https://clickhouse.com/cli | sh`, then `clickhousectl local use latest`).
+
+## Editing the data
+
+`scripts/ch` is a tiny clickhouse-client for the JSON files, so I don't hand-edit them:
 
 ```sql
 INSERT INTO talks (date, title, event, location, type, url, youtube)
 VALUES ('2026-11-04', 'Kill Your Dashboards', 'Some Conf 2026', 'Paris, FR', 'talk', 'https://someconf.io', NULL);
 
-ALTER TABLE talks UPDATE youtube = 'https://youtu.be/…' WHERE title = 'Kill Your Dashboards';
 UPDATE photos SET camera = 'Rolleiflex 2.8e' WHERE place ILIKE '%singapore%';
 DELETE FROM demos WHERE name = 'Thing';
 
 SELECT date, title FROM talks WHERE youtube IS NULL ORDER BY date DESC LIMIT 5;
 ```
 
-`INSERT`, `UPDATE` and `DELETE` rewrite `talks.json`, `demos.json` or `photos.json` in place, after checking each value against the table's schema (`DESCRIBE talks` shows it): dates, talk types, URLs, YouTube IDs (a full YouTube URL is accepted), unique highlight slots. Errors come back ClickHouse style (`Code: 16. DB::Exception: There is no column titel in table talks. Maybe you meant title?`). New rows go in date order without reshuffling the rest. `SELECT` (and anything else) runs on play.clickhouse.com with your local files sent along as tables, the same way the site's run buttons work, so you can check an edit before pushing. Photos are `UPDATE` only: add them with `scripts/add-photo.sh`. Nothing is committed; review with `git diff`, then commit and push.
+Edits are checked against the schema (`DESCRIBE talks`) and rewrite the JSON in place. `SELECT` runs on the playground with your local files sent along, like the run buttons, so you can check an edit before pushing. Run it with no arguments for a `:)` prompt.
 
-## Runnable queries
+- **Talks** (`public/talks.json`): `date`, `title`, `event`, `location`, `type` (keynote, talk, webinar, video, interview or host), `url`, `youtube` (the video ID or `null`), and optionally `note`, `mc`, `repo` and `highlight` (1–6, for the home page's highlighted videos).
+- **Demos** (`public/demos.json`): `date`, `name`, `about`, `event` (or `null`) and `repo`.
+- **Writing** (`public/writing.json`): posts on other sites, with `date`, `title`, `venue`, `url` and optional `coauthors`.
 
-The query boxes on the home, photos, archive, post and 404 pages run on real ClickHouse. Click **▶ run** to execute the query, or **edit** to change it first (⌘/Ctrl+Enter runs it while editing).
+## Photos
 
-![Editing the talks query to add a date range, then querying the playground's UK house prices dataset](docs/runnable-queries.gif)
+Export from Lightroom as sRGB JPEG, long edge 2000 px or more, with Remove Location Info ticked. Then:
 
-ClickHouse accepts SQL over plain HTTP, so `public/run.js` sends each query from the browser with a single `fetch()`: a POST to `https://play.clickhouse.com/?user=play` with the SQL as the body. `play` is the public [ClickHouse playground](https://play.clickhouse.com)'s read-only user and needs no password. The playground allows requests from any website (`Access-Control-Allow-Origin: *`), so there is no server of our own in between. Before sending a query, `run.js` does this:
+```
+scripts/add-photo.sh ~/Pictures/Export/IMG_1234.jpg "Title" "Place" "YYYY-MM"
+```
 
-- The site's data is sent along with each query as inline tables, so `talks`, `photos`, `posts` and `pages` work like real tables. For example, a query that mentions `talks` is sent as `WITH talks AS (SELECT * FROM values(...)) <your query>`.
-- Anything else on the playground works too, such as `SHOW TABLES` or its demo datasets like `uk_price_paid`.
-- Each query is wrapped in `SELECT * FROM (...) LIMIT 501 FORMAT JSONCompact`, and at most 500 rows are shown.
-- Errors come back from ClickHouse as they are, minus the long list of expected tokens on syntax errors.
+It shrinks the photo to 2000 px (never enlarging), makes a 600 px thumbnail, strips the metadata, and adds it to `public/photos.json`. `scripts/strip_metadata.py` keeps only the pixels, the colour profile and the orientation: no GPS, no place names, no serial numbers. Write a sentence of `alt` text for each photo, because photo search only knows what's in the alt text. If the grid's crop cuts off the subject, add `"focus": "top"` (or `bottom`, `left`, `right`).
 
-The `play` user can't change settings, read from URLs, use `format()`, or create temporary tables, so the inline data uses `values()`. Every query shown on the site has to be valid ClickHouse SQL, which is why the grouped talks views use `groupArray()`. To make a new query box runnable, give it `data-run` (`<div class="query" data-run>`) and load `/run.js` on the page. `DESCRIBE tyler` stays decorative.
+## The old blog
 
-## Embeddings
-
-`/search/` searches everything (linked from the home page nav), the photos and archive pages search their own rows, each talk has a "more like this" link (`/search/?like=<path>`), the 404 page finds pages by meaning as well as spelling, and every old post ends with its nearest posts. Both are `cosineDistance` queries over embeddings, made like this:
-
-- **Pages, ahead of time:** `python3 scripts/embed.py` collects every row of the `pages` table (home, photos, archive, posts with their text, talks, demos), plus every photo from its title, alt text and place, and embeds them with ClickHouse's [`aiEmbed`](https://clickhouse.com/docs/sql-reference/functions/ai-functions) in `clickhouse local`. It uses [EmbeddingGemma](https://ollama.com/library/embeddinggemma) running in Ollama, through Ollama's OpenAI-compatible endpoint, so it's free and nothing leaves your machine. It keeps the first 384 of the 768 dimensions (the model is trained so a prefix still works; 128 was too lossy for one-word searches), scales them to Int8, and writes `public/embeddings.json` (about 150 KB). In the same run, ClickHouse works out each post's nearest posts, and the script writes them into the post pages and `public/archive/related.json`, which the importer reads on a re-import. It takes a few seconds. Run it again after adding posts or talks: a page without a vector gets zeros and sorts last.
-- **The search, live:** `public/search.js` (the search page, photos, archive and the 404 page) calls `/api/embed?q=<words>`. `src/worker.js` embeds them with the same model on Cloudflare Workers AI (`@cf/google/embeddinggemma-300m`), truncates and scales them the same way, and caches the answer for a day. Input is capped at 200 characters.
-- **The query:** `run.js` sends the vectors as base64 strings and unpacks them into an `embedding Array(Float32)` column on `posts` and `pages`, so the whole site's vectors stay well inside the playground's 256 KB query limit. The live vector is a one-row `request` table. Each page shows the result computed the same way in the browser, so it appears without a round trip, and ▶ run gets the same rows from ClickHouse. `?q=some+words` on any page with a search box searches on load. Talks and demos have no pages of their own, so in `pages` their `path` is their row on the home page (`/#talk-<date>-<event>`, `/#demo-<name>`, made by `siteAnchor` in `site.js`), which opens and highlights that row; results never send people off the site. A talk's "more like this" uses its stored vector, so it needs no live embedding. Photo search works only as well as the alt text in `photos.json`, so write a sentence about what's in each new photo.
-
-Setup, once: `brew install ollama && brew services start ollama && ollama pull embeddinggemma`, then ClickHouse via [clickhousectl](https://clickhouse.com/docs/concepts/features/interfaces/cli) (`curl -fsSL https://clickhouse.com/cli | sh`, then `clickhousectl local use latest`). The Homebrew cask's binary is quarantined by macOS; clickhousectl's isn't.
+`scripts/import_wordpress.py` turned the old WordPress export into static pages at their original addresses, so old links still work. It was a one-time migration. I keep it because it also renders the old post pages, so a site-wide change like the footer means running it again. The old database was hacked, so the HTML goes through a parser on the way in.
 
 ## License
 

@@ -1,8 +1,5 @@
-// Shared by every page. Loaded in <head> (not deferred) so a saved light theme applies before first paint.
-// Theme: dark by default; the header button switches to light and remembers the choice.
-// Contact: the copy button next to the email address.
-// siteAnchor: each talk's and demo's link on the home page, which opens that row. Search results and the 404
-// page link there, so they stay on this site: /#talk-<date>-<event>, /#demo-<name>.
+// Every page loads this in <head> so a saved light theme applies before first paint.
+// Also: the contact copy button, and siteAnchor, the home-page link that opens a talk or demo row.
 (function(){
   var root=document.documentElement;
   try{ if(localStorage.getItem('theme')==='light') root.dataset.theme='light'; }catch(_){}

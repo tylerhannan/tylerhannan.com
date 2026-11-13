@@ -65,7 +65,7 @@
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var ym=function(d){return String(d).slice(0,7)};
   var grid=document.getElementById('photo-grid'), list=[];
-  var rank=null, note='';  // after a search: file -> similarity (the grid takes the search query's order), and its footnote
+  var rank=null, note='';  // after a search: file -> similarity, and its footnote
 
   function render(){
     if(!list.length){ grid.outerHTML='<div class="empty-state">0 rows in set.</div>'; return; }
@@ -83,8 +83,7 @@
     document.getElementById('photo-foot').textContent=rank&&note||list.length+' rows in set'+(real<list.length?' ('+(list.length-real)+' example)':'')+'.';
   }
 
-  // Search by what's in a shot: search.js embeds the words and the grid takes the order of this query.
-  // Each photo's vector comes from its title, alt text and place (scripts/embed.py). An empty search goes back to by-date.
+  // Search by what's in a shot. Each photo's vector comes from its title, alt text and place.
   var sqlBox=document.getElementById('photo-sql'), byDate=sqlBox.innerHTML, input=document.getElementById('search-q');
   var BY_MEANING='<span class="p">:) </span><span class="kw">WITH</span>\n     (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> request) <span class="kw">AS</span> words\n   <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, words), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, place\n   <span class="kw">FROM</span> photos\n   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, file;';
   var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
@@ -94,20 +93,20 @@
     done:function(best,words){
       rank={}; best.forEach(function(b){ rank[b.key]=b.similarity; });
       note=best.length+' rows in set, nearest first. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI; each photo was embedded from its title, description and place with ClickHouse\'s aiEmbed.';
-      if(list.length) render();  // a ?q= search can finish before photos.json; its render picks this up
+      if(list.length) render();  // a ?q= search can finish before photos.json loads
     },
     fail:function(){ document.getElementById('photo-foot').textContent='The embedding service is not answering right now; try again in a bit.'; }});
   document.getElementById('search-form').addEventListener('submit',function(){
     if(!input.value.trim()){ byDateAgain(); try{ history.replaceState(null,'',location.pathname); }catch(_){} }
   });
-  input.addEventListener('search',function(){ if(!input.value.trim()) document.getElementById('search-form').requestSubmit(); });  // the field's ✕
+  input.addEventListener('search',function(){ if(!input.value.trim()) document.getElementById('search-form').requestSubmit(); });  // the ✕
 
   var lb=document.getElementById('lightbox');
   var cur=-1, closing=false, queued=null, opener=null;
-  // Each photo has its own URL (/photos/#<file name>): Back closes the viewer, and the link can be shared.
+  // each photo has its own URL: Back closes the viewer and the link can be shared
   var slug=function(p){return p.file.replace(/\.[^.]+$/,'')};
   function open(i,push){
-    if(closing){ queued=i; return; }  // a close is still stepping back through history; open once it lands
+    if(closing){ queued=i; return; }  // still closing; open once it lands
     show(i);
     var p=list.filter(function(q){return q.file})[cur];
     if(push) history.pushState({photo:true},'','#'+slug(p));
@@ -120,20 +119,20 @@
     for(var i=0;i<real.length;i++) if(slug(real[i])===h) return i;
     return -1;
   }
-  // Viewer steps through real photos only (example slots have no file), wrapping at the ends.
+  // steps through real photos only, wrapping at the ends
   function show(i){
     var real=list.filter(function(p){return p.file}); if(!real.length) return;
     cur=(i+real.length)%real.length;
     var p=real[cur];
     var img=document.getElementById('lb-img'), cap=[p.title,p.place,p.date,p.camera].filter(Boolean).join(' · ');
-    // swap the caption when the new photo has loaded, so it never sits under the previous one
+    // swap the caption once the new photo has loaded
     img.onload=function(){ document.getElementById('lb-cap').textContent=cap; img.onload=null; };
     img.src='/photos/'+p.file; img.alt=p.alt||p.title;
     if(img.complete) img.onload();
     lb.setAttribute('aria-label',p.title);
     document.getElementById('lb-pos').textContent=(cur+1)+' / '+real.length;
     document.getElementById('lb-prev').parentNode.hidden=real.length<2;
-    if(lb.open) history.replaceState(history.state,'','#'+slug(p));  // prev/next update the URL without piling up history
+    if(lb.open) history.replaceState(history.state,'','#'+slug(p));  // without piling up history
     var nx=real[(cur+1)%real.length]; if(nx!==p) new Image().src='/photos/'+nx.file;  // preload next
   }
   grid.addEventListener('click',function(e){
@@ -156,15 +155,14 @@
     var dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy; sx=null;
     if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) show(dx<0?cur+1:cur-1);
   });
-  // Every way of closing (button, Esc, backdrop) goes through here so the URL returns to the plain gallery.
-  // If opening pushed a history entry, step back over it; for a shared link, just drop the #photo.
+  // every way of closing comes through here, so the URL goes back to the plain gallery
   function closeViewer(){
     if(!lb.open) return;
     lb.close(); refocus();
     if(history.state&&history.state.photo){ closing=true; history.back(); }
     else history.replaceState(null,'',location.pathname+location.search);
   }
-  function refocus(){  // back to the photo that was open, so keyboard users keep their place
+  function refocus(){  // keyboard users keep their place
     var real=list.filter(function(q){return q.file}), p=real[cur];
     var b=opener&&document.body.contains(opener)?opener:p&&grid.querySelector('.photo[data-i="'+list.indexOf(p)+'"]');
     if(b) b.focus(); opener=null;

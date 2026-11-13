@@ -113,13 +113,13 @@
 (function(){
   var framed = window.self !== window.top;
   var state = {type:'all', video:false, group:'year'};
-  var folded={};  // per grouping mode: group key -> true when collapsed. Older years start folded.
+  var folded={};  // per mode: group key -> folded
   var talks = [];
   var esc = function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var ym = function(d){return String(d).slice(0,7)};
   var yt = function(id){return 'https://www.youtube.com/watch?v='+encodeURIComponent(id)};
 
-  // Table grouping: each mode adds a column to the query and a header row per group.
+  // each grouping adds a column to the query and a header row per group
   var GROUPS={
     year:{name:'year', col:'<span class="kw">toYear</span>(date) <span class="kw">AS</span> year',
       key:function(t){return String(t.date).slice(0,4)}, label:function(k){return k}},
@@ -131,7 +131,7 @@
     var w=[];
     if(state.type!=='all') w.push('type = <span class="s">\''+esc(state.type)+'\'</span>');
     if(state.video) w.push('youtube <span class="kw">IS NOT NULL</span>');
-    // Real ClickHouse SQL (the box is runnable): grouped modes collect each group's talks with groupArray().
+    // real SQL, so grouped modes use groupArray()
     var nl='\n   ', g=GROUPS[state.group];
     var cols=g?g.col+','+nl+'       <span class="kw">arrayReverseSort</span>(<span class="kw">groupArray</span>((date, title, event))) <span class="kw">AS</span> talks':'date, title, event';
     return '<span class="p">:) </span><span class="c">-- not exhaustive. I forget things I\'ve done, sometimes while doing them</span>'+nl+'<span class="c">-- plus countless customer dinners, meetups, and hallway tracks</span>'+nl+
@@ -165,7 +165,7 @@
     if(g){
       rows.sort(function(a,b){return g.key(b).localeCompare(g.key(a))||String(b.date).localeCompare(String(a.date))});
       rows.forEach(function(t){var k=g.key(t); counts[k]=(counts[k]||0)+1});
-      if(!folded[state.group]){  // first time in this mode: open the two newest groups
+      if(!folded[state.group]){  // first time: open the two newest groups
         folded[state.group]={}; Object.keys(counts).sort().reverse().forEach(function(k,n){ if(state.group==='year'&&n>=2) folded[state.group][k]=true; });
       }
     }
@@ -204,7 +204,7 @@
   }
 
   function vids(){
-    // Hand-picked: talks.json entries with "highlight": 1-6 (and a youtube ID), shown in that order.
+    // talks with "highlight": 1-6, in that order
     var v=talks.filter(function(t){return t.youtube&&t.highlight}).sort(function(a,b){return a.highlight-b.highlight}).slice(0,6);
     document.getElementById('vids').innerHTML=v.map(function(t){
       return '<div class="vid" data-id="'+esc(t.youtube)+'" data-title="'+esc(t.title)+'"><a class="thumb" href="'+yt(t.youtube)+'" aria-label="Play '+esc(t.title)+'"><span class="ph">'+esc(t.event)+'</span><img alt="" loading="lazy" src="https://i.ytimg.com/vi/'+esc(t.youtube)+'/hqdefault.jpg" onerror="this.remove()"><span class="btn" aria-hidden="true">▶</span></a><a class="vt" href="'+yt(t.youtube)+'">'+esc(t.title)+'</a><span class="vm">'+esc(ym(t.date))+' · '+esc(t.event)+'</span></div>';
@@ -236,8 +236,7 @@
     if(location.hash.indexOf('#demo-')===0) openAnchor();
   }).catch(function(){document.getElementById('demo-rows').innerHTML='<tr><td colspan="3" class="d">Couldn\'t load demos.json.</td></tr>';});
 
-  // /#talk-… and /#demo-… (site.js siteAnchor; search results and the 404 page link here) open that row:
-  // filters reset, its group unfolds, the row expands, and it's briefly highlighted.
+  // /#talk-… and /#demo-… links (search, the 404 page) open that row and flash it
   function flash(tr){ tr.scrollIntoView({behavior:'smooth',block:'center'}); tr.classList.add('hit'); setTimeout(function(){ tr.classList.remove('hit'); },2500); }
   function openAnchor(){
     var h='/'+location.hash, t=h.indexOf('/#talk-')===0&&talks.filter(function(x){ return siteAnchor.talk(x)===h; })[0];
@@ -251,7 +250,7 @@
     } else if(h.indexOf('/#demo-')===0){ var d=document.getElementById(location.hash.slice(1)); if(d) flash(d); }
   }
   window.addEventListener('hashchange',openAnchor);
-  document.addEventListener('click',function(e){  // the same link twice doesn't change the hash, so open it here
+  document.addEventListener('click',function(e){  // the same link twice doesn't fire hashchange
     var a=e.target.closest('a[href^="/#talk-"],a[href^="/#demo-"]'); if(!a||e.metaKey||e.ctrlKey||e.shiftKey) return;
     e.preventDefault(); if(location.hash!==a.hash) history.pushState(null,'',a.hash); openAnchor();
   });

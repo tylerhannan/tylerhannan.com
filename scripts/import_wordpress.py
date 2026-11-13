@@ -1,19 +1,11 @@
 #!/usr/bin/env python3
-"""Turn a WordPress SQL export into static pages for tylerhannan.com.
+"""Turn the old WordPress export into static pages. A one-time migration, kept because it also renders the
+old post pages, so a site-wide change (the footer, say) means re-running it.
 
-Usage:
     python3 scripts/import_wordpress.py backup/wordpress.sql
 
-What it does:
-  - reads published posts from the *_posts table (any table prefix)
-  - reads the site's permalink structure from *_options, so each post keeps
-    its old URL (e.g. /2012/05/my-post/) and old inbound links keep working
-  - writes public/<permalink>/index.html for every post
-  - writes public/archive/posts.json, which the archive page lists
-  - rewrites links to the old domain's wp-content/uploads to /wp-content/uploads,
-    so copy the old public_html/wp-content/uploads folder to public/wp-content/uploads
-
-Only the Python standard library is used. Re-running it is safe; it overwrites.
+Writes public/<old permalink>/index.html for every published post, so old links keep working, and
+public/archive/posts.json. Re-running is safe. Stdlib only.
 """
 import html
 from html.parser import HTMLParser
@@ -26,8 +18,7 @@ from urllib.parse import quote, unquote
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "public"
 
-# The blog went quiet after 2012. Everything published later was spam injected
-# into the hacked WordPress install, so skip it.
+# the blog went quiet after 2012; everything later is spam from the hack
 LAST_REAL_YEAR = "2012"
 
 
@@ -158,8 +149,7 @@ RELATIVE_FIXUPS = {
 }
 
 
-# Images that were hot-linked from other sites that no longer exist. These were recovered from the
-# Wayback Machine (web.archive.org) and saved under public/wp-content/uploads/recovered/.
+# hot-linked images from sites that are gone, recovered from the Wayback Machine
 OLD_SITE_FILES = ["TMM_Screenshot.gif", "facebook-small-icon.gif", "linkedin-small-icon.gif", "twitter-small-icon.gif", "blog.jpg"]
 
 RECOVERED_IMAGES = {
@@ -200,14 +190,14 @@ def clean(content, old_hosts):
     content = re.sub(r"\[embed\]([\s\S]*?)\[/embed\]",
                      lambda m: '<p><a href="%s">%s</a></p>' % (html.escape(m.group(1).strip(), quote=True), html.escape(m.group(1).strip())), content)
     content = re.sub(r"\[/?(gallery|audio|video)[^\]]*\]", "", content)
-    # files the old theme served outside wp-content, rescued from the old host before it went away
+    # files the old theme served outside wp-content
     content = re.sub(r'https?://(?:www\.)?tylerhannan\.com/(?:style|images)/(%s)' % "|".join(map(re.escape, OLD_SITE_FILES)),
                      r"/wp-content/uploads/recovered/\1", content)
     content = re.sub(r'(<iframe[^>]+src=")http://', r"\1https://", content, flags=re.I)  # http players are blocked on https
     for host in old_hosts:
         content = re.sub(r"https?://(www\.)?%s/wp-content/" % re.escape(host), "/wp-content/", content)
     content = re.sub(r'href="www\.', 'href="http://www.', content)  # scheme-less links
-    # dead embeds and badges: "Digg!" links, Flash players, the SlideShare logo (the link to each deck stays)
+    # dead embeds and badges (the link to each SlideShare deck stays)
     content = re.sub(r'<a [^>]*href="http://digg\.com/submit[^"]*"[^>]*>\s*<img[^>]*>\s*</a>', "", content)
     content = re.sub(r'<object[\s\S]*?</object>', flash_embed, content, flags=re.I)
     # WordPress auto-embedded a bare YouTube link that sits on its own line
@@ -219,7 +209,7 @@ def clean(content, old_hosts):
     for dead, local in RECOVERED_IMAGES.items():
         content = content.replace(dead, local)
     content = re.sub(r'<img[^>]+src="https?://(?:blog\.jestes\.com|www\.ipcommerce\.com|commercelab\.ipcommerce\.com)/[^"]*"[^>]*>', lost_image, content)
-    # a lost image that was a link to a bigger copy on the same dead site: drop the dead link and the spacing around it
+    # a lost image linked to a bigger copy on the same dead site
     content = re.sub(r'<a [^>]*href="https?://(?:blog\.jestes\.com|www\.ipcommerce\.com|commercelab\.ipcommerce\.com)/[^"]*"[^>]*>\s*(<span class="lost">[^<]*</span>)\s*</a>', r"\1", content)
     content = re.sub(r'(?:\s*<br\s*/?>)*\s*(<span class="lost">[^<]*</span>)(?:\s*<br\s*/?>)*', r"\n\1\n", content)
     for rel, absolute in RELATIVE_FIXUPS.items():
@@ -227,8 +217,8 @@ def clean(content, old_hosts):
     return autop(sanitize(content))
 
 
-# The database was hacked once, so the finished HTML goes through a parser, not regexes: no scripts,
-# no event handlers or srcdoc, no javascript:/data: URLs, and iframes only from known video players.
+# The database was hacked once, so the HTML goes through a parser: no scripts, handlers, javascript: URLs,
+# or iframes other than known video players.
 DROP = {"script", "object", "embed", "applet", "base", "form", "meta", "link"}
 PLAYERS = ("https://www.youtube-nocookie.com/embed/", "https://player.vimeo.com/video/")
 
@@ -450,7 +440,7 @@ def main():
     spam = [p for p in posts if p["post_date"][:4] > LAST_REAL_YEAR]
     posts = [p for p in posts if p["post_date"][:4] <= LAST_REAL_YEAR]
 
-    # nearest posts by embedding, from scripts/embed.py (run it again after an import that adds posts)
+    # nearest posts, from scripts/embed.py
     related = PUBLIC / "archive" / "related.json"
     related = json.loads(related.read_text(encoding="utf-8")) if related.exists() else {}
 
@@ -459,8 +449,7 @@ def main():
         path = permalink(structure, p)
         title = html.unescape(p.get("post_title") or "Untitled")
         date = p["post_date"][:10]
-        # WordPress stores non-ASCII slugs percent-encoded ("%e2%80%9c"). The host decodes request
-        # paths before matching files, so folders need the real characters; links stay encoded.
+        # non-ASCII slugs are stored percent-encoded; folders need the real characters, links stay encoded
         out = (PUBLIC / unquote(path.strip("/")) / "index.html").resolve()
         if not out.is_relative_to(PUBLIC.resolve()) or out.parent == PUBLIC.resolve():
             print(f"Skipped post with an unsafe slug: {p.get('post_name')!r}")  # e.g. %2e%2e/ from a tampered database

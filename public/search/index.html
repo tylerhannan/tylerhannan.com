@@ -77,17 +77,14 @@
   <footer><span>tylerhannan.com · colours: <a href="https://github.com/jan-warchol/selenized">selenized</a></span><span class="fl"><a href="/">home</a><a href="/search/">search</a><a href="/photos/">photos</a><a href="/archive/">writing archive</a></span></footer>
 </div>
 <script>
-// search.js embeds the words (EmbeddingGemma on Workers AI) and makes them the `request` table the meaning query reads,
-// and ranks the titles for the spelling query;
-// the rows shown are computed the same way in the browser. ?q=words searches; ?like=<path> (a talk's
-// "more like this" on the home page) ranks against that page's stored vector instead.
+// ?q=words searches by meaning and spelling; ?like=<path> ("more like this") ranks against that page's own vector.
 (function(){
   var out=document.getElementById('search-out'), rows=document.getElementById('search-rows'), foot=document.getElementById('search-foot');
   var sql=document.getElementById('search-sql'), LIMIT=10;
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
   var k=function(w){ return '<span class="kw">'+w+'</span>'; }, n=function(v){ return '<span class="n">'+v+'</span>'; };
-  // the query for the rows below: nearest to the searched words, or to one page
+  // the query for the rows below
   function query(path){
     var s=path==null?'':'<span class="s">'+esc(lit(path))+'</span>';
     sql.innerHTML='<span class="p">:) </span>'+k('WITH')+'\n     ('+k('SELECT')+' embedding '+k('FROM')+(path==null?' request':' pages '+k('WHERE')+' path = '+s)+') '+k('AS')+' words\n   '+
@@ -102,7 +99,7 @@
   }
   function fail(){ rows.innerHTML=''; foot.textContent='0 rows in set. The embedding service is not answering right now; try again in a bit.'; }
   var q=new URLSearchParams(location.search), like=q.get('like');
-  // by spelling: the same words through ngramSearchCaseInsensitive, no model needed
+  // by spelling: no model needed
   var spell=document.getElementById('spell'), spellSql=document.getElementById('spell-sql'), spellOut=document.getElementById('spell-out'),
     spellRows=document.getElementById('spell-rows'), spellFoot=document.getElementById('spell-foot'), SPELL=5, sn=0;
   function spellQuery(words){
@@ -128,7 +125,7 @@
     box.run(title,{start:function(){ query(like); start(); spell.hidden=true; }, search:function(){ return siteSimilar(like,LIMIT,'pages',true); },
       done:function(best){ show(best,'The pages nearest to “'+title+'”, using the embedding ClickHouse\'s aiEmbed made for it ahead of time.'); }, fail:fail});
   });
-  if(!sql.innerHTML) query(null);  // shown before the first search too, like every other page's query
+  if(!sql.innerHTML) query(null);  // shown before the first search too
   if(!spellSql.innerHTML) spellQuery('');
 })();
 </script>

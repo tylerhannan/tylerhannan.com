@@ -1,6 +1,4 @@
-/* Colours: Selenized black (dark) and Selenized white (light) by Jan Warchoł, with ClickHouse yellow from Click UI as the accent
-   (brand.300 #faff69 in dark; brand.700 #686b00 in light, since yellow on white is unreadable). Light colours tuned for AA contrast.
-   Layout: one column "query console" — a header, then each section is a query and its result set. */
+/* Selenized black and white by Jan Warchoł, with ClickHouse yellow as the accent (darker in light mode so it's readable). */
 :root{
   --bg:#181818; --panel:#252525; --line:#3b3b3b; --fg:#dedede; --muted:#9a9a9a;
   --accent:#faff69; --kw:#3fc5b7; --str:#70b433; --num:#eb6eb7; --err:#ff665c; --on-accent:#181818;

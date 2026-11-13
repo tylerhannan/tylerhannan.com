@@ -1,28 +1,11 @@
 #!/usr/bin/env python3
-"""Embed every page on the site with ClickHouse's aiEmbed, for the semantic queries on the 404 and post pages.
+"""Embed every page, talk, demo, photo and post with aiEmbed in clickhouse local, through Ollama.
 
-Usage:
     python3 scripts/embed.py
 
-Needs, on this machine:
-  - Ollama running, with the model pulled:  ollama pull embeddinggemma
-  - clickhouse on PATH (clickhousectl local use latest), or CLICKHOUSE=/path/to/clickhouse
-
-What it does:
-  - collects the same rows as the `pages` table in public/run.js (home, photos, archive, every post, talk and demo)
-    plus every photo (from its title, alt text and place),
-    with a post's text taken from its HTML
-  - runs aiEmbed(…, 'embeddinggemma') over them in clickhouse local, through Ollama's OpenAI-compatible endpoint
-  - keeps the first 384 of EmbeddingGemma's 768 dimensions (it's trained so that a prefix still works) and
-    scales each to Int8, then writes public/embeddings.json: {path: base64 of the 384 bytes}. 128 was too lossy
-    for one-word searches ("neon" missed the neon photos); 768 would push the pages table past play's 256 KB query limit
-  - runs the "nearest posts" query from each post page in clickhouse local, on exactly those Int8 vectors, writes
-    public/archive/related.json, and puts the results into every post page (the importer does too, on re-import)
-
-The 404 page embeds the missed URL live with the same model on Cloudflare Workers AI (src/worker.js), using
-the same truncation and scaling, so the two sets of vectors are comparable.
-
-Re-run it after adding posts or talks; a page without a vector is all zeros and sorts last. Stdlib only.
+Needs Ollama with embeddinggemma pulled, and clickhouse on PATH (or CLICKHOUSE=/path/to/clickhouse).
+Writes public/embeddings.json (first 384 of 768 dims, Int8, base64; 128 missed the neon photos, 768
+doesn't fit in play's 256 KB) and each post's nearest posts. Re-run after adding things.
 """
 import base64
 import html
@@ -91,8 +74,7 @@ def docs():
     return uniq
 
 
-# EmbeddingGemma's document prompt (the query side, in src/worker.js, is "task: search result | query: …").
-# Then: the first DIMS dimensions, scaled so the largest is ±127. Cosine distance ignores the scale.
+# EmbeddingGemma's document prompt, then the first DIMS dims scaled to ±127 (cosine ignores scale)
 SQL = f"""
 CREATE NAMED COLLECTION tylerhannan_embed AS provider = 'openai', endpoint = '{OLLAMA}';
 
@@ -129,8 +111,7 @@ def main():
         tmp = Path(tmp)
         (tmp / "docs.jsonl").write_text("".join(json.dumps(d, ensure_ascii=False) + "\n" for d in rows), encoding="utf-8")
         print(f"Embedding {len(rows)} pages with {MODEL} via Ollama…", flush=True)
-        # --tmp: by default clickhouse local keeps its tables and named collections between runs (by design, in
-        # ~/Library/Application Support/clickhouse-local), so CREATE would fail on the second run
+        # --tmp: clickhouse local keeps tables between runs, so CREATE would fail the second time
         r = subprocess.run([ch, "local", "--tmp", "--multiquery", SQL], cwd=tmp, capture_output=True, text=True)
         if r.returncode:
             sys.exit(r.stderr.strip() or f"clickhouse local exited with {r.returncode}")

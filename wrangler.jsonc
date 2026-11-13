@@ -1,17 +1,16 @@
-// Cloudflare Workers config: serves public/ as a static site, no build step.
-// Connected to GitHub in the Cloudflare dashboard, so every push to main deploys.
+// public/ as a static site, no build step. Every push to main deploys.
 {
   "name": "tylerhannan-com",
   "compatibility_date": "2026-10-01",
-  // Only /api/embed (the 404 page's live embedding); everything else is a static file
+  // only /api/embed runs code; everything else is a static file
   "main": "src/worker.js",
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"],
-    // /2012/04/geektool/ serves /2012/04/geektool/index.html, so old WordPress links keep working
+    // old WordPress links work with or without the slash
     "html_handling": "auto-trailing-slash",
-    // Unknown URLs get public/404.html with a real 404 status
+    // unknown URLs get 404.html with a real 404
     "not_found_handling": "404-page"
   },
   // Workers AI, for EmbeddingGemma

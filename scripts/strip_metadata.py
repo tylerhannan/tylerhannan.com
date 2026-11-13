@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""Strip a JPEG down to what it needs to display: pixels, colour profile, orientation.
+"""Strip a JPEG to what it needs to display: pixels, colour profile, orientation.
 
     python3 scripts/strip_metadata.py photo.jpg [more.jpg ...]   (rewrites in place)
 
-Keeps APP0 (JFIF), APP2 only for the ICC colour profile, and Adobe APP14 (colour transform), and replaces EXIF
-with a minimal block holding only the Orientation tag. Everything else goes: EXIF (GPS, camera and lens
-serial numbers, owner), XMP (Lightroom location, keywords), IPTC/APP13 (city, sublocation, country),
-comments, other application segments (MPF too), and anything after the end of the image.
-Allow-listing means new kinds of metadata are dropped too.
-
-Stdlib only. Exits non-zero, leaving the file untouched, if the file isn't a JPEG it can parse.
+Allow-list, so new kinds of metadata go too: GPS, serial numbers, XMP, IPTC, comments, MPF and
+anything after the end of the image. Leaves the file alone if it can't parse it. Stdlib only.
 """
 import struct
 import sys

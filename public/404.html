@@ -79,7 +79,7 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
   document.getElementById('req').textContent=lit(path); document.getElementById('req2').textContent=lit(path);
   document.getElementById('req3').textContent=lit(words);
 
-  // The tables show what the queries above return, computed locally (search.js): same function, same order.
+  // the tables show what the queries above return, computed in the browser
   var row=function(m,p){ return '<tr><td class="d">'+m+'</td><td><a href="'+esc(p.path)+'">'+esc(p.title)+'</a></td><td class="e">'+esc(p.path)+'</td></tr>'; };
   var near=document.getElementById('near'), foot=document.getElementById('near-foot');
   siteSpelling(words,3).then(function(best){
@@ -87,7 +87,7 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
     foot.textContent=best.length+' rows in set. 1 means every bit of what you typed is in the title.';
   }).catch(function(){ near.innerHTML=''; foot.textContent='0 rows in set. (the data is also missing, which is impressive.)'; });
 
-  // By meaning: search.js embeds the words just now and makes them the one-row `request` table.
+  // by meaning: search.js embeds the words and makes them the request table
   var sem=document.getElementById('sem'), semFoot=document.getElementById('sem-foot');
   if(!words){ sem.innerHTML=''; semFoot.textContent='0 rows in set. There are no words in this URL to embed.'; return; }
   siteSearch(words,3).then(function(best){

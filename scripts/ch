@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
 """ch: edit the site's data with SQL, clickhouse-client style.
 
-    scripts/ch                          interactive: a :) prompt, end each statement with ;
-    scripts/ch "INSERT INTO ..."        one-off (several statements separated by ; work too)
+    scripts/ch                          a :) prompt; end each statement with ;
+    scripts/ch "INSERT INTO ..."        one-off (several statements work too)
     scripts/ch < changes.sql            from a file
 
-Local tables, backed by the JSON files the site reads:
-    talks   public/talks.json
-    demos   public/demos.json
-    photos  public/photos.json   (UPDATE only: add photos with scripts/add-photo.sh)
-
-INSERT, ALTER TABLE ... UPDATE / DELETE, UPDATE ... SET and DELETE FROM rewrite the JSON in place, after
-checking every value against the table's schema (DESCRIBE talks shows it). SELECT runs on real ClickHouse
-(play.clickhouse.com, public and read-only) with your local files sent along as tables, the same way the
-site's run buttons work, so you can check an edit before you push it. Type help at the prompt for examples.
-
-Stdlib only. Nothing is committed or pushed: review with git diff, then commit as usual.
+talks, demos and photos are the JSON files in public/ (photos is UPDATE only; add them with
+scripts/add-photo.sh). Edits are checked against the schema (DESCRIBE talks) and rewrite the JSON.
+SELECT runs on play.clickhouse.com with the files sent along, like the site's run buttons.
+Nothing is committed: check git diff, then commit. Type help for examples.
 """
 import base64
 import datetime
@@ -54,8 +47,7 @@ def err(code, name, msg):
 
 
 # ---- schemas ----------------------------------------------------------------------------------------
-# mode: req = must have a value; null = always written, may be null; opt = left out of the JSON when
-# null/false; empty = written as "" when unset (photos.json style).
+# req: must have a value; null: written, may be null; opt: left out when null/false; empty: "" when unset
 TALK_TYPES = ("keynote", "talk", "webinar", "video", "interview", "host")
 FOCUS = ("top", "bottom", "left", "right")
 
@@ -359,7 +351,7 @@ def pages():  # same rows as run.js and search.js
 
 
 REMOTE["pages"] = ("path String, title String, event Nullable(String), e String", pages)
-# Tables whose rows carry a base64 embedding (scripts/embed.py), unpacked into `embedding` as in run.js
+# tables whose rows carry a base64 embedding, unpacked as in run.js
 _UNPACK = ("* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), "
            "range(1, length(base64Decode(e)) + 1)) AS embedding")
 VEC = {"posts": _UNPACK, "photos": _UNPACK, "writing": _UNPACK, "pages": _UNPACK}
