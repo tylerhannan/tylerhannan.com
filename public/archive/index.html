@@ -46,7 +46,8 @@
       </table></div>
       <p class="foot" id="search-foot" aria-live="polite"></p>
     </div>
-    <div class="query" data-run><span class="p">:) </span><span class="kw">SELECT</span> date, title, venue
+    <div class="query" data-run><span class="p">:) </span><span class="c">-- not exhaustive. I forget things I've written, sometimes while writing them</span>
+   <span class="kw">SELECT</span> date, title, venue
    <span class="kw">FROM</span> (
        <span class="kw">SELECT</span> date, title, <span class="s">'tylerhannan.com'</span> <span class="kw">AS</span> venue <span class="kw">FROM</span> posts
        <span class="kw">UNION ALL</span>

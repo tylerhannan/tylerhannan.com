@@ -134,7 +134,7 @@
     // Real ClickHouse SQL (the box is runnable): grouped modes collect each group's talks with groupArray().
     var nl='\n   ', g=GROUPS[state.group];
     var cols=g?g.col+','+nl+'       <span class="kw">arrayReverseSort</span>(<span class="kw">groupArray</span>((date, title, event))) <span class="kw">AS</span> talks':'date, title, event';
-    return '<span class="p">:) </span><span class="c">-- not exhaustive, but directional:</span>'+nl+'<span class="c">-- plus countless customer dinners, meetups, and hallway tracks</span>'+nl+
+    return '<span class="p">:) </span><span class="c">-- not exhaustive. I forget things I\'ve done, sometimes while doing them</span>'+nl+'<span class="c">-- plus countless customer dinners, meetups, and hallway tracks</span>'+nl+
       '<span class="kw">SELECT</span> '+cols+nl+'<span class="kw">FROM</span> talks'+
       (w.length?nl+'<span class="kw">WHERE</span> '+w.join(nl+'  <span class="kw">AND</span> '):'')+
       (g?nl+'<span class="kw">GROUP BY</span> '+g.name:'')+
@@ -182,7 +182,7 @@
     }).join('')||'<tr><td colspan="4" class="d">0 rows. Try another filter.</td></tr>';
     var ms=Math.max(0.001,(performance.now()-t0)/1000);
     var n=Object.keys(counts).length;
-    document.getElementById('foot').textContent=rows.length+' talk'+(rows.length===1?'':'s')+(g?' in '+n+' group'+(n===1?'':'s'):'')+' (not exhaustive, but directional). Rendered in '+ms.toFixed(3)+' sec.';
+    document.getElementById('foot').textContent=rows.length+' talk'+(rows.length===1?'':'s')+(g?' in '+n+' group'+(n===1?'':'s'):'')+' (not exhaustive). Rendered in '+ms.toFixed(3)+' sec.';
     render.rows=rows; chips();
   }
 
