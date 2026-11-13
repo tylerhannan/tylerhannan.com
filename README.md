@@ -87,3 +87,9 @@ The `play` user can't change settings, read from URLs, use `format()`, or create
 - **The query:** `run.js` sends the vectors as base64 strings and unpacks them into an `embedding Array(Float32)` column on `posts` and `pages`, so the whole site's vectors stay well inside the playground's 256 KB query limit. The live vector is a one-row `request` table. Each page shows the result computed the same way in the browser, so it appears without a round trip, and ▶ run gets the same rows from ClickHouse. `?q=some+words` on any page with a search box searches on load. Talks and demos have no pages of their own, so in `pages` their `path` is their row on the home page (`/#talk-<date>-<event>`, `/#demo-<name>`, made by `siteAnchor` in `site.js`), which opens and highlights that row; results never send people off the site. A talk's "more like this" uses its stored vector, so it needs no live embedding. Photo search works only as well as the alt text in `photos.json`, so write a sentence about what's in each new photo.
 
 Setup, once: `brew install ollama && brew services start ollama && ollama pull embeddinggemma`, then ClickHouse via [clickhousectl](https://clickhouse.com/docs/concepts/features/interfaces/cli) (`curl -fsSL https://clickhouse.com/cli | sh`, then `clickhousectl local use latest`). The Homebrew cask's binary is quarantined by macOS; clickhousectl's isn't.
+
+## License
+
+The code (HTML, CSS, JavaScript, `scripts/`, `src/`) is [MIT](LICENSE). Borrow whatever's useful.
+
+The content isn't: the photos, the posts, and the talks, demos and writing data are © Tyler Hannan, all rights reserved. Images in old posts that came from elsewhere belong to their owners. Colours are [Selenized](https://github.com/jan-warchol/selenized) by Jan Warchoł (MIT).
