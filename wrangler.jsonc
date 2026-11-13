@@ -2,6 +2,7 @@
 {
   "name": "tylerhannan-com",
   "compatibility_date": "2026-10-01",
+  "workers_dev": false,
   // only /api/embed runs code; everything else is a static file
   "main": "src/worker.js",
   "assets": {

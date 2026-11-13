@@ -115,7 +115,7 @@
   var state = {type:'all', video:false, group:'year'};
   var folded={};  // per mode: group key -> folded
   var talks = [];
-  var esc = function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var esc = function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   var ym = function(d){return String(d).slice(0,7)};
   var yt = function(id){return 'https://www.youtube.com/watch?v='+encodeURIComponent(id)};
 
@@ -195,8 +195,8 @@
     }
     var links=[];
     if(t.youtube) links.push('<a href="'+yt(t.youtube)+'">watch on youtube ↗</a>');
-    if(t.url&&(!t.youtube||t.url.indexOf(t.youtube)<0)) links.push('<a href="'+esc(t.url)+'">'+(/youtube\.com\/playlist/.test(t.url)?'all episodes':'event page')+' ↗</a>');
-    if(t.repo) links.push('<a href="'+esc(t.repo)+'">code ↗</a>');
+    if(t.url&&(!t.youtube||t.url.indexOf(t.youtube)<0)) links.push('<a href="'+esc(siteHref(t.url))+'">'+(/youtube\.com\/playlist/.test(t.url)?'all episodes':'event page')+' ↗</a>');
+    if(t.repo) links.push('<a href="'+esc(siteHref(t.repo))+'">code ↗</a>');
     links.push('<a href="/search/?like='+encodeURIComponent(siteAnchor.talk(t))+'">more like this →</a>');
     var meta=[t.event,t.location,t.type].filter(Boolean).map(esc).join(' · ');
     var html='<tr class="x"><td></td><td colspan="3">'+meta+(t.note?'<br>'+esc(t.note):'')+'<div class="links">'+links.join('')+'</div>'+(withVideo&&t.youtube&&!framed?embed(t.youtube,t.title):'')+'</td></tr>';
@@ -230,7 +230,7 @@
   fetch('demos.json').then(function(r){return r.json()}).then(function(d){
     var ds=d.demos||[];
     document.getElementById('demo-rows').innerHTML=ds.map(function(x){
-      return '<tr id="'+esc(siteAnchor.demo(x).slice(2))+'"><td><a href="'+esc(x.repo)+'">'+esc(x.name)+' ↗</a></td><td>'+esc(x.about)+'</td>'+(x.event?'<td class="e">'+esc(x.event)+'</td>':'<td class="d">NULL</td>')+'</tr>';
+      return '<tr id="'+esc(siteAnchor.demo(x).slice(2))+'"><td><a href="'+esc(siteHref(x.repo))+'">'+esc(x.name)+' ↗</a></td><td>'+esc(x.about)+'</td>'+(x.event?'<td class="e">'+esc(x.event)+'</td>':'<td class="d">NULL</td>')+'</tr>';
     }).join('');
     document.getElementById('demo-foot').textContent=ds.length+' row'+(ds.length===1?'':'s')+' in set. Code for each is on GitHub.';
     if(location.hash.indexOf('#demo-')===0) openAnchor();

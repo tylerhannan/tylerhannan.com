@@ -71,7 +71,7 @@
 </div>
 <script>
 (function(){
-  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   var list=document.getElementById('list');
   // the query above: old posts plus posts elsewhere, newest first
   var json=function(u){ return fetch(u).then(function(r){ if(!r.ok) throw new Error(u); return r.json(); }); };
@@ -79,14 +79,14 @@
     var d=r[0], posts=(d.posts||[]).concat((r[1].writing||[]).map(function(w){ return {date:w.date,title:w.title,path:w.url,venue:w.venue}; }))
       .sort(function(a,b){return b.date.localeCompare(a.date)});
     if(!posts.length){
-      list.innerHTML='<div class="empty-state">0 rows in set. Posts appear here after running <code>python3 scripts/import_wordpress.py backup/wordpress.sql</code>.</div>';
+      list.innerHTML='<div class="empty-state">0 rows in set. (the posts are also missing, which is impressive.)</div>';
       return;
     }
     var html='', year='';
     posts.forEach(function(p){
       var y=p.date.slice(0,4);
       if(y!==year){ if(year) html+='</ul>'; html+='<p class="year">'+y+'</p><ul class="posts">'; year=y; }
-      html+='<li><span class="d">'+esc(p.date.slice(0,10).slice(5))+'</span><span><a href="'+esc(p.path)+'">'+esc(p.title)+'</a>'+(p.venue?' <span class="v">'+esc(p.venue)+' ↗</span>':'')+'</span></li>';
+      html+='<li><span class="d">'+esc(p.date.slice(0,10).slice(5))+'</span><span><a href="'+esc(siteHref(p.path))+'">'+esc(p.title)+'</a>'+(p.venue?' <span class="v">'+esc(p.venue)+' ↗</span>':'')+'</span></li>';
     });
     list.innerHTML=html+'</ul>';
     document.getElementById('foot').textContent=posts.length+' rows in set.';
@@ -98,7 +98,7 @@
   siteSearchBox({form:document.getElementById('search-form'), input:document.getElementById('search-q'), box:document.getElementById('search-sql'), table:'posts', limit:10,
     start:function(){ out.hidden=false; rows.innerHTML='<tr><td colspan="3" class="d">Embedding…</td></tr>'; foot.textContent=''; },
     done:function(best,words){
-      rows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.similarity.toFixed(2)+'</td><td><a href="'+esc(b.path)+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.date)+'</td></tr>'; }).join('');
+      rows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.similarity.toFixed(2)+'</td><td><a href="'+esc(siteHref(b.path))+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.date)+'</td></tr>'; }).join('');
       foot.textContent=best.length+' rows in set. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every post was embedded with the same model by ClickHouse\'s aiEmbed.';
     },
     fail:function(){ rows.innerHTML=''; foot.textContent='0 rows in set. The embedding service is not answering right now; try again in a bit.'; }});

@@ -29,6 +29,7 @@
   });
 
   var slug=function(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); };
+  window.siteHref=function(u){ u=String(u||''); return /^(https?:\/\/|\/(?!\/))/i.test(u)?u:'#'; };  // links from data: web or site paths only
   window.siteAnchor={
     talk:function(t){ return '/#talk-'+slug(t.date+' '+t.event); },
     demo:function(d){ return '/#demo-'+slug(d.name); }

@@ -19,14 +19,47 @@ import tempfile
 from pathlib import Path
 from urllib.parse import unquote
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from import_wordpress import PUBLIC, excerpt, related_section  # noqa: E402
+PUBLIC = Path(__file__).resolve().parent.parent / "public"
 
 MODEL = "embeddinggemma"
 DIMS = 384
 OLLAMA = os.environ.get("OLLAMA_URL", "http://localhost:11434") + "/v1/embeddings"
 RELATED = 5
 
+
+def excerpt(body, limit=155):
+    """First words of the post as plain text, for search results and link previews."""
+    text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", body))).strip()
+    text = re.sub(r" ([.,;:!?)])", r"\1", text)
+    text = re.sub(r"\[image no longer available[^\]]*\]|\[video no longer available\]", "", text).strip()
+    return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
+
+
+def related_section(path, items):
+    """The post page's "nearest posts" query and its result (from scripts/embed.py), runnable like the home page's."""
+    e = lambda v: html.escape(str(v), quote=True)
+    p = e("'" + path.replace("\\", "\\\\").replace("'", "\\'") + "'")
+    rows = "".join(f'<tr><td class="d">{i["similarity"]:.2f}</td><td><a href="{e(i["path"])}">{e(i["title"])}</a></td>'
+                   f'<td class="e">{e(unquote(i["path"]))}</td></tr>' for i in items)
+    return f"""  <!-- related -->
+  <section aria-labelledby="related-h">
+    <p class="label" id="related-h">Nearest posts</p>
+    <div class="query" data-run><span class="p">:) </span><span class="kw">WITH</span>
+     (<span class="kw">SELECT</span> embedding <span class="kw">FROM</span> posts <span class="kw">WHERE</span> path = <span class="s">{p}</span>) <span class="kw">AS</span> this_post
+   <span class="kw">SELECT</span> <span class="kw">round</span>(<span class="n">1</span> - <span class="kw">cosineDistance</span>(embedding, this_post), <span class="n">2</span>) <span class="kw">AS</span> similarity, title, path
+   <span class="kw">FROM</span> posts
+   <span class="kw">WHERE</span> path != <span class="s">{p}</span>
+   <span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>, path
+   <span class="kw">LIMIT</span> <span class="n">{len(items)}</span>;</div>
+    <div class="tbl near"><table>
+      <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
+      <tbody>{rows}</tbody>
+    </table></div>
+    <p class="foot">{len(items)} rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+  </section>
+  <script src="/run.js" defer></script>
+  <!-- /related -->
+"""
 
 def describe(page):
     """A page's <meta name="description">."""
@@ -125,7 +158,6 @@ def main():
 
     rel = {r["path"]: [{"similarity": s, "title": t, "path": p} for s, t, p in r["related"]]
            for r in sorted(related, key=lambda r: r["path"])}
-    (PUBLIC / "archive/related.json").write_text(json.dumps(rel, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 
     pattern = re.compile(r"  <!-- related -->.*?<!-- /related -->\n|(?=  <section id=\"contact\")", re.S)
     for path, items in rel.items():

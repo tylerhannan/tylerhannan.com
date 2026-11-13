@@ -62,9 +62,10 @@
 
 <script>
 (function(){
-  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   var ym=function(d){return String(d).slice(0,7)};
   var grid=document.getElementById('photo-grid'), list=[];
+  document.addEventListener('error',function(e){ var t=e.target; if(t.dataset&&t.dataset.full&&t.src.indexOf(t.dataset.full)<0) t.src=t.dataset.full; },true);  // missing thumbnail: use the full photo
   var rank=null, note='';  // after a search: file -> similarity, and its footnote
 
   function render(){
@@ -76,7 +77,7 @@
       var meta=[rank&&p.file in rank?rank[p.file].toFixed(2):'',p.place,p.date&&ym(p.date)].filter(Boolean).map(esc).join(' · ');
       var focus=/^(top|bottom|left|right|center)$/.test(p.focus)?' style="object-position:'+p.focus+'"':'';  // which edge the grid crop keeps
       // grid uses the 600px thumbnail; fall back to the full photo if a thumbnail is missing
-      var inner=p.file?'<img src="/photos/thumbs/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy" decoding="async"'+focus+' onerror="this.onerror=null;this.src=\'/photos/'+esc(p.file)+'\'">':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
+      var inner=p.file?'<img src="/photos/thumbs/'+esc(p.file)+'" alt="'+esc(p.alt||p.title)+'" loading="lazy" decoding="async"'+focus+' data-full="/photos/'+esc(p.file)+'">':'<span class="ph">'+(p.example?'example slot':'no file')+'</span>';
       return '<button type="button" class="photo'+(p.file?'':' empty')+'" data-i="'+i+'"'+(p.file?'':' disabled')+'>'+inner+'<span class="pc"><span class="vt">'+esc(p.title)+'</span><span class="vm">'+meta+'</span></span></button>';
     }).join('');
     var real=list.filter(function(p){return p.file}).length;

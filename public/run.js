@@ -5,7 +5,7 @@
   var MAX_BYTES=2e6; // stop reading after ~2 MB so a big result can't freeze the tab
   // play's max_query_size, and the site's tables count toward it
   var MAX_QUERY=262144;
-  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   var json={};
   function load(url){  // cached; a failed fetch gets retried
     return json[url]||(json[url]=fetch(url).then(function(r){ if(!r.ok) throw new Error(url+': HTTP '+r.status); return r.json(); })

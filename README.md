@@ -72,7 +72,7 @@ It shrinks the photo to 2000 px (never enlarging), makes a 600 px thumbnail, str
 
 ## The old blog
 
-`scripts/import_wordpress.py` turned the old WordPress export into static pages at their original addresses, so old links still work. It was a one-time migration. I keep it because it also renders the old post pages, so a site-wide change like the footer means running it again. The old database was hacked, so the HTML goes through a parser on the way in.
+The old WordPress posts live at their original addresses (`/2012/04/…/`), so old links still work. They were converted from a WordPress export once, by a script I've since deleted: the old database had been hacked, and keeping a parser for a hacked database around was more trouble than it was worth. The pages are plain static HTML now, and `scripts/embed.py` updates their "Nearest posts" boxes.
 
 ## License
 

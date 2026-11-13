@@ -27,7 +27,8 @@ export default {
       const r = await env.AI.run(MODEL, { text: ['task: search result | query: ' + q] });
       v = r.data[0].slice(0, DIMS);
     } catch (e) {
-      return json({ error: 'Workers AI: ' + (e && e.message || e) }, 502);
+      console.error(e);
+      return json({ error: 'embedding failed' }, 502);
     }
     const max = Math.max(...v.map(Math.abs)) || 1;  // same scaling as embed.py
     const bytes = Uint8Array.from(v, (x) => Math.round(x * 127 / max) & 0xFF);

@@ -81,7 +81,7 @@
 (function(){
   var out=document.getElementById('search-out'), rows=document.getElementById('search-rows'), foot=document.getElementById('search-foot');
   var sql=document.getElementById('search-sql'), LIMIT=10;
-  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   var lit=function(s){ return "'"+s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; };
   var k=function(w){ return '<span class="kw">'+w+'</span>'; }, n=function(v){ return '<span class="n">'+v+'</span>'; };
   // the query for the rows below
@@ -94,7 +94,7 @@
   }
   function start(){ out.hidden=false; rows.innerHTML='<tr><td colspan="3" class="d">Embedding…</td></tr>'; foot.textContent=''; }
   function show(best,note){
-    rows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.similarity.toFixed(2)+'</td><td><a href="'+esc(b.path)+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.path)+'</td></tr>'; }).join('');
+    rows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.similarity.toFixed(2)+'</td><td><a href="'+esc(siteHref(b.path))+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.path)+'</td></tr>'; }).join('');
     foot.textContent=best.length+' rows in set. '+note;
   }
   function fail(){ rows.innerHTML=''; foot.textContent='0 rows in set. The embedding service is not answering right now; try again in a bit.'; }
@@ -112,7 +112,7 @@
     spellOut.hidden=false; spellRows.innerHTML='<tr><td colspan="3" class="d">Searching…</td></tr>'; spellFoot.textContent='';
     siteSpelling(words,SPELL).then(function(best){
       if(id!==sn) return;
-      spellRows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.match+'</td><td><a href="'+esc(b.path)+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.path)+'</td></tr>'; }).join('');
+      spellRows.innerHTML=best.map(function(b){ return '<tr><td class="d">'+b.match+'</td><td><a href="'+esc(siteHref(b.path))+'">'+esc(b.title)+'</a></td><td class="e">'+esc(b.path)+'</td></tr>'; }).join('');
       spellFoot.textContent=best.length+' rows in set. 1 means every bit of what you typed is in the title.';
     },function(){ if(id!==sn) return; spellRows.innerHTML=''; spellFoot.textContent='0 rows in set. The site\'s data didn\'t load; try again in a bit.'; });
   }

@@ -69,7 +69,7 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
 </div>
 <script>
 (function(){
-  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   var dec=function(p){ try{ return decodeURIComponent(p); }catch(_){ return p; } };
   var path=dec(location.pathname);
   // the words someone was looking for: /2026/10/clickhouse-agents/ -> "clickhouse agents"
@@ -80,7 +80,7 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
   document.getElementById('req3').textContent=lit(words);
 
   // the tables show what the queries above return, computed in the browser
-  var row=function(m,p){ return '<tr><td class="d">'+m+'</td><td><a href="'+esc(p.path)+'">'+esc(p.title)+'</a></td><td class="e">'+esc(p.path)+'</td></tr>'; };
+  var row=function(m,p){ return '<tr><td class="d">'+m+'</td><td><a href="'+esc(siteHref(p.path))+'">'+esc(p.title)+'</a></td><td class="e">'+esc(p.path)+'</td></tr>'; };
   var near=document.getElementById('near'), foot=document.getElementById('near-foot');
   siteSpelling(words,3).then(function(best){
     near.innerHTML=best.map(function(b){ return row(String(b.match),b); }).join('');
