@@ -6,6 +6,9 @@
   var ENDPOINT='https://play.clickhouse.com/?user=play';
   var MAX_ROWS=500;  // the playground allows far more; a browser table doesn't need it
   var MAX_BYTES=2e6; // and stop reading a response after ~2 MB, so a huge FORMAT TSV can't freeze the tab
+  // play's max_query_size: the site's tables travel inside the query, so check the size before sending.
+  // Over it, say so plainly instead of sending it to fail. (2026-11-13: the pages table is ~207 KB.)
+  var MAX_QUERY=262144;
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var json={};
   function load(url){  // cached per page; a failed fetch is forgotten so the next run retries
@@ -134,6 +137,8 @@
       out.hidden=false; out.innerHTML='<p class="foot">Running on play.clickhouse.com…</p>'; status.textContent='Running query';
       var t0=performance.now();
       build(q).then(function(b){
+        var size=new TextEncoder().encode(b.sql).length;
+        if(size>MAX_QUERY) throw new Error('Not sent. With the site\'s tables inside it, this query is '+Math.ceil(size/1024)+' KB, and play.clickhouse.com takes at most '+MAX_QUERY/1024+' KB (max_query_size). The site has outgrown the playground; query fewer of its tables.');
         return fetch(ENDPOINT,{method:'POST',body:b.sql,signal:mine.signal}).then(function(r){ return readCapped(r,mine).then(function(res){
           if(id!==runId) return;
           var ms=performance.now()-t0, text=res.text;
