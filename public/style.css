@@ -171,6 +171,7 @@ footer .fl{display:flex;gap:16px}
 .posts .d{font:14px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
 .posts a{text-decoration:none;margin-right:.35em}  /* room before the venue, and none when it wraps */
 .posts .v{font:12px var(--mono);color:var(--muted);white-space:nowrap}
+.posts a.v:hover{color:var(--fg)}
 .empty-state{border:1px dashed var(--line);border-radius:8px;padding:20px;color:var(--muted);margin-top:16px}
 .empty-state code{font-family:var(--mono);color:var(--fg)}
 article{max-width:68ch}
