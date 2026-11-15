@@ -88,7 +88,7 @@
     posts.forEach(function(p){
       var y=p.date.slice(0,4);
       if(y!==year){ if(year) html+='</ul>'; html+='<p class="year">'+y+'</p><ul class="posts">'; year=y; }
-      html+='<li><span class="d">'+esc(p.date.slice(0,10).slice(5))+'</span><span><a href="'+esc(siteHref(p.path))+'">'+esc(p.title)+'</a>'+(p.venue?' <span class="v">'+esc(p.venue)+' ↗</span>':'')+(p.ai?'<span class="ai"><span class="ai-l">AI summary</span> '+esc(p.ai)+'</span>':'')+'</span></li>';
+      html+='<li><span class="d">'+esc(p.date.slice(0,10).slice(5))+'</span><span><a href="'+esc(siteHref(p.path))+'">'+esc(p.title)+'</a>'+(p.venue?' <span class="v">'+esc(p.venue)+' ↗</span>':'')+(p.ai?'<details class="ai"><summary>AI summary</summary><span>'+esc(p.ai)+'</span></details>':'')+'</span></li>';
     });
     list.innerHTML=html+'</ul>';
     document.getElementById('foot').textContent=posts.length+' rows in set.';
