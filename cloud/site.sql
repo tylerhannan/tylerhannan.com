@@ -119,6 +119,10 @@ WHERE kind = 'post' AND path != {path:String}
 ORDER BY similarity DESC, path
 LIMIT 5;
 
+-- changes when the searchable rows change, so the Worker's cached answers can't outlive a refresh
+CREATE OR REPLACE VIEW site.version AS
+SELECT toString(sum(cityHash64(path, h))) AS v FROM site.vectors INNER JOIN site.pages USING (path, h);
+
 -- the first 384 of 4096 dims as Int8 base64, small enough for play's 256 KB queries (/embeddings.json)
 CREATE OR REPLACE VIEW site.compact AS
 SELECT path, base64Encode(arrayStringConcat(arrayMap(x -> char(if(x < 0, toInt16(x) + 256, x)), q))) AS e
@@ -145,6 +149,7 @@ GRANT SELECT ON site.vectors TO site_search;
 GRANT SELECT ON site.pages TO site_search;
 GRANT SELECT ON site.compact TO site_search;
 GRANT SELECT ON site.query_vector TO site_search;
+GRANT SELECT ON site.version TO site_search;
 -- a user other than default needs this grant to reach Cloud's built-in model
 GRANT NAMED COLLECTION ON clickhouse_inference_embeddings TO site_search;
 CREATE SETTINGS PROFILE IF NOT EXISTS site_search

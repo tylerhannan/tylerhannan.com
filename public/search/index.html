@@ -60,7 +60,7 @@
     <p class="label" id="how-h">How it works</p>
     <ol class="how-list">
       <li>Whenever I push a change, ClickHouse Cloud reads the site and its <code>aiEmbed</code> turns every page, talk, demo and photo caption into 4,096 numbers, using Qwen3-Embedding-8B.</li>
-      <li>When you search, the same service runs the same model on your words and ranks every page with <code>cosineDistance</code>. That's the query above, and run sends it again. Answers are cached for a day.</li>
+      <li>When you search, the same service runs the same model on your words and ranks every page with <code>cosineDistance</code>. That's the query above, and run sends it again. Answers are cached until the site changes.</li>
       <li>Closest by spelling doesn't use a model. <code>ngramSearchCaseInsensitive</code> compares the letters you typed with every title.</li>
     </ol>
   </section>
@@ -129,7 +129,7 @@
   var box=siteSearchBox({form:document.getElementById('search-form'), input:document.getElementById('search-q'), box:sql, limit:LIMIT, byEvent:true,
     search:function(words){ return fetch('/api/search?q='+encodeURIComponent(words)).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }).then(function(j){ return j.results; }); },
     start:function(words){ cloudQuery(words); start(); spelling(words); },
-    done:function(best,words){ show(best,'Ranked by ClickHouse Cloud with Qwen3-Embedding-8B and all 4,096 dimensions. A search someone made today comes from a day\'s cache.'); },
+    done:function(best,words){ show(best,'Ranked by ClickHouse Cloud with Qwen3-Embedding-8B and all 4,096 dimensions. A search someone already made comes from a cache until the next refresh.'); },
     fail:fail});
   if(like&&!(q.get('q')||'').trim()) sitePages().then(function(pages){
     var me=pages.filter(function(p){ return p.key===like; })[0], title=me?me.title:like;
