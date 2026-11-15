@@ -124,9 +124,7 @@
   // each grouping adds a column to the query and a header row per group
   var GROUPS={
     year:{name:'year', col:'<span class="kw">toYear</span>(date) <span class="kw">AS</span> year',
-      key:function(t){return String(t.date).slice(0,4)}, label:function(k){return k}},
-    has_video:{name:'has_video', col:'youtube <span class="kw">IS NOT NULL</span> <span class="kw">AS</span> has_video',
-      key:function(t){return t.youtube?'1':'0'}, label:function(k){return k==='1'?'▶ with video':'no video'}}
+      key:function(t){return String(t.date).slice(0,4)}, label:function(k){return k}}
   };
 
   function sql(){
@@ -149,7 +147,7 @@
     var el=document.getElementById('chips');
     el.innerHTML=types.map(function(t){return '<button type="button" class="chip" data-type="'+esc(t)+'" aria-pressed="'+(state.type===t)+'">'+esc(t)+'</button>'}).join('')+
       '<button type="button" class="chip" data-video="1" aria-pressed="'+state.video+'">▶ has video</button>';
-    document.getElementById('groups').innerHTML='<span class="chips-l">group by</span>'+['year','has_video','none'].map(function(g){
+    document.getElementById('groups').innerHTML='<span class="chips-l">group by</span>'+['year','none'].map(function(g){
       return '<button type="button" class="chip" data-group="'+g+'" aria-pressed="'+(state.group===g)+'">'+g+'</button>'}).join('');
     if(keep){
       var sel=keep.type!=null?'[data-type="'+keep.type+'"]':keep.video?'[data-video]':'[data-group="'+keep.group+'"]';
