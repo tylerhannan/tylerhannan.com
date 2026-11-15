@@ -93,7 +93,7 @@
     start:function(){ sqlBox.innerHTML=BY_MEANING; document.getElementById('photo-foot').textContent='Embedding…'; },
     done:function(best,words){
       rank={}; best.forEach(function(b){ rank[b.key]=b.similarity; });
-      note=best.length+' rows in set, nearest first. request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI; each photo was embedded from its title, description and place with ClickHouse\'s aiEmbed.';
+      note=best.length+' rows in set, nearest first. request is '+lit(words)+', embedded just now by EmbeddingGemma 2 on Cloudflare Workers AI; each photo was embedded from its title, description and place with ClickHouse\'s aiEmbed.';
       if(list.length) render();  // a ?q= search can finish before photos.json loads
     },
     fail:function(){ document.getElementById('photo-foot').textContent='The embedding service is not answering right now; try again in a bit.'; }});

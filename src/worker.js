@@ -1,6 +1,6 @@
-// The static site in public/, plus /api/embed?q=… for search: EmbeddingGemma on Workers AI, returned
+// The static site in public/, plus /api/embed?q=… for search: EmbeddingGemma 2 on Workers AI, returned
 // as 384 Int8 dims in base64, like embeddings.json, so the words and the pages are comparable.
-const MODEL = '@cf/google/embeddinggemma-300m';
+const MODEL = '@cf/google/embeddinggemma-2';
 const DIMS = 384;
 const MAX_CHARS = 200;  // keeps this from being a free embedding API
 
@@ -16,16 +16,16 @@ export default {
     const q = (url.searchParams.get('q') || '').replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
     if (!q) return json({ error: 'Add ?q=some words' }, 400);
 
-    // the cache key includes the size, so a DIMS change never serves stale answers
-    const key = new Request(url.origin + '/api/embed?d=' + DIMS + '&q=' + encodeURIComponent(q));
+    // the cache key includes the model and size, so a change never serves stale answers
+    const key = new Request(url.origin + '/api/embed?m=' + encodeURIComponent(MODEL) + '&d=' + DIMS + '&q=' + encodeURIComponent(q));
     const hit = await caches.default.match(key);
     if (hit) return hit;
 
     let v;
     try {
       // the query prompt; pages use the document prompt
-      const r = await env.AI.run(MODEL, { text: ['task: search result | query: ' + q] });
-      v = r.data[0].slice(0, DIMS);
+      const r = await env.AI.run(MODEL, { input: ['task: search result | query: ' + q] });
+      v = r.data[0].embedding.slice(0, DIMS);
     } catch (e) {
       console.error(e);
       return json({ error: 'embedding failed' }, 502);

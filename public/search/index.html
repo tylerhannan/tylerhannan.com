@@ -58,7 +58,7 @@
   <section aria-labelledby="how-h">
     <p class="label" id="how-h">How it works</p>
     <ol class="how-list">
-      <li>Ahead of time, ClickHouse's <code>aiEmbed</code> turned every page, talk, demo and photo caption into 384 numbers, using EmbeddingGemma running on my laptop.</li>
+      <li>Ahead of time, ClickHouse's <code>aiEmbed</code> turned every page, talk, demo and photo caption into 384 numbers, using EmbeddingGemma 2 running on my laptop.</li>
       <li>When you search, a Cloudflare Worker runs the same model on your words.</li>
       <li>Your browser ranks the pages by how close their numbers are to yours. Press run and the same query runs on play.clickhouse.com instead.</li>
       <li>Closest by spelling doesn't use a model. <code>ngramSearchCaseInsensitive</code> compares the letters you typed with every title.</li>
@@ -118,7 +118,7 @@
   }
   var box=siteSearchBox({form:document.getElementById('search-form'), input:document.getElementById('search-q'), box:sql, limit:LIMIT, byEvent:true,
     start:function(words){ query(null); start(); spelling(words); },
-    done:function(best,words){ show(best,'request is '+lit(words)+', embedded just now by EmbeddingGemma on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.'); },
+    done:function(best,words){ show(best,'request is '+lit(words)+', embedded just now by EmbeddingGemma 2 on Cloudflare Workers AI. Every page was embedded with the same model by ClickHouse\'s aiEmbed.'); },
     fail:fail});
   if(like&&!(q.get('q')||'').trim()) sitePages().then(function(pages){
     var me=pages.filter(function(p){ return p.key===like; })[0], title=me?me.title:like;

@@ -3,8 +3,8 @@
 
     python3 scripts/embed.py
 
-Needs Ollama with embeddinggemma pulled, and clickhouse on PATH (or CLICKHOUSE=/path/to/clickhouse).
-Writes public/embeddings.json (first 384 of 768 dims, Int8, base64; 128 missed the neon photos, 768
+Needs Ollama with embeddinggemma-2:270m-bf16-text pulled, and clickhouse on PATH (or CLICKHOUSE=/path/to/clickhouse).
+Writes public/embeddings.json (first 384 of 768 dims, Int8, base64; 384 stays closest to the full 768 while still fitting; 768
 doesn't fit in play's 256 KB) and each post's nearest posts. Re-run after adding things.
 """
 import base64
@@ -21,7 +21,7 @@ from urllib.parse import unquote
 
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 
-MODEL = "embeddinggemma"
+MODEL = "embeddinggemma-2:270m-bf16-text"  # full precision; the default tag is 4-bit and drifts from Workers AI
 DIMS = 384
 OLLAMA = os.environ.get("OLLAMA_URL", "http://localhost:11434") + "/v1/embeddings"
 RELATED = 5
@@ -55,7 +55,7 @@ def related_section(path, items):
       <thead><tr><th>similarity</th><th>title</th><th>path</th></tr></thead>
       <tbody>{rows}</tbody>
     </table></div>
-    <p class="foot">{len(items)} rows in set. Each post's embedding is from EmbeddingGemma, made with ClickHouse's aiEmbed.</p>
+    <p class="foot">{len(items)} rows in set. Each post's embedding is from EmbeddingGemma 2, made with ClickHouse's aiEmbed.</p>
   </section>
   <script src="/run.js" defer></script>
   <!-- /related -->
@@ -107,7 +107,7 @@ def docs():
     return uniq
 
 
-# EmbeddingGemma's document prompt, then the first DIMS dims scaled to ±127 (cosine ignores scale)
+# EmbeddingGemma 2's document prompt, then the first DIMS dims scaled to ±127 (cosine ignores scale)
 SQL = f"""
 CREATE NAMED COLLECTION tylerhannan_embed AS provider = 'openai', endpoint = '{OLLAMA}';
 

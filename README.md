@@ -32,7 +32,7 @@ To make a new box runnable, give it `data-run` (`<div class="query" data-run>`) 
 
 The search page, the photos and writing pages, each talk's "more like this" and the 404 page all rank by meaning with `cosineDistance`. The search page and the 404 page rank by spelling too, with `ngramSearchCaseInsensitive`.
 
-- **Ahead of time:** `python3 scripts/embed.py` embeds every page (old posts with their text), talk, demo, photo caption and off-site post title with `aiEmbed` in `clickhouse local`, using EmbeddingGemma through Ollama. It keeps the first 384 of the 768 dimensions (128 missed the neon photos when I searched "neon"), squashes them to Int8, and writes `public/embeddings.json`. It also writes each old post's nearest posts. Re-run it after adding anything.
+- **Ahead of time:** `python3 scripts/embed.py` embeds every page (old posts with their text), talk, demo, photo caption and off-site post title with `aiEmbed` in `clickhouse local`, using EmbeddingGemma 2 through Ollama (the full-precision `270m-bf16-text` tag; the default 4-bit one drifts from Workers AI). It keeps the first 384 of the 768 dimensions, which stays closest to the full model while the pages table still fits under 256 KB, squashes them to Int8, and writes `public/embeddings.json`. It also writes each old post's nearest posts. Re-run it after adding anything.
 - **When you search:** `/api/embed?q=…` (`src/worker.js`) embeds your words with the same model on Workers AI, scaled the same way, and caches the answer for a day.
 - **The ranking:** your browser does the same math as the SQL, so results show up right away. Press run and the exact query goes to the playground and returns the same rows.
 

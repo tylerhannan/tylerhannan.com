@@ -44,8 +44,8 @@
   }
   // embed the words, make them the request table, rank against them
   window.siteSearch=function(words,limit,table,byEvent){
-    // d= matches the Worker's DIMS, so a cached answer is never the wrong size
-    var req=get('/api/embed?d=384&q='+encodeURIComponent(words)).then(function(r){ return {words:words,e:r.embedding}; });
+    // v= and d= change with the model and size, so a browser never reuses an old answer
+    var req=get('/api/embed?v=2&d=384&q='+encodeURIComponent(words)).then(function(r){ return {words:words,e:r.embedding}; });
     window.siteRequest=req;
     return Promise.all([req,TABLES[table||'pages']()]).then(function(r){ return rank(r[1],vec(r[0].e),limit,null,byEvent); });
   };
