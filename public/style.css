@@ -176,6 +176,7 @@ footer .fl{display:flex;gap:16px}
 .empty-state code{font-family:var(--mono);color:var(--fg)}
 article{max-width:68ch}
 article h1{font-size:clamp(30px,5vw,44px);line-height:1.1;margin:20px 0 8px}
+article .sub{font-size:clamp(18px,2.4vw,21px);line-height:1.4;color:var(--muted);margin:0 0 14px;text-wrap:balance}  /* reads as part of the title, not the first line */
 article .meta{font:13px var(--mono);color:var(--muted);margin:0 0 28px}
 article .content{font-size:17px;line-height:1.7}
 article .content img{max-width:100%;height:auto;border-radius:6px}
