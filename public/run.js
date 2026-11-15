@@ -29,22 +29,22 @@
   var TABLES={
     talks:function(){ return load('/talks.json').then(function(d){
       var rows=(d.talks||[]).map(function(t){var o={};for(var k in t)o[k]=t[k];o.date=day(t.date);o.mc=!!t.mc;return o});
-      return cte('talks','date Date, title String, event String, location Nullable(String), type String, url Nullable(String), youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String), mc Bool',
-        rows,['date','title','event','location','type','url','youtube','repo','highlight','note','mc']); }); },
+      return cte('talks','date Date, title String, event String, location Nullable(String), type String, url Nullable(String), youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String), mc Bool, topic Nullable(String)',
+        rows,['date','title','event','location','type','url','youtube','repo','highlight','note','mc','topic']); }); },
     photos:function(){ return Promise.all([load('/photos.json'),vectors()]).then(function(r){
       var rows=(r[0].photos||[]).filter(function(p){return p.file}).map(function(p){var o={};for(var k in p)o[k]=p[k];o.date=day(p.date);o.e=r[1]('/photos/'+p.file);return o});
       return cte('photos','date Date, file String, title String, place Nullable(String), camera Nullable(String), alt Nullable(String), focus Nullable(String), e String',
         rows,['date','file','title','place','camera','alt','focus','e'],VEC); }); },
     posts:function(){ return Promise.all([load('/archive/posts.json'),vectors()]).then(function(r){
-      var rows=(r[0].posts||[]).map(function(p){return {date:day(p.date),title:p.title,path:p.path,e:r[1](p.path)}});
-      return cte('posts','date Date, title String, path String, e String',rows,['date','title','path','e'],VEC); }); },
+      var rows=(r[0].posts||[]).map(function(p){return {date:day(p.date),title:p.title,path:p.path,topic:p.topic||null,e:r[1](p.path)}});
+      return cte('posts','date Date, title String, path String, topic Nullable(String), e String',rows,['date','title','path','topic','e'],VEC); }); },
     // my posts on other sites
     writing:function(){ return Promise.all([load('/writing.json'),vectors()]).then(function(r){
-      var rows=(r[0].writing||[]).map(function(w){ return {date:day(w.date),title:w.title,venue:w.venue,url:w.url,coauthors:w.coauthors||null,ai_summary:w.ai_summary||null,e:r[1](w.url)}; });
-      return cte('writing','date Date, title String, venue String, url String, coauthors Nullable(String), ai_summary Nullable(String), e String',rows,['date','title','venue','url','coauthors','ai_summary','e'],VEC); }); },
+      var rows=(r[0].writing||[]).map(function(w){ return {date:day(w.date),title:w.title,venue:w.venue,url:w.url,coauthors:w.coauthors||null,ai_summary:w.ai_summary||null,topic:w.topic||null,e:r[1](w.url)}; });
+      return cte('writing','date Date, title String, venue String, url String, coauthors Nullable(String), ai_summary Nullable(String), topic Nullable(String), e String',rows,['date','title','venue','url','coauthors','ai_summary','topic','e'],VEC); }); },
     demos:function(){ return load('/demos.json').then(function(d){
       var rows=(d.demos||[]).map(function(x){var o={};for(var k in x)o[k]=x[k];o.date=day(x.date);return o});
-      return cte('demos','date Date, name String, about String, event Nullable(String), repo String',rows,['date','name','about','event','repo']); }); },
+      return cte('demos','date Date, name String, about String, event Nullable(String), repo String, topic Nullable(String)',rows,['date','name','about','event','repo','topic']); }); },
     // every page, talk, demo, photo and post, for search and the 404 (rows from site.js, as in search.js)
     pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),load('/demos.json'),vectors(),load('/photos.json'),load('/writing.json')]).then(function(r){
       var rows=sitePageRows(r[0],r[1],r[2],r[4],r[5]).map(function(p){ return {path:p.path,title:p.title,event:p.event,e:r[3](p.k)}; });

@@ -16,18 +16,18 @@ WITH
     -- " · ".join(x for x in (...) if x)
     (parts) -> arrayStringConcat(arrayFilter(x -> x != '', parts), ' · ') AS joined,
     (html) -> decodeHTMLComponent(extract(html, '<meta name="description" content="([^"]*)"')) AS description
-SELECT path, kind, title, event, text
+SELECT path, kind, title, event, topic, text
 FROM
 (
-    SELECT 0 AS src, 1 AS i, '/' AS path, 'page' AS kind, 'Home' AS title, NULL AS event,
+    SELECT 0 AS src, 1 AS i, '/' AS path, 'page' AS kind, 'Home' AS title, NULL AS event, NULL AS topic,
            description(raw_blob) AS text FROM url(base || '/index.html', RawBLOB)
     UNION ALL
-    SELECT 0, 2, '/photos/', 'page', 'Photos', NULL, description(raw_blob) FROM url(base || '/photos/index.html', RawBLOB)
+    SELECT 0, 2, '/photos/', 'page', 'Photos', NULL, NULL, description(raw_blob) FROM url(base || '/photos/index.html', RawBLOB)
     UNION ALL
-    SELECT 0, 3, '/archive/', 'page', 'Writing archive', NULL, description(raw_blob) FROM url(base || '/archive/index.html', RawBLOB)
+    SELECT 0, 3, '/archive/', 'page', 'Writing', NULL, NULL, description(raw_blob) FROM url(base || '/archive/index.html', RawBLOB)
     UNION ALL
-    -- posts: titles from posts.json, text from text.json (made once from the old WordPress posts)
-    SELECT 1, i, JSONExtractString(p, 'path'), 'post', JSONExtractString(p, 'title'), NULL,
+    -- posts: titles from posts.json, the whole text from text.json; topic (here and below) is from aiClassify, for GROUP BY, not embedded
+    SELECT 1, i, JSONExtractString(p, 'path'), 'post', JSONExtractString(p, 'title'), NULL, JSONExtract(p, 'topic', 'Nullable(String)'),
            texts[JSONExtractString(p, 'path')]
     FROM url(base || '/archive/posts.json', RawBLOB)
     ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'posts') AS p, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'posts')) AS i
@@ -40,18 +40,18 @@ FROM
     -- talks: keyed by their link (two talks can share a playlist link; the first one wins)
     SELECT 2, i,
            ifNull(nullIf(JSONExtract(t, 'url', 'Nullable(String)'), ''), 'https://www.youtube.com/watch?v=' || JSONExtractString(t, 'youtube')),
-           'talk', JSONExtractString(t, 'title'), JSONExtractString(t, 'event'),
+           'talk', JSONExtractString(t, 'title'), JSONExtractString(t, 'event'), JSONExtract(t, 'topic', 'Nullable(String)'),
            joined([JSONExtractString(t, 'event'), JSONExtractString(t, 'location'), JSONExtractString(t, 'note')])
     FROM url(base || '/talks.json', RawBLOB)
     ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'talks') AS t, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'talks')) AS i
     UNION ALL
-    SELECT 3, i, JSONExtractString(d, 'repo'), 'demo', JSONExtractString(d, 'name'), NULL,
+    SELECT 3, i, JSONExtractString(d, 'repo'), 'demo', JSONExtractString(d, 'name'), NULL, JSONExtract(d, 'topic', 'Nullable(String)'),
            joined(['A demo: ' || JSONExtractString(d, 'about'), JSONExtractString(d, 'event')])
     FROM url(base || '/demos.json', RawBLOB)
     ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'demos') AS d, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'demos')) AS i
     UNION ALL
     -- photos: embedded from their captions (title, alt text, place), keyed by the image's URL
-    SELECT 4, i, '/photos/' || JSONExtractString(ph, 'file'), 'photo', JSONExtractString(ph, 'title'), NULL,
+    SELECT 4, i, '/photos/' || JSONExtractString(ph, 'file'), 'photo', JSONExtractString(ph, 'title'), NULL, NULL,
            joined(['A photo: ' || if(JSONExtractString(ph, 'alt') != '', JSONExtractString(ph, 'alt'), JSONExtractString(ph, 'title')),
                    JSONExtractString(ph, 'place')])
     FROM url(base || '/photos.json', RawBLOB)
@@ -59,7 +59,7 @@ FROM
     WHERE JSONExtractString(ph, 'file') != ''
     UNION ALL
     -- posts on other sites, keyed by the post's url: the title, plus the AI summary made from the post with aiGenerate
-    SELECT 5, i, JSONExtractString(w, 'url'), 'writing', JSONExtractString(w, 'title'), NULL,
+    SELECT 5, i, JSONExtractString(w, 'url'), 'writing', JSONExtractString(w, 'title'), NULL, JSONExtract(w, 'topic', 'Nullable(String)'),
            joined(['A post on ' || JSONExtractString(w, 'venue'),
                    if(JSONExtractString(w, 'coauthors') != '', 'with ' || JSONExtractString(w, 'coauthors'), ''),
                    JSONExtractString(w, 'ai_summary')])
@@ -74,7 +74,7 @@ SETTINGS max_http_get_redirects = 1;  -- the live site redirects /index.html to 
 CREATE MATERIALIZED VIEW IF NOT EXISTS site.pages
 REFRESH EVERY 1 WEEK
 ENGINE = MergeTree ORDER BY path
-AS SELECT path, kind, title, event, text, cityHash64(title, text) AS h FROM site.docs;
+AS SELECT path, kind, title, event, topic, text, cityHash64(title, text) AS h FROM site.docs;
 
 -- One vector per version of a row's text; the search only uses the current one
 CREATE TABLE IF NOT EXISTS site.vectors

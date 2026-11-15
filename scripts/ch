@@ -72,6 +72,7 @@ TABLES = {
             col("repo", "url", "opt", "Nullable(String)", "demo code; adds a 'code' tag"),
             col("highlight", "highlight", "opt", "Nullable(UInt8)", "1-6: position in Highlighted videos (needs youtube)"),
             col("mc", "bool", "opt", "Bool", "true adds an 'mc' tag"),
+            col("topic", "str", "opt", "Nullable(String)", "set by aiClassify; not shown on the page"),
         ],
     },
     "demos": {
@@ -82,6 +83,7 @@ TABLES = {
             col("about", "str", "req", "String", "one line"),
             col("event", "str", "null", "Nullable(String)", "NULL for client work that can't be named"),
             col("repo", "url", "req", "String", "GitHub URL"),
+            col("topic", "str", "opt", "Nullable(String)", "set by aiClassify; not shown on the page"),
         ],
     },
     "photos": {
@@ -312,18 +314,18 @@ def day(d):
 
 REMOTE = {
     "talks": ("date Date, title String, event String, location Nullable(String), type String, url Nullable(String), "
-              "youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String), mc Bool",
+              "youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String), mc Bool, topic Nullable(String)",
               lambda: [dict(t, date=day(t.get("date")), mc=bool(t.get("mc"))) for t in load(TABLES["talks"])["talks"]]),
-    "demos": ("date Date, name String, about String, event Nullable(String), repo String",
+    "demos": ("date Date, name String, about String, event Nullable(String), repo String, topic Nullable(String)",
               lambda: [dict(x, date=day(x.get("date"))) for x in load(TABLES["demos"])["demos"]]),
     "photos": ("date Date, file String, title String, place Nullable(String), camera Nullable(String), "
                "alt Nullable(String), focus Nullable(String), e String",
                lambda: [dict(p, date=day(p.get("date")), e=vector("/photos/" + p["file"])) for p in load(TABLES["photos"])["photos"] if p.get("file")]),
-    "posts": ("date Date, title String, path String, e String",
-              lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"], e=vector(p["path"]))
+    "posts": ("date Date, title String, path String, topic Nullable(String), e String",
+              lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"], topic=p.get("topic"), e=vector(p["path"]))
                        for p in json.loads((ROOT / "public/archive/posts.json").read_text(encoding="utf-8"))["posts"]]),
-    "writing": ("date Date, title String, venue String, url String, coauthors Nullable(String), ai_summary Nullable(String), e String",
-                lambda: [dict(date=day(w["date"]), title=w["title"], venue=w["venue"], url=w["url"], coauthors=w.get("coauthors"), ai_summary=w.get("ai_summary"), e=vector(w["url"]))
+    "writing": ("date Date, title String, venue String, url String, coauthors Nullable(String), ai_summary Nullable(String), topic Nullable(String), e String",
+                lambda: [dict(date=day(w["date"]), title=w["title"], venue=w["venue"], url=w["url"], coauthors=w.get("coauthors"), ai_summary=w.get("ai_summary"), topic=w.get("topic"), e=vector(w["url"]))
                          for w in json.loads((ROOT / "public/writing.json").read_text(encoding="utf-8"))["writing"]]),
 }
 def slug(s):
