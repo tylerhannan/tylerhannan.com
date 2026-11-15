@@ -121,7 +121,7 @@ LIMIT 5;
 
 -- changes when the searchable rows change, so the Worker's cached answers can't outlive a refresh
 CREATE OR REPLACE VIEW site.version AS
-SELECT toString(sum(cityHash64(path, h))) AS v FROM site.vectors INNER JOIN site.pages USING (path, h);
+SELECT toString(sum(cityHash64(path, h, href))) AS v FROM site.vectors INNER JOIN site.pages USING (path, h);
 
 -- the first 384 of 4096 dims as Int8 base64, small enough for play's 256 KB queries (/embeddings.json)
 CREATE OR REPLACE VIEW site.compact AS
