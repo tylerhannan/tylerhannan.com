@@ -41,7 +41,17 @@ HOST=<host>
 clickhouse client --secure --host $HOST --password <password> --queries-file cloud/site.sql
 ```
 
-The service runs the first refresh by itself, and later ones on a schedule and after each push (below).
+Or without the password, through the Query API, which takes one statement at a time. `clickhouse format` splits the
+file; it needs `--show_secrets`, or it quietly writes every `url()` argument as `'[HIDDEN]'`:
+
+```sh
+clickhouse format --multiquery --oneline --show_secrets < cloud/site.sql | grep -v '^$' |
+  while IFS= read -r q; do clickhousectl cloud service query --name tylerhannan-search --query "$q" < /dev/null; done
+```
+
+The service runs the first refresh by itself, and later ones on a schedule and after each push (below). From an
+empty service to a working search took 34 s on 2026-11-15: 26 s to load the 21 statements, 0.5 s to read the site
+(324 rows) and 5.7 s to embed them.
 
 Two users, each allowed one job. `site.sql` made their roles: `site_search` reads the views and their tables, one
 model call of one text per query; `site_refresh` refreshes the views. Cloud wants passwords with an uppercase
@@ -106,6 +116,16 @@ It waits until the site serves the pushed files, then sends `SYSTEM REFRESH VIEW
   the built-in model.
 - `ai_function_max_api_calls_per_query` counts requests, not texts, and one request can carry a batch. The search
   profile also sets `ai_function_embedding_max_batch_size = 1`.
+
+## Start over
+
+Everything in `site` comes from the site and `site.sql`, so it can be dropped and rebuilt. The roles, users and
+settings profile live outside the database and survive.
+
+```sh
+clickhousectl cloud service query --name tylerhannan-search --query "DROP DATABASE site SYNC"
+# then load site.sql again, as above
+```
 
 ## Tear down
 
