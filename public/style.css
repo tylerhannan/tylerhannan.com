@@ -189,9 +189,23 @@ article h1{font-size:clamp(30px,5vw,44px);line-height:1.1;margin:20px 0 8px}
 article .meta{font:13px var(--mono);color:var(--muted);margin:0 0 28px}
 article .content{font-size:17px;line-height:1.7}
 article .content img{max-width:100%;height:auto;border-radius:6px}
+article .content img.shot,article .content .clip video{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px}  /* screenshots shouldn't read as part of the page */
+article .content .clip{margin:24px 0}
+article .content .qwrap .query{padding-top:40px}  /* room for run and edit above the SQL */
+article nav.toc{display:block;font:inherit;font-size:15px;line-height:1.7;margin:8px 0 28px;padding:12px 16px;border:1px solid var(--line);border-radius:8px}
+article nav.toc p{display:block;font:12px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 6px}
+article nav.toc ol{display:block;margin:0;padding-left:1.4em}
+article nav.toc li{display:list-item}
+article .footnotes{margin-top:40px;padding-top:12px;border-top:1px solid var(--line);font-size:14px;line-height:1.6;color:var(--muted)}
+article .footnotes p{margin:6px 0}
+article .fnref,article .fnback{text-decoration:none;color:var(--accent)}
+article sup.fnmark{font:600 .72em var(--mono);line-height:0;margin-left:1px}  /* readable, and a little room from the word */
+article sup.fnmark a{padding:0 1px}
+article .footnotes .fnback{font:600 13px var(--mono);display:inline-block;min-width:1.2em}
 article .content iframe{max-width:100%}
 .lost{display:block;margin:12px 0;font:13px var(--mono);color:var(--muted)}
-article .content pre{font:13px/1.6 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
-article .content code{font-family:var(--mono);font-size:.9em}
+article .content pre{font:13px/1.6 var(--mono);font-variant-ligatures:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
+article .content code{font-family:var(--mono);font-size:.9em;font-variant-ligatures:none}  /* -> stays two characters */
+article .content :not(pre)>code{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:.05em .35em}  /* so inline code reads as code */
 article .content blockquote{margin:0;padding-left:16px;border-left:2px solid var(--line);color:var(--muted)}
 .note{font:13px var(--mono);color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}

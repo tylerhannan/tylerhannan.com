@@ -59,7 +59,7 @@
   <section aria-labelledby="how-h">
     <p class="label" id="how-h">How it works</p>
     <ol class="how-list">
-      <li>Whenever I push a change, ClickHouse Cloud reads the site and its <code>aiEmbed</code> turns every page, talk, demo and photo caption into 4,096 numbers, using Qwen3-Embedding-8B.</li>
+      <li>Whenever I push a change, ClickHouse Cloud reads the site and its <code>aiEmbed</code> turns every page, talk, demo, and photo caption into 4,096 numbers, using Qwen3-Embedding-8B.</li>
       <li>When you search, the same service runs the same model on your words and ranks every page with <code>cosineDistance</code>. That's the query above, and run sends it again. Answers are cached until the next refresh.</li>
       <li>Closest by spelling doesn't use a model. <code>ngramSearchCaseInsensitive</code> compares the letters you typed with every title.</li>
     </ol>
