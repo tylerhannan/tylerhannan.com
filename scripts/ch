@@ -322,8 +322,8 @@ REMOTE = {
     "posts": ("date Date, title String, path String, e String",
               lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"], e=vector(p["path"]))
                        for p in json.loads((ROOT / "public/archive/posts.json").read_text(encoding="utf-8"))["posts"]]),
-    "writing": ("date Date, title String, venue String, url String, coauthors Nullable(String), e String",
-                lambda: [dict(date=day(w["date"]), title=w["title"], venue=w["venue"], url=w["url"], coauthors=w.get("coauthors"), e=vector(w["url"]))
+    "writing": ("date Date, title String, venue String, url String, coauthors Nullable(String), ai_summary Nullable(String), e String",
+                lambda: [dict(date=day(w["date"]), title=w["title"], venue=w["venue"], url=w["url"], coauthors=w.get("coauthors"), ai_summary=w.get("ai_summary"), e=vector(w["url"]))
                          for w in json.loads((ROOT / "public/writing.json").read_text(encoding="utf-8"))["writing"]]),
 }
 def slug(s):

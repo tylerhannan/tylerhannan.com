@@ -58,10 +58,11 @@ FROM
     ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'photos') AS ph, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'photos')) AS i
     WHERE JSONExtractString(ph, 'file') != ''
     UNION ALL
-    -- posts on other sites: only the title is ours to embed, keyed by the post's url
+    -- posts on other sites, keyed by the post's url: the title, plus the AI summary made from the post with aiGenerate
     SELECT 5, i, JSONExtractString(w, 'url'), 'writing', JSONExtractString(w, 'title'), NULL,
            joined(['A post on ' || JSONExtractString(w, 'venue'),
-                   if(JSONExtractString(w, 'coauthors') != '', 'with ' || JSONExtractString(w, 'coauthors'), '')])
+                   if(JSONExtractString(w, 'coauthors') != '', 'with ' || JSONExtractString(w, 'coauthors'), ''),
+                   JSONExtractString(w, 'ai_summary')])
     FROM url(base || '/writing.json', RawBLOB)
     ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'writing') AS w, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'writing')) AS i
 )

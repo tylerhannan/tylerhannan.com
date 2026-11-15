@@ -40,8 +40,8 @@
       return cte('posts','date Date, title String, path String, e String',rows,['date','title','path','e'],VEC); }); },
     // my posts on other sites
     writing:function(){ return Promise.all([load('/writing.json'),vectors()]).then(function(r){
-      var rows=(r[0].writing||[]).map(function(w){ return {date:day(w.date),title:w.title,venue:w.venue,url:w.url,coauthors:w.coauthors||null,e:r[1](w.url)}; });
-      return cte('writing','date Date, title String, venue String, url String, coauthors Nullable(String), e String',rows,['date','title','venue','url','coauthors','e'],VEC); }); },
+      var rows=(r[0].writing||[]).map(function(w){ return {date:day(w.date),title:w.title,venue:w.venue,url:w.url,coauthors:w.coauthors||null,ai_summary:w.ai_summary||null,e:r[1](w.url)}; });
+      return cte('writing','date Date, title String, venue String, url String, coauthors Nullable(String), ai_summary Nullable(String), e String',rows,['date','title','venue','url','coauthors','ai_summary','e'],VEC); }); },
     demos:function(){ return load('/demos.json').then(function(d){
       var rows=(d.demos||[]).map(function(x){var o={};for(var k in x)o[k]=x[k];o.date=day(x.date);return o});
       return cte('demos','date Date, name String, about String, event Nullable(String), repo String',rows,['date','name','about','event','repo']); }); },

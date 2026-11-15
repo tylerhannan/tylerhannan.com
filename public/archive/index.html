@@ -78,7 +78,7 @@
   // the query above: old posts plus posts elsewhere, newest first
   var json=function(u){ return fetch(u).then(function(r){ if(!r.ok) throw new Error(u); return r.json(); }); };
   Promise.all([json('/archive/posts.json'),json('/writing.json').catch(function(){ return {}; })]).then(function(r){
-    var d=r[0], posts=(d.posts||[]).concat((r[1].writing||[]).map(function(w){ return {date:w.date,title:w.title,path:w.url,venue:w.venue}; }))
+    var d=r[0], posts=(d.posts||[]).concat((r[1].writing||[]).map(function(w){ return {date:w.date,title:w.title,path:w.url,venue:w.venue,ai:w.ai_summary}; }))
       .sort(function(a,b){return b.date.localeCompare(a.date)});
     if(!posts.length){
       list.innerHTML='<div class="empty-state">0 rows in set. (the posts are also missing, which is impressive.)</div>';
@@ -88,7 +88,7 @@
     posts.forEach(function(p){
       var y=p.date.slice(0,4);
       if(y!==year){ if(year) html+='</ul>'; html+='<p class="year">'+y+'</p><ul class="posts">'; year=y; }
-      html+='<li><span class="d">'+esc(p.date.slice(0,10).slice(5))+'</span><span><a href="'+esc(siteHref(p.path))+'">'+esc(p.title)+'</a>'+(p.venue?' <span class="v">'+esc(p.venue)+' ↗</span>':'')+'</span></li>';
+      html+='<li><span class="d">'+esc(p.date.slice(0,10).slice(5))+'</span><span><a href="'+esc(siteHref(p.path))+'">'+esc(p.title)+'</a>'+(p.venue?' <span class="v">'+esc(p.venue)+' ↗</span>':'')+(p.ai?'<span class="ai"><span class="ai-l">AI summary</span> '+esc(p.ai)+'</span>':'')+'</span></li>';
     });
     list.innerHTML=html+'</ul>';
     document.getElementById('foot').textContent=posts.length+' rows in set.';
