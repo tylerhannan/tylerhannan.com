@@ -93,9 +93,9 @@ SELECT path,
        arraySlice(aiEmbed('title: ' || title || ' | text: ' || text, 'embeddinggemma-2:270m-bf16-text',
                           map('credentials', 'site_embed')), 1, 384) AS v
 FROM file('docs.jsonl', JSONEachRow)</code></pre>
-<p>On my laptop that does all 324 pages, talks, demos, photo captions, and posts I wrote for other sites in about 8 seconds. The <code>'title: … | text: …'</code> bit is the prompt EmbeddingGemma expects for documents. Then the script squashes each vector down to Int8, base64-encodes it, and saves the lot as <code>embeddings.json</code>, right alongside the rest of the site's JSON.</p>
+<p>On my laptop that does all 324 pages, talks, demos, photo captions, and posts I wrote for other sites in about 8 seconds. The <code>'title: … | text: …'</code> bit is the prompt EmbeddingGemma expects for documents. Then the script squashes each vector down to <code>Int8</code>, base64-encodes it, and saves the lot as <code>embeddings.json</code>, right alongside the rest of the site's JSON.</p>
 <h3>Embedding whatever you type</h3>
-<p>The playground can't help with this one. <code>aiEmbed</code> needs a named collection on the server, and the play user, very reasonably, doesn't get one. So I wrote a small Cloudflare Worker that runs the same EmbeddingGemma 2 model on Workers AI and hands back the same Int8 format.</p>
+<p>The playground can't help with this one. <code>aiEmbed</code> needs a named collection on the server, and the play user, very reasonably, doesn't get one. So I wrote a small Cloudflare Worker that runs the same EmbeddingGemma 2 model on Workers AI and hands back the same <code>Int8</code> format.</p>
 <p>You may be thinking, Tyler, who cares which model does the embedding? Fair question. It matters a lot, because vectors from two different models don't line up, and then search gives you nonsense. So I use the same model on both sides, and I checked: for identical text, the vectors from Ollama and from Workers AI come out at 0.9995 cosine similarity or better. Pages embedded on my laptop and words embedded by Cloudflare really can be compared.</p>
 <h3>Ranking</h3>
 <p>Whatever you typed becomes a one-row table called <code>request</code>. From there, ranking every page is one query with <a href="https://clickhouse.com/docs/reference/functions/regular-functions/distance-functions#cosineDistance"><code>cosineDistance</code></a>:</p>
@@ -121,14 +121,14 @@ LIMIT 10</code></pre>
 <tr><td>768</td><td>LB&#x27;s Record Bar, Never Stop Exploring</td><td>No</td></tr>
 </tbody></table></div>
 <p><img src="/blog/play/photo-search-neon.jpg" alt="The photos page searched for &quot;neon&quot;: the grid reordered with lit signs first, LB&#x27;s Record Bar and Never Stop Exploring." class="shot"></p>
-<p>So I went with 384. That's one Int8 byte per dimension, base64-encoded, and the whole pages table comes to about 200 KB. ClickHouse unpacks it right inside the CTE:</p>
+<p>So I went with 384. That's one <code>Int8</code> byte per dimension, base64-encoded, and the whole <code>pages</code> table comes to about 200 KB. ClickHouse unpacks it right inside the CTE:</p>
 <pre><code class="language-sql">SELECT * EXCEPT (e),
        arrayMap(i -&gt; toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))),
                 range(1, length(base64Decode(e)) + 1)) AS embedding
 FROM values('path String, title String, e String', ...)</code></pre>
-<p>And because cosine distance doesn't care how long a vector is, squashing it to Int8 only costs a little precision.</p>
+<p>And because cosine distance doesn't care how long a vector is, squashing it to <code>Int8</code> only costs a little precision.</p>
 <p>Then, right before I published this, I found out Cloudflare was retiring that model. Its replacement, EmbeddingGemma 2, finds three lit signs for "neon" even at 128 dimensions. Of course it does. I kept 384 anyway, because it still tracks the full 768 more closely across the other searches I tried, and the screenshot above is EmbeddingGemma 2's answer.</p>
-<p>That was plenty of room until I went looking for old talks and posts. Every search sends the whole pages table along with it, and it's now about 208 KB of the 256 KB. I'll have to try smaller vectors soon, or speak and write less. <code>run.js</code> now checks the size before it sends anything, so a query that's too big gets a plain "not sent" instead of an error from the playground.</p>
+<p>That was plenty of room until I went looking for old talks and posts. Every search sends the whole <code>pages</code> table along with it, and it's now about 208 KB of the 256 KB. I'll have to try smaller vectors soon, or speak and write less. <code>run.js</code> now checks the size before it sends anything, so a query that's too big gets a plain "not sent" instead of an error from the playground.</p>
 <h2 id="things-i-learned-the-hard-way">Things I learned the hard way</h2>
 <p>First, remember the playground is shared. There are quotas, and every visitor's query counts against them, including mine. That's why my queries are small and <code>run.js</code> caps results at 501 rows.</p>
 <p>Also, <code>aiEmbed</code> is still in beta, so before you copy my SQL, check the argument order for your version. In 26.11 it's <code>aiEmbed(text, model[, params])</code>.</p>
