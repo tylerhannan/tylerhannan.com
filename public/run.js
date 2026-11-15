@@ -62,7 +62,7 @@
   function build(q){
     q=q.replace(/^\s*:\)\s*/,'').replace(/;(?:\s*(?:--[^\n]*|\/\*[\s\S]*?\*\/))*\s*$/,'');  // trailing ';' and comments after it
     q=q.replace(/^(?:\s*(?:--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/))+/,'').trim();  // leading comments
-    var bare=q.replace(/'(?:[^'\\]|\\.)*'|--[^\n]*|#[!\s][^\n]*|\/\*[\s\S]*?\*\//g,' ');  // a table name in a string or comment doesn't count
+    var bare=q.replace(/'(?:[^'\\]|\\.|'')*'|--[^\n]*|#[!\s][^\n]*|\/\*[\s\S]*?\*\//g,' ');  // a table name in a string or comment doesn't count
     var names=Object.keys(TABLES).filter(function(n){return new RegExp('\\b'+n+'\\b','i').test(bare)});
     return Promise.all(names.map(function(n){return TABLES[n]()})).then(function(ctes){
       var own=/\bFORMAT\s+\w+\s*$/i.test(q), fmt=own?'':' FORMAT JSONCompact', m;
