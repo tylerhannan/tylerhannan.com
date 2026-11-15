@@ -39,12 +39,13 @@
 <li>The ClickHouse playground takes SQL over HTTP from any website, with a read-only user and no password.</li>
 <li>Send JSON along with each query using <code>values()</code>. Congrats, your data becomes tables.</li>
 <li>Add vectors from <code>aiEmbed</code>. Hey presto, you get semantic search.</li>
-<li>Iff⁰ the whole query fits in 256 KB.</li>
+<li>Iff<a class="fnref" href="#fn0" id="ref0">⁰</a> the whole query fits in 256 KB.</li>
 </ul>
+<nav class="toc" aria-label="In this post"><p>In this post</p><ol><li><a href="#i-work-for-clickhouse-so">I work for ClickHouse, so…</a></li><li><a href="#yes-i-wrote-about-geektool">Yes, I wrote about GeekTool</a></li><li><a href="#ideas-aren-t-titles">Ideas aren't titles</a></li><li><a href="#256-kb-is-a-budget">256 KB is a budget</a></li><li><a href="#things-i-learned-the-hard-way">Things I learned the hard way</a></li><li><a href="#one-small-worker">One small Worker</a></li></ol></nav>
 <p>I've ignored my blog for years. It ran on WordPress and mattered back when I was an evangelist in the payments industry. Not surprisingly, it went the way most old WordPress sites do. One day the page was blank, probably some broken PHP. And when I finally looked in the database, it was full of spam.</p>
 <p>I rebuilt tylerhannan.com as a folder of HTML and JSON files: no backend, no database. Then I was looking for a talk that I had given, and I couldn't find it. </p>
 <p>Well, now I need search. Yay? How do I build search on a static site?</p>
-<h2>I work for ClickHouse, so…</h2>
+<h2 id="i-work-for-clickhouse-so">I work for ClickHouse, so…</h2>
 <p>This began an exploration that ended up with every query box on this site being real SQL, and you can run it. The <a href="https://clickhouse.com/docs/get-started/sample-datasets/playground">ClickHouse playground</a> takes <a href="https://clickhouse.com/docs/concepts/features/interfaces/http">SQL over HTTP</a> from any website, with a read-only user and no password. I send my site's JSON along with each query using the <a href="https://clickhouse.com/docs/reference/functions/table-functions/values"><code>values()</code> table function</a>, and ClickHouse treats that data as tables.</p>
 <p>The client is one <code>fetch()</code> call:</p>
 <pre><code class="language-javascript">const res = await fetch('https://play.clickhouse.com/?user=play', {
@@ -64,23 +65,24 @@ SELECT toYear(date) AS year, count() AS talks
 FROM talks
 GROUP BY year
 ORDER BY year DESC</code></pre>
-<p>On the site, a little script called run.js¹ does that for every query box. It looks at which tables your query mentions. It loads that JSON. It turns each one into a CTE and sticks it on the front of your SQL. Then it sends the lot to the playground.</p>
+<p>On the site, a little script called run.js<a class="fnref" href="#fn1" id="ref1">¹</a> does that for every query box. It looks at which tables your query mentions. It loads that JSON. It turns each one into a CTE and sticks it on the front of your SQL. Then it sends the lot to the playground.</p>
 <p>It also caps every result at 501 rows, because I know myself, and sooner or later I'd try to pull a million rows into a browser tab.</p>
 <p>And because the boxes are real SQL, you can edit them. Group my talks by year, or ignore my data completely and query the playground's own datasets instead. <code>SELECT count() FROM github_events</code> counts about 11.2 billion rows. Go ahead, try it on the home page, I'll wait. Back? Beauty. That's 11 billion rows, counted from what is basically a folder of HTML files, and I'm still a little amazed that works.</p>
-<p><img src="/blog/play/run-on-play.png" alt="The talks query edited to count the playground&#x27;s github_events table, with the result underneath: about 11.2 billion rows, run on play.clickhouse.com." class="shot" loading="lazy"></p>
-<h2>Yes, I wrote about GeekTool</h2>
+<p><img src="/blog/play/run-on-play.png" alt="The talks query edited to count the playground&#x27;s github_events table, with the result underneath: about 11.2 billion rows, run on play.clickhouse.com." class="shot"></p>
+<h2 id="yes-i-wrote-about-geektool">Yes, I wrote about GeekTool</h2>
 <p>Then I had search, lightweight search. It was compelling, but it wasn't enough. A 404 page and broken WordPress links that match by spelling do not a useful site search make.</p>
 <p>This is the query behind the 404 page:</p>
-<div class="query" data-run>SELECT round(ngramSearchCaseInsensitive(title, 'geektool implementation'), 2) AS match, title
+<div class="query" data-run>WITH 'geektool implementation' AS words
+SELECT round(ngramSearchCaseInsensitive(title, words), 2) AS match, title
 FROM pages
 ORDER BY match DESC
 LIMIT 3</div>
-<p>Old WordPress links tend to show up with slightly wrong paths. So when one lands on the 404 page, the page turns the missing path into words and asks <a href="https://clickhouse.com/docs/reference/functions/regular-functions/string-search-functions#ngramSearchCaseInsensitive"><code>ngramSearchCaseInsensitive</code></a> which titles look closest. Try /2012/04/geektool-implementation/ and it finds "GeekTool: Implementation Detail" at 0.85.²</p>
-<p><img src="/blog/play/404-spelling-geektool.png" alt="The 404 page for /2012/04/geektool-implementation/: the spelling query, and its top result, &quot;GeekTool: Implementation Detail&quot;, at 0.85." class="shot" loading="lazy"></p>
+<p>Old WordPress links tend to show up with slightly wrong paths. So when one lands on the 404 page, the page turns the missing path into words and asks <a href="https://clickhouse.com/docs/reference/functions/regular-functions/string-search-functions#ngramSearchCaseInsensitive"><code>ngramSearchCaseInsensitive</code></a> which titles look closest. Try /2012/04/geektool-implementation/ and it finds "GeekTool: Implementation Detail" at 0.85.<a class="fnref" href="#fn2" id="ref2">²</a></p>
+<p><img src="/blog/play/404-spelling-geektool.png" alt="The 404 page for /2012/04/geektool-implementation/: the spelling query, and its top result, &quot;GeekTool: Implementation Detail&quot;, at 0.85." class="shot"></p>
 <p>And that's fine for most broken links. It's no help at all when someone types an idea instead of a title.</p>
-<h2>Ideas aren't titles</h2>
+<h2 id="ideas-aren-t-titles">Ideas aren't titles</h2>
 <p>ClickHouse has released AI functions, so I was interested in <a href="https://clickhouse.com/docs/reference/functions/regular-functions/ai-functions"><code>aiEmbed</code></a>. I wanted semantic search on my website, and for that I needed three things: a vector for every page, a vector for whatever someone types, and a way to compare them. ClickHouse handles the first one and the last one. </p>
-<p><img src="/blog/play/404-spelling-and-meaning.png" alt="The 404 page for /credit-card-fees, with the spelling query and results on top and the meaning query and results below, including &quot;Cost of Accepting Credit Cards&quot;." class="shot" loading="lazy"></p>
+<p><img src="/blog/play/404-spelling-and-meaning.png" alt="The 404 page for /credit-card-fees, with the spelling query and results on top and the meaning query and results below, including &quot;Cost of Accepting Credit Cards&quot;." class="shot"></p>
 <p>Here's what that looks like on the 404 for /credit-card-fees. Spelling finds the titles with "credit card" in them, which is fine. Meaning also finds Cost of Accepting Credit Cards, and that one doesn't say "fees" anywhere in the title. That's the bit I wanted.</p>
 <h3>Embedding the pages</h3>
 <p><code>aiEmbed</code> has been in ClickHouse since 26.6, and it's still beta. You hand it some text, it sends that to an embedding model, and you get an <code>Array(Float32)</code> back. Anything that speaks the OpenAI API works, and you tell <code>aiEmbed</code> where to find it with a <a href="https://clickhouse.com/docs/concepts/features/configuration/server-config/named-collections">named collection</a>. I used <a href="https://ollama.com">Ollama running EmbeddingGemma 2 on my laptop</a>. Here's the heart of <code>embed.py</code>, which runs in clickhouse-local:</p>
@@ -107,7 +109,7 @@ LIMIT 10</code></pre>
 <p>The <a href="https://clickhouse.com/docs/reference/statements/select/limit-by"><code>LIMIT 1 BY</code></a> is there because, before I added it, the nearly identical "ClickHouse release calls" talks took four of the ten results for "streaming data into ClickHouse". I do a lot of release calls, apparently enough to crowd out everything else.</p>
 <p>In practice, your browser does the same math itself from <code>embeddings.json</code>, which is why results show up right away. If you press run, the exact query goes off to the playground instead, and you get the same rows back. I use that a lot to make sure my JavaScript and ClickHouse agree.</p>
 <figure class="clip"><video autoplay muted loop playsinline preload="metadata" poster="/blog/play/search-clip-poster.jpg" aria-label="Typing a search on the search page, results appearing, then pressing run and the playground returning the same rows"><source src="/blog/play/search-clip.webm" type="video/webm"><source src="/blog/play/search-clip.mp4" type="video/mp4"></video></figure>
-<h2>256 KB is a budget</h2>
+<h2 id="256-kb-is-a-budget">256 KB is a budget</h2>
 <p>Bringing your own data does have a limit, though. <a href="https://clickhouse.com/docs/reference/settings/session-settings/max#max_query_size"><code>max_query_size</code></a> on the playground is 262,144 bytes, and every byte of data I send along counts toward it. More dimensions usually means better search…but it also means more bytes. EmbeddingGemma gives you 768 dimensions, and it's trained so you can chop off the end and the first part still works on its own.</p>
 <p>So I started small, with 128 dimensions. Then I searched "neon" and got a photo of playing cards first, an old blog post second, and an actual neon sign third, which is not what anyone searching for neon wants. </p>
 <p>Granted, that's one search, which is hardly science, but it was enough to send me back for more dimensions.</p>
@@ -118,7 +120,7 @@ LIMIT 10</code></pre>
 <tr><td>384</td><td>LB&#x27;s Record Bar, Never Stop Exploring</td><td>Yes, about 200 KB</td></tr>
 <tr><td>768</td><td>LB&#x27;s Record Bar, Never Stop Exploring</td><td>No</td></tr>
 </tbody></table></div>
-<p><img src="/blog/play/photo-search-neon.jpg" alt="The photos page searched for &quot;neon&quot;: the grid reordered with lit signs first, LB&#x27;s Record Bar and Never Stop Exploring." class="shot" loading="lazy"></p>
+<p><img src="/blog/play/photo-search-neon.jpg" alt="The photos page searched for &quot;neon&quot;: the grid reordered with lit signs first, LB&#x27;s Record Bar and Never Stop Exploring." class="shot"></p>
 <p>So I went with 384. That's one Int8 byte per dimension, base64-encoded, and the whole pages table comes to about 200 KB. ClickHouse unpacks it right inside the CTE:</p>
 <pre><code class="language-sql">SELECT * EXCEPT (e),
        arrayMap(i -&gt; toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))),
@@ -127,26 +129,28 @@ FROM values('path String, title String, e String', ...)</code></pre>
 <p>And because cosine distance doesn't care how long a vector is, squashing it to Int8 only costs a little precision.</p>
 <p>Then, right before I published this, I found out Cloudflare was retiring that model. Its replacement, EmbeddingGemma 2, finds three lit signs for "neon" even at 128 dimensions. Of course it does. I kept 384 anyway, because it still tracks the full 768 more closely across the other searches I tried, and the screenshot above is EmbeddingGemma 2's answer.</p>
 <p>That was plenty of room until I went looking for old talks and posts. Every search sends the whole pages table along with it, and it's now about 208 KB of the 256 KB. I'll have to try smaller vectors soon, or speak and write less. <code>run.js</code> now checks the size before it sends anything, so a query that's too big gets a plain "not sent" instead of an error from the playground.</p>
-<h2>Things I learned the hard way</h2>
+<h2 id="things-i-learned-the-hard-way">Things I learned the hard way</h2>
 <p>First, remember the playground is shared. There are quotas, and every visitor's query counts against them, including mine. That's why my queries are small and <code>run.js</code> caps results at 501 rows.</p>
 <p>Also, <code>aiEmbed</code> is still in beta, so before you copy my SQL, check the argument order for your version. In 26.11 it's <code>aiEmbed(text, model[, params])</code>.</p>
 <p>Then there's clickhouse-local, which remembers things. It keeps your tables and named collections between runs. Older versions threw everything away, so if you're used to that, a script that runs CREATE twice will fail the second time. It all lives in <code>~/Library/Application Support/clickhouse-local</code> on macOS (<code>~/.local/share/clickhouse-local</code> on Linux), and <code>--tmp</code> gets you the old throwaway behaviour back.</p>
 <p>And if your browser is doing the ranking, like mine is, the JavaScript has to round, order and break ties exactly the way the query does. Otherwise the run button (text, css element, whatever) gives you different answers than the page. When I'm not sure, I press it and compare.</p>
 <p>Oh, and check how much of each page you're actually embedding. I was cutting every post at 2,000 characters, which felt like plenty. It wasn't. 120 of my 193 old posts are longer than that, so search never saw how most of them ended. So I took a sentence from the end of 30 long posts and searched for it. With the cut, the right post came back first 8 times, and its median rank was 20th. With the whole post, it came back first 12 times, and the median rank was 2nd. Thirty sentences is hardly science, but I embed the whole thing now. The vectors are the same size either way, so it costs nothing against the 256 KB.</p>
 <p>Finally, the search box on the writing page only covers the old posts that live on this site. The posts I wrote for other sites are listed too, but all I have for them is a title. So /search/ can match them by title, not by what they actually say. </p>
-<h2>One small Worker</h2>
+<h2 id="one-small-worker">One small Worker</h2>
 <p>So that's it. The site is still a folder of files, and every query on it runs on the playground. You can do all of this right now. Please go break it.</p>
 <ul>
 <li><a href="https://tylerhannan.com/search/?q=streaming+data+into+clickhouse">Search by meaning</a>, then press run on the query underneath and you get the same rows straight from ClickHouse. </li>
 <li>Visit <a href="https://tylerhannan.com/credit-card-fees">a page that doesn't exist</a> to see spelling and meaning side by side. </li>
 <li>Or edit <a href="https://tylerhannan.com">any query on the home page</a> and run something of your own. </li>
 </ul>
-<p>The code is all <a href="https://github.com/tylerhannan/tylerhannan.com/tree/playground-search">on GitHub</a>: static files and one small Worker.</p>
+<p>The code is all <a href="https://github.com/tylerhannan/tylerhannan.com/tree/playground-search">on GitHub</a>: static files and one small Worker.</p>
 <p>There's still a script on my laptop, and a second copy of the model behind the Worker. I'd like to get rid of both. It could all be SQL, and I'd like that.</p>
-<p class="fn">⁰ Yes, iff. If and only if. That's maths, not database talk, but formal proofs and relational algebra are close cousins, so I'm keeping it.³</p>
-<p class="fn">¹ "Little" is doing some work there. It's 170 lines.</p>
-<p class="fn">² It was 2012. Don't judge me.</p>
-<p class="fn">³ Yes, a footnote on a footnote. And yes, I zero-index.</p>
+<div class="footnotes">
+<p id="fn0"><a class="fnback" href="#ref0" aria-label="Back to the text">⁰</a> Yes, iff. If and only if. That's maths, not database talk, but formal proofs and relational algebra are close cousins, so I'm keeping it.<a class="fnref" href="#fn3" id="ref3">³</a></p>
+<p id="fn1"><a class="fnback" href="#ref1" aria-label="Back to the text">¹</a> "Little" is doing some work there. It's 170 lines.</p>
+<p id="fn2"><a class="fnback" href="#ref2" aria-label="Back to the text">²</a> It was 2012. Don't judge me.</p>
+<p id="fn3"><a class="fnback" href="#ref3" aria-label="Back to the text">³</a> Yes, a footnote on a footnote. And yes, I zero-index.</p>
+</div>
     </div>
     <p class="note">Published 2026-11-15. The code as this post describes it is the <a href="https://github.com/tylerhannan/tylerhannan.com/tree/playground-search">playground-search</a> tag.</p>
   </article>
