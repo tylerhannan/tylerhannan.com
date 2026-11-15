@@ -83,6 +83,7 @@
   }
   function render(){
     box.innerHTML=sql();
+    if(render.done) box.dispatchEvent(new Event('query-changed')); render.done=true;  // clears an old run result
     groups.innerHTML='<span class="chips-l">group by</span>'+['year','topic'].map(function(g){ return '<button type="button" class="chip" data-group="'+g+'" aria-pressed="'+(group===g)+'">'+g+'</button>'; }).join('');
     var html='', sets={};
     if(group==='topic'){

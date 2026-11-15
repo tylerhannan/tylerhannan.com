@@ -399,7 +399,7 @@ def vector(path, _cache={}):
 def remote(q, t0):
     q = re.sub(r";\s*$", "", q.strip())
     q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts|writing|pages)\b", r"\1", q, flags=re.I)  # as in local statements
-    bare = re.sub(r"'(?:[^'\\]|\\.)*'|--[^\n]*|#[!\s][^\n]*|/\*.*?\*/", " ", q, flags=re.S)  # names in strings or comments don't count
+    bare = re.sub(r"'(?:[^'\\]|\\.|'')*'|--[^\n]*|#[!\s][^\n]*|/\*.*?\*/", " ", q, flags=re.S)  # names in strings or comments don't count
     ctes = []
     for name, (schema, rows) in REMOTE.items():
         if re.search(rf"\b{name}\b", bare, re.I):

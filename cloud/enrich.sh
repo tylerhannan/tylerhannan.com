@@ -3,11 +3,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 if [ -z "${CLICKHOUSE_URL:-}" ] || [ -z "${CLICKHOUSE_PASSWORD+set}" ]; then
-  echo "cloud/enrich.sh: CLICKHOUSE_URL/PASSWORD not set, skipping" >&2
-  exit 0
+  case "${GITHUB_REPOSITORY:-}" in tylerhannan/tylerhannan.com|"") echo "cloud/enrich.sh: CLICKHOUSE_URL/PASSWORD not set" >&2; exit 1 ;; esac
+  echo "cloud/enrich.sh: no secrets in this fork, skipping" >&2; exit 0  # forks have no secrets
 fi
 BASE=${SITE_BASE:-https://raw.githubusercontent.com/tylerhannan/tylerhannan.com/$(git rev-parse HEAD)/public}
-enc() { python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"; }
+enc() { python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1].replace("\\", "\\\\"), safe=""))' "$1"; }  # params are read escaped
 run() {  # SQL file or text, then name=value parameters
   sql=$1; shift; q="param_base=$(enc "$BASE")"
   for kv in "$@"; do q="$q&param_${kv%%=*}=$(enc "${kv#*=}")"; done

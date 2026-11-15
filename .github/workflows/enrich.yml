@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Summaries, then topics, then a pull request
         run: |
-          [ -n "$CLICKHOUSE_URL" ] || { echo "No secrets, skipping"; exit 0; }
+          [ -n "$CLICKHOUSE_URL" ] || { [ "$GITHUB_REPOSITORY" = tylerhannan/tylerhannan.com ] && { echo "CLICKHOUSE_URL not set"; exit 1; }; echo "No secrets in this fork, skipping"; exit 0; }
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           branch="enrich/${GITHUB_SHA::7}"

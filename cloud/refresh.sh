@@ -5,8 +5,8 @@
 set -eu
 cd "$(dirname "$0")/.."
 if [ -z "${CLICKHOUSE_URL:-}" ] || [ -z "${CLICKHOUSE_PASSWORD+set}" ]; then
-  echo "cloud/refresh.sh: CLICKHOUSE_URL/PASSWORD not set, skipping the search refresh"
-  exit 0
+  case "${GITHUB_REPOSITORY:-}" in tylerhannan/tylerhannan.com|"") echo "cloud/refresh.sh: CLICKHOUSE_URL/PASSWORD not set" >&2; exit 1 ;; esac
+  echo "cloud/refresh.sh: no secrets in this fork, skipping" >&2; exit 0  # forks have no secrets
 fi
 BASE=${SITE_BASE:-$(sed -n "s/^ *'\([^']*\)' AS base,.*/\1/p" cloud/site.sql)}
 
