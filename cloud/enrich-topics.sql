@@ -2,7 +2,7 @@
 WITH
     (s -> concat('''', replaceAll(replaceAll(s, '\\', '\\\\'), '''', '\\'''), '''')) AS lit,
     -- the model sees the descriptions; the topic is the part before the colon
-    ['Payments & platforms: payment processing, fees, breaches, PCI compliance, platform strategy, developer APIs, mobile, e-commerce',
+    ['Payments & commerce: payment processing, cards, fees, fraud, breaches, PCI compliance, merchants, payment and commerce platforms and APIs (PayPal, IP Commerce)',
      'Developer communities: devrel, evangelism, meetups, contributors, champions, community programs',
      'NoSQL databases: Riak, Fauna, key/value and document stores, availability, replication, data modelling',
      'GraphQL: GraphQL APIs, Hasura, schemas, GraphQL events',

@@ -1,6 +1,7 @@
 // The static site in public/, plus three endpoints answered by ClickHouse Cloud (cloud/site.sql). The service
 // embeds and ranks; this Worker holds site_searcher's password and caches the answers.
 //   /api/search?q=   full-size search (site.search)
+//   /api/related?path= a post's nearest posts, from stored vectors, no model call (site.related)
 //   /api/embed?q=    the words as 384 Int8 dims in base64, for the request table on play (site.query_vector)
 //   /embeddings.json every page's vector packed the same way, for the queries on play (site.compact)
 // Without CLICKHOUSE_URL and CLICKHOUSE_SEARCH_PASSWORD (wrangler dev without .dev.vars) it answers 503.
@@ -23,8 +24,8 @@ async function cached(key, ctx, make) {
 }
 
 // one query as site_searcher; the words go as a parameter, never into the SQL (escaped format, so backslashes are doubled)
-async function clickhouse(env, sql, q) {
-  const r = await fetch(env.CLICKHOUSE_URL + '/' + (q == null ? '' : '?param_q=' + encodeURIComponent(q.replace(/\\/g, '\\\\'))), {
+async function clickhouse(env, sql, q, name = 'q') {
+  const r = await fetch(env.CLICKHOUSE_URL + '/' + (q == null ? '' : '?param_' + name + '=' + encodeURIComponent(q.replace(/\\/g, '\\\\'))), {
     method: 'POST',
     headers: { 'X-ClickHouse-User': env.CLICKHOUSE_SEARCH_USER || 'site_searcher', 'X-ClickHouse-Key': env.CLICKHOUSE_SEARCH_PASSWORD },
     body: sql,
@@ -39,6 +40,11 @@ const ROUTES = {
     words: true, ttl: DAY,
     answer: async (env, q) => ({ q, results: await clickhouse(env,
       'SELECT similarity, kind, title, path FROM site.search(q = {q:String}) FORMAT JSONEachRow', q) }),
+  },
+  '/api/related': {
+    words: true, param: 'path', ttl: DAY,
+    answer: async (env, path) => ({ path, results: await clickhouse(env,
+      'SELECT similarity, title, path FROM site.related(path = {path:String}) FORMAT JSONEachRow', path, 'path') }),
   },
   '/api/embed': {
     words: true, ttl: DAY,
@@ -65,9 +71,10 @@ export default {
     if (request.method !== 'GET') return json({ error: 'GET only' }, 405, { Allow: 'GET' });
     if (!env.CLICKHOUSE_URL || !env.CLICKHOUSE_SEARCH_PASSWORD) return json({ error: 'Search is not set up' }, 503);
 
-    const q = route.words ? (url.searchParams.get('q') || '').replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS) : null;
-    if (route.words && !q) return json({ error: 'Add ?q=some words' }, 400);
-    const key = new Request(url.origin + url.pathname + '?m=' + MODEL + '&d=' + DIMS + (q == null ? '' : '&q=' + encodeURIComponent(q)));
+    const name = route.param || 'q';
+    const q = route.words ? (url.searchParams.get(name) || '').replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS) : null;
+    if (route.words && !q) return json({ error: 'Add ?' + name + '=…' }, 400);
+    const key = new Request(url.origin + url.pathname + '?m=' + MODEL + '&d=' + DIMS + (q == null ? '' : '&' + name + '=' + encodeURIComponent(q)));
     return cached(key, ctx, async () => {
       try {
         return json(await route.answer(env, q), 200, { 'Cache-Control': 'public, max-age=' + route.ttl });

@@ -72,9 +72,9 @@
     { "date": "2013-05", "title": "Distributed Databases Panel: An Exploration of Approaches and Best Practices", "event": "Google I/O 2013", "location": "San Francisco, US", "type": "talk", "url": "https://www.youtube.com/watch?v=zxwsOueJU4Q", "youtube": "zxwsOueJU4Q", "note": "Panel.", "topic": "NoSQL databases" },
     { "date": "2013-02", "title": "Interviewed at Strata Santa Clara 2013", "event": "O'Reilly Strata 2013", "location": "Santa Clara, US", "type": "interview", "url": "https://www.youtube.com/watch?v=P4KXpKV3FfM", "youtube": "P4KXpKV3FfM", "topic": "NoSQL databases" },
     { "date": "2012-10-25", "title": "Introduction to Riak", "event": "Denver / Boulder Cloud Computing Group", "location": "Louisville, US", "type": "talk", "url": "https://www.meetup.com/denver-boulder-cloud-computing-group/events/dtgnncyqnbhc/", "youtube": null, "topic": "NoSQL databases" },
-    { "date": "2012-05", "title": "Demo: IP Commerce Multi-Party Payments", "event": "FinovateSpring 2012", "location": "San Francisco, US", "type": "talk", "url": "https://finovate.com/videos/finovatespring-2012-ipcommerce/", "youtube": null, "topic": "Payments & platforms" },
-    { "date": "2011-01", "title": "Payment Security & Payment Diversity Should Not Cost a Bundle", "event": "National Retail Federation", "location": "New York, US", "type": "talk", "url": "https://nrf.com/", "youtube": null, "topic": "Payments & platforms" },
-    { "date": "2008-06", "title": "Understanding Electronic Commerce", "event": "ISV Innovation (Microsoft Channel 9)", "type": "webinar", "url": "https://channel9.msdn.com/", "youtube": null, "topic": "Payments & platforms" }
+    { "date": "2012-05", "title": "Demo: IP Commerce Multi-Party Payments", "event": "FinovateSpring 2012", "location": "San Francisco, US", "type": "talk", "url": "https://finovate.com/videos/finovatespring-2012-ipcommerce/", "youtube": null, "topic": "Payments & commerce" },
+    { "date": "2011-01", "title": "Payment Security & Payment Diversity Should Not Cost a Bundle", "event": "National Retail Federation", "location": "New York, US", "type": "talk", "url": "https://nrf.com/", "youtube": null, "topic": "Payments & commerce" },
+    { "date": "2008-06", "title": "Understanding Electronic Commerce", "event": "ISV Innovation (Microsoft Channel 9)", "type": "webinar", "url": "https://channel9.msdn.com/", "youtube": null, "topic": "Payments & commerce" }
   ],
   "links": {
     "linkedin": "https://www.linkedin.com/in/tylerhannan/",

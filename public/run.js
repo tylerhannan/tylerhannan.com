@@ -1,5 +1,5 @@
 // Makes every .query[data-run] box runnable on play.clickhouse.com, with the site's JSON sent along as tables.
-// data-run="auto" also runs once when the box scrolls into view (each post's nearest posts).
+// data-run="cloud" boxes run their data-api on ClickHouse Cloud through the Worker instead: same SQL, no edit.
 (function(){
   var ENDPOINT='https://play.clickhouse.com/?user=play';
   var MAX_ROWS=500;  // a browser table doesn't need more
@@ -95,14 +95,15 @@
     if(typeof v==='object') return esc(JSON.stringify(v));
     return esc(v);
   }
-  function show(out,res,ms){
+  function show(out,res,ms,where){
+    where=where||'play.clickhouse.com';
     if(res.raw!=null){ out.innerHTML='<pre class="raw">'+esc(res.raw)+'</pre><p class="foot">Elapsed: '+(ms/1000).toFixed(3)+' sec (round trip). Ran on play.clickhouse.com.</p>'; return; }
     var d=res.data, rows=d.data||[], more=rows.length>MAX_ROWS; if(more) rows=rows.slice(0,MAX_ROWS);
     var st=d.statistics||{};
     out.innerHTML='<div class="tbl"><table><thead><tr>'+d.meta.map(function(m){return '<th title="'+esc(m.type)+'">'+esc(m.name)+'</th>'}).join('')+'</tr></thead><tbody>'+
       (rows.map(function(r){return '<tr>'+r.map(function(v){return '<td>'+cell(v)+'</td>'}).join('')+'</tr>'}).join('')||'<tr><td colspan="'+d.meta.length+'" class="d">0 rows.</td></tr>')+
       '</tbody></table></div><p class="foot">'+(more?'Showing the first '+MAX_ROWS+' rows. ':rows.length+' row'+(rows.length===1?'':'s')+' in set. ')+
-      'Elapsed: '+(st.elapsed!=null?st.elapsed:ms/1000).toFixed(3)+' sec.'+(st.rows_read!=null?' Processed '+st.rows_read.toLocaleString()+' rows.':'')+' Ran on play.clickhouse.com.</p>';
+      'Elapsed: '+(st.elapsed!=null?st.elapsed:ms/1000).toFixed(3)+' sec.'+(st.rows_read!=null?' Processed '+st.rows_read.toLocaleString()+' rows.':'')+' Ran on '+where+'.</p>';
   }
 
   // run and edit sit outside the box, so pages that redraw the query don't wipe them
@@ -110,20 +111,33 @@
     var wrap=document.createElement('div'); wrap.className='qwrap';
     box.before(wrap); wrap.appendChild(box);
     var bar=document.createElement('div'); bar.className='runbar';
-    bar.innerHTML='<button type="button" class="run" title="Run on play.clickhouse.com">run</button><button type="button" class="edit">edit</button>';
+    var cloud=box.getAttribute('data-run')==='cloud';
+    bar.innerHTML=cloud?'<button type="button" class="run" title="Run on ClickHouse Cloud">run</button><span class="where">on ClickHouse Cloud</span>'
+      :'<button type="button" class="run" title="Run on play.clickhouse.com">run</button><button type="button" class="edit">edit</button>';
     wrap.appendChild(bar);
     var out=document.createElement('div'); out.className='result'; out.hidden=true;
     var status=document.createElement('span'); status.className='vh'; status.setAttribute('aria-live','polite');  // short announcements only
     wrap.after(out); out.after(status);
     var ta=null, runBtn=bar.querySelector('.run'), editBtn=bar.querySelector('.edit'), ctrl=null, runId=0;
-    function finish(){ ctrl=null; runBtn.textContent='run'; runBtn.title='Run on play.clickhouse.com'; }
+    function finish(){ ctrl=null; runBtn.textContent='run'; runBtn.title=cloud?'Run on ClickHouse Cloud':'Run on play.clickhouse.com'; }
+    // a Cloud box: the Worker runs this same fixed SQL with the box's one parameter, so visitors can't send their own
+    function runCloud(mine,t0,id){
+      out.innerHTML='<p class="foot">Running on ClickHouse Cloud…</p>';
+      return fetch(box.getAttribute('data-api'),{signal:mine.signal}).then(function(r){ return r.json().then(function(j){
+        if(id!==runId) return;
+        if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+        var rows=j.results||[], cols=rows.length?Object.keys(rows[0]):['similarity','title','path'];
+        show(out,{data:{meta:cols.map(function(c){return {name:c,type:''};}),data:rows.map(function(x){return cols.map(function(c){return x[c];});}),statistics:{}}},performance.now()-t0,'ClickHouse Cloud');
+        var f=out.querySelector('.foot'); status.textContent=f?f.textContent:'Query finished';
+      }); });
+    }
     function run(){
       if(ctrl){ ctrl.abort(); return; }  // doubles as cancel
       var q=ta?ta.value:box.innerText, id=++runId, mine=new AbortController(); ctrl=mine;
       runBtn.textContent='cancel'; runBtn.title='Stop this query';
       out.hidden=false; out.innerHTML='<p class="foot">Running on play.clickhouse.com…</p>'; status.textContent='Running query';
       var t0=performance.now();
-      build(q).then(function(b){
+      (cloud?runCloud(mine,t0,id):build(q).then(function(b){
         var size=new TextEncoder().encode(b.sql).length;
         if(size>MAX_QUERY) throw new Error('Not sent. With the site\'s tables inside it, this query is '+Math.ceil(size/1024)+' KB, and play.clickhouse.com takes at most '+MAX_QUERY/1024+' KB (max_query_size). The site has outgrown the playground; query fewer of its tables.');
         return fetch(ENDPOINT,{method:'POST',body:b.sql,signal:mine.signal}).then(function(r){ return readCapped(r,mine).then(function(res){
@@ -136,7 +150,7 @@
           show(out,b.raw?{raw:text+(res.cut?'\n… (stopped after '+MAX_BYTES/1e6+' MB)':'')}:{data:JSON.parse(text)},ms);
           var f=out.querySelector('.foot'); status.textContent=f?f.textContent:'Query finished';
         }); });
-      }).catch(function(e){
+      })).catch(function(e){
         if(id!==runId) return;
         if(e&&e.name==='AbortError'){ out.innerHTML='<p class="foot">Cancelled.</p>'; status.textContent='Query cancelled'; return; }
         var msg=String(e&&e.message||e).replace(/\s*\(version [^()]*(\([^)]*\))?\)\s*$/,'');
@@ -154,7 +168,7 @@
       });
     }
     runBtn.addEventListener('click',run);
-    editBtn.addEventListener('click',function(){
+    if(editBtn) editBtn.addEventListener('click',function(){
       if(ta){ ta.remove(); ta=null; box.hidden=false; editBtn.textContent='edit'; return; }
       ta=document.createElement('textarea'); ta.className='query'; ta.spellcheck=false; ta.setAttribute('aria-label','SQL query');
       ta.value=box.innerText.replace(/^\s*:\)\s*/,'');
@@ -165,8 +179,8 @@
     });
     // the talks filters say when a shown result is out of date
     box.addEventListener('query-changed',function(){ if(!ta&&!out.hidden&&!ctrl){ out.hidden=true; out.innerHTML=''; status.textContent=''; } });
-    // data-run="auto": run once when it first comes into view, so play only sees the query from people who scroll to it
-    if(box.getAttribute('data-run')==='auto'){
+    // data-auto: run once when it comes into view (Cloud boxes only, so play never sees a query nobody asked for)
+    if(cloud&&box.hasAttribute('data-auto')){
       if(!('IntersectionObserver' in window)){ run(); return; }
       var seen=new IntersectionObserver(function(es){ if(es.some(function(e){ return e.isIntersecting; })){ seen.disconnect(); if(!ctrl&&out.hidden) run(); } },{rootMargin:'200px'});
       seen.observe(wrap);
