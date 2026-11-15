@@ -335,7 +335,7 @@ def pages():  # same rows as sitePageRows in site.js; scripts/check-pages.mjs co
     pub = lambda f: json.loads((ROOT / "public" / f).read_text(encoding="utf-8"))
     rows = [dict(path=urllib.parse.unquote(p["path"]), title=p["title"], event=None, e=vector(p["path"]))
             for p in [{"path": "/", "title": "Home"}, {"path": "/photos/", "title": "Photos"},
-                      {"path": "/archive/", "title": "Writing archive"}] + pub("archive/posts.json")["posts"]]
+                      {"path": "/archive/", "title": "Writing"}] + pub("archive/posts.json")["posts"]]
     for t in pub("talks.json")["talks"]:
         rows.append(dict(path="/#talk-" + slug(t["date"] + " " + t["event"]), title=t["title"] + " · " + t["event"],
                          event=t["event"], e=vector(t.get("url") or "https://www.youtube.com/watch?v=" + t["youtube"])))

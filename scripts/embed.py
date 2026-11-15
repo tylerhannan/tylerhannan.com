@@ -83,7 +83,7 @@ def docs():
     writing = json.loads((PUBLIC / "writing.json").read_text(encoding="utf-8"))["writing"]
     out = [{"path": "/", "kind": "page", "title": "Home", "text": describe("")},
            {"path": "/photos/", "kind": "page", "title": "Photos", "text": describe("photos")},
-           {"path": "/archive/", "kind": "page", "title": "Writing archive", "text": describe("archive")}]
+           {"path": "/archive/", "kind": "page", "title": "Writing", "text": describe("archive")}]
     out += [{"path": p["path"], "kind": "post", "title": p["title"], "text": post_text(p["path"])} for p in posts]
     for t in talks:
         path = t.get("url") or "https://www.youtube.com/watch?v=" + t["youtube"]

@@ -39,7 +39,7 @@
   window.sitePageRows=function(posts,talks,demos,photos,writing){
     var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
     var row=function(path,title,k,event){ return {path:path,title:title,k:k,event:event||null}; };
-    return [{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}].concat(posts.posts||[])
+    return [{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing'}].concat(posts.posts||[])
       .map(function(p){ return row(dec(p.path),p.title,p.path); })
       // talks and demos live on the home page; their vectors are keyed by their own link
       .concat((talks.talks||[]).map(function(t){ return row(window.siteAnchor.talk(t),t.title+' · '+t.event,t.url||'https://www.youtube.com/watch?v='+t.youtube,t.event); }))
