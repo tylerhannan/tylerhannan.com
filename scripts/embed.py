@@ -68,10 +68,10 @@ def describe(page):
 
 
 def post_text(path):
-    """A post's body as plain text, from the page the importer wrote."""
+    """A post's body as plain text, from its page."""
     page = (PUBLIC / unquote(path.strip("/")) / "index.html").read_text(encoding="utf-8")
     m = re.search(r'<div class="content">(.*?)\n    </div>\n    <p class="note">', page, re.S)
-    return excerpt(m.group(1) if m else "", 2000)
+    return excerpt(m.group(1) if m else "", 10 ** 6)  # the whole post, not just its start
 
 
 def docs():
