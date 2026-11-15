@@ -44,17 +44,9 @@
     demos:function(){ return load('/demos.json').then(function(d){
       var rows=(d.demos||[]).map(function(x){var o={};for(var k in x)o[k]=x[k];o.date=day(x.date);return o});
       return cte('demos','date Date, name String, about String, event Nullable(String), repo String',rows,['date','name','about','event','repo']); }); },
-    // every page, talk, demo, photo and post, for search and the 404 (same rows as search.js)
+    // every page, talk, demo, photo and post, for search and the 404 (rows from site.js, as in search.js)
     pages:function(){ return Promise.all([load('/archive/posts.json'),load('/talks.json'),load('/demos.json'),vectors(),load('/photos.json'),load('/writing.json')]).then(function(r){
-      var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
-      var rows=[{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}]
-        .concat(r[0].posts||[]).map(function(p){ return {path:dec(p.path),title:p.title,e:r[3](p.path)}; })
-        // talks and demos live on the home page; their vectors are keyed by their own link
-        .concat((r[1].talks||[]).map(function(t){ var u=t.url||'https://www.youtube.com/watch?v='+t.youtube; return {path:siteAnchor.talk(t),title:t.title+' · '+t.event,event:t.event,e:r[3](u)}; }))
-        .concat((r[2].demos||[]).map(function(d){ return {path:siteAnchor.demo(d),title:d.name+' · demo',e:r[3](d.repo)}; }))
-        // opens the photo in the viewer
-        .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return {path:'/photos/#'+p.file.replace(/\.[^.]+$/,''),title:p.title+' · photo',e:r[3]('/photos/'+p.file)}; }))
-        .concat((r[5].writing||[]).map(function(w){ return {path:w.url,title:w.title+' · '+w.venue,e:r[3](w.url)}; }));
+      var rows=sitePageRows(r[0],r[1],r[2],r[4],r[5]).map(function(p){ return {path:p.path,title:p.title,event:p.event,e:r[3](p.k)}; });
       return cte('pages','path String, title String, event Nullable(String), e String',rows,['path','title','event','e'],VEC); }); },
     // the words just searched for, embedded by search.js
     request:function(){
@@ -70,7 +62,8 @@
   function build(q){
     q=q.replace(/^\s*:\)\s*/,'').replace(/;(?:\s*(?:--[^\n]*|\/\*[\s\S]*?\*\/))*\s*$/,'');  // trailing ';' and comments after it
     q=q.replace(/^(?:\s*(?:--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/))+/,'').trim();  // leading comments
-    var names=Object.keys(TABLES).filter(function(n){return new RegExp('\\b'+n+'\\b','i').test(q)});
+    var bare=q.replace(/'(?:[^'\\]|\\.)*'|--[^\n]*|#[!\s][^\n]*|\/\*[\s\S]*?\*\//g,' ');  // a table name in a string or comment doesn't count
+    var names=Object.keys(TABLES).filter(function(n){return new RegExp('\\b'+n+'\\b','i').test(bare)});
     return Promise.all(names.map(function(n){return TABLES[n]()})).then(function(ctes){
       var own=/\bFORMAT\s+\w+\s*$/i.test(q), fmt=own?'':' FORMAT JSONCompact', m;
       if(/^(SELECT|WITH)\b/i.test(q))  // newlines so a trailing -- comment can't eat the wrapper

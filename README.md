@@ -54,7 +54,7 @@ DELETE FROM demos WHERE name = 'Thing';
 SELECT date, title FROM talks WHERE youtube IS NULL ORDER BY date DESC LIMIT 5;
 ```
 
-Edits are checked against the schema (`DESCRIBE talks`) and rewrite the JSON in place. `SELECT` runs on the playground with your local files sent along, like the run buttons, so you can check an edit before pushing. Run it with no arguments for a `:)` prompt.
+Edits are checked against the schema (`DESCRIBE talks`) and rewrite the JSON in place. `SELECT` runs on the playground with your local files sent along, like the run buttons, so you can check an edit before pushing. Run it with no arguments for a `:)` prompt. `node scripts/check-pages.mjs` checks that it builds the same `pages` table as the browser does.
 
 - **Talks** (`public/talks.json`): `date`, `title`, `event`, `location`, `type` (keynote, talk, webinar, video, interview or host), `url`, `youtube` (the video ID or `null`), and optionally `note`, `mc`, `repo` and `highlight` (1–6, for the home page's highlighted videos).
 - **Demos** (`public/demos.json`): `date`, `name`, `about`, `event` (or `null`) and `repo`.

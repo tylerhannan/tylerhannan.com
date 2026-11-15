@@ -331,7 +331,7 @@ def slug(s):
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
 
 
-def pages():  # same rows as run.js and search.js
+def pages():  # same rows as sitePageRows in site.js; scripts/check-pages.mjs compares them
     pub = lambda f: json.loads((ROOT / "public" / f).read_text(encoding="utf-8"))
     rows = [dict(path=urllib.parse.unquote(p["path"]), title=p["title"], event=None, e=vector(p["path"]))
             for p in [{"path": "/", "title": "Home"}, {"path": "/photos/", "title": "Photos"},
@@ -368,9 +368,10 @@ def vector(path, _cache={}):
 def remote(q, t0):
     q = re.sub(r";\s*$", "", q.strip())
     q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts|writing|pages)\b", r"\1", q, flags=re.I)  # as in local statements
+    bare = re.sub(r"'(?:[^'\\]|\\.)*'|--[^\n]*|#[!\s][^\n]*|/\*.*?\*/", " ", q, flags=re.S)  # names in strings or comments don't count
     ctes = []
     for name, (schema, rows) in REMOTE.items():
-        if re.search(rf"\b{name}\b", q, re.I):
+        if re.search(rf"\b{name}\b", bare, re.I):
             cols = [c.split()[0] for c in schema.split(", ")]
             vals = ", ".join("(" + ", ".join(lit(r.get(c)) for c in cols) + ")" for r in rows())
             ctes.append(f"{name} AS (SELECT {VEC.get(name, '*')} FROM values({lit(schema)}, {vals}))")
