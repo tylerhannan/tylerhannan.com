@@ -73,8 +73,9 @@ echo "$SEARCH_PW" | npx wrangler secret put CLICKHOUSE_SEARCH_PASSWORD
 gh secret set CLICKHOUSE_URL --body "https://$HOST:8443"
 gh secret set CLICKHOUSE_REFRESH_PASSWORD --body "$REFRESH_PW"
 
-# the GitHub Action that fills in AI summaries and topics (.github/workflows/enrich.yml), and lets it open pull requests
+# the GitHub Action that fills in AI summaries and topics (.github/workflows/enrich.yml)
 gh secret set CLICKHOUSE_ENRICH_PASSWORD --body "$ENRICH_PW"
+# "Allow GitHub Actions to create and approve pull requests": it only creates them, but this is the one switch
 gh api -X PUT repos/tylerhannan/tylerhannan.com/actions/permissions/workflow -F can_approve_pull_request_reviews=true
 unset SEARCH_PW REFRESH_PW ENRICH_PW
 ```
