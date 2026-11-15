@@ -398,7 +398,8 @@ def vector(path, _cache={}):
 
 def remote(q, t0):
     q = re.sub(r";\s*$", "", q.strip())
-    q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts|writing|pages)\b", r"\1", q, flags=re.I)  # as in local statements
+    q = re.sub(r"'(?:[^'\\]|\\.|'')*'|\b(?:site|default)\.(talks|demos|photos|posts|writing|pages)\b",
+               lambda m: m.group(1) or m.group(0), q, flags=re.I)  # as in local statements; strings stay as they are
     bare = re.sub(r"'(?:[^'\\]|\\.|'')*'|--[^\n]*|#[!\s][^\n]*|/\*.*?\*/", " ", q, flags=re.S)  # names in strings or comments don't count
     ctes = []
     for name, (schema, rows) in REMOTE.items():

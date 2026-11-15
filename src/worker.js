@@ -39,10 +39,10 @@ const ROUTES = {
   '/api/search': {
     words: true, ttl: DAY,
     answer: async (env, q) => ({ q, results: await clickhouse(env,
-      'SELECT similarity, kind, title, path FROM site.search(q = {q:String}) FORMAT JSONEachRow', q) }),
+      'SELECT similarity, title, path FROM site.search(q = {q:String}) FORMAT JSONEachRow', q) }),
   },
   '/api/related': {
-    words: true, param: 'path', ttl: DAY,
+    words: true, param: 'path', ttl: 3600,  // an hour, like /embeddings.json, so a new post shows up soon
     answer: async (env, path) => ({ path, results: await clickhouse(env,
       'SELECT similarity, title, path FROM site.related(path = {path:String}) FORMAT JSONEachRow', path, 'path') }),
   },
