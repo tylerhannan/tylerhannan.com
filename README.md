@@ -1,91 +1,81 @@
 # tylerhannan.com
 
-Static site, no build step. Everything served lives in `public/`. Hosted on Cloudflare Workers (`wrangler.jsonc`); every push to `main` deploys. The one bit of server code is `src/worker.js`, which serves the search endpoints and `/embeddings.json` from ClickHouse Cloud (see [Embeddings](#embeddings)).
+My site. It's a folder of HTML and JSON files in `public/`, with no build step and no database of its own. Every query box on it is real SQL that runs on [play.clickhouse.com](https://clickhouse.com/docs/get-started/sample-datasets/playground), the public ClickHouse playground, with the site's data sent along as tables. Search by meaning is all SQL too: [ClickHouse Cloud](https://clickhouse.com/cloud) reads the site, embeds it with [`aiEmbed`](https://clickhouse.com/docs/reference/functions/regular-functions/ai-functions) and answers searches (`cloud/site.sql`).
 
-Preview locally (pages fetch JSON, so opening the files directly won't work):
+It's hosted on Cloudflare Workers (`wrangler.jsonc`), and every push to `main` deploys. The only server code is `src/worker.js`, which passes searches to ClickHouse Cloud and caches the answers.
 
-```
-cd public && python3 -m http.server 8000
-```
-
-That serves the files only. Search, the photo and archive search boxes, the 404 page's meaning search and each post's nearest posts need the Worker: `npx wrangler dev`, with the ClickHouse settings in a gitignored `.dev.vars` (`CLICKHOUSE_URL`, `CLICKHOUSE_SEARCH_PASSWORD`; see `cloud/README.md`).
-
-## Adding photos
-
-Export from Lightroom with:
-
-| Setting | Value |
-|---|---|
-| Format | JPEG, quality 90+ |
-| Color space | sRGB |
-| Size | Long edge 2000 px or larger (don't enlarge) |
-| Metadata | Copyright only, **Remove Location Info** checked |
-
-Then add each one:
+Preview locally:
 
 ```
-scripts/add-photo.sh ~/Pictures/Export/IMG_1234.jpg "Title" "Place" "YYYY-MM"
+cd public && python3 -m http.server 8000     # everything except search by meaning
+npx wrangler dev                              # everything, with the ClickHouse Cloud settings in .dev.vars (cloud/README.md)
 ```
 
-The script shrinks the long edge to 2000 px (smaller photos stay as they are), makes a 600 px thumbnail for the grid, strips the metadata, saves them as `public/photos/<title>.jpg` and `public/photos/thumbs/<title>.jpg`, and adds the photo to the top of `public/photos.json`. The date is required, as `YYYY-MM`. Commit and push to publish.
+## How the query boxes work
 
-- `scripts/strip_metadata.py` keeps only the pixels, the colour profile and the orientation. GPS, place names (EXIF, XMP and IPTC), camera and lens serial numbers, owner and copyright all go, so fill in `camera` in `photos.json` if you want it shown. Ticking "Remove Location Info" in Lightroom is still a good habit.
-- The grid crops every photo to a 4:3 landscape box. The full-size viewer shows the whole photo. If the crop cuts off the subject, add `"focus": "top"` (or `bottom`, `left`, `right`) to that photo in `photos.json`.
-- Titles become filenames; the script refuses a title whose file already exists.
-- Optional fields in `photos.json`: `camera` (shown in the viewer caption) and `alt` (a short description for screen readers; the title is used if empty).
+ClickHouse speaks SQL over HTTP, and the playground has a read-only `play` user with no password that accepts requests from any website. So `public/run.js` is one `fetch()`: it POSTs the SQL to `https://play.clickhouse.com/?user=play`.
 
-## Talks
+The playground won't let me store anything, so the data comes along with the query. `run.js` looks at which of the site's tables your query mentions, turns each one into a CTE with `values()`, and puts it in front of your SQL:
 
-Edit `public/talks.json`. Each talk has `date`, `title`, `event`, `location`, `type` (keynote / talk / webinar / video / podcast / host, for MC and host slots), `url`, `youtube` (the 11-character video ID, or `null`), and optionally `note`, `mc` (`true` adds an "mc" tag for events Tyler also hosted) and `repo` (a public GitHub repo for the talk, shown as a "code ↗" link). To show a talk in **Highlighted videos** on the home page, give it `"highlight": 1` to `6` (the number sets its position).
-
-## Demos
-
-Edit `public/demos.json`. Each demo has `date`, `name`, `about` (one line), `event` (or `null`, e.g. for client work that can't be named) and `repo`. They show in the **Demos** section on the home page, newest first. A talk with a demo also gets `repo` in `talks.json`, which adds a "code" tag to its row.
-
-## Editing data with SQL
-
-`scripts/ch` is a tiny clickhouse-client for the site's JSON files, so you never hand-edit them:
-
-```sh
-scripts/ch                       # interactive: tylerhannan.com :) prompt, end statements with ;
-scripts/ch "DESCRIBE talks"      # one-off
-scripts/ch < changes.sql         # from a file
+```sql
+WITH talks AS (SELECT * FROM values('date Date, title String, …', (…), (…)))
+SELECT toYear(date) AS year, count() FROM talks GROUP BY year
 ```
+
+The tables are `talks`, `demos`, `photos`, `posts` (the old blog), `writing` (posts I wrote for other sites) and `pages` (all of it, for search). Anything else on the playground works too, like `SHOW TABLES` or `github_events`. Results are capped at 500 rows.
+
+To make a new box runnable, give it `data-run` (`<div class="query" data-run>`) and load `/run.js`. Every query shown on the site has to be valid ClickHouse SQL, which is why the grouped talk views use `groupArray()`.
+
+![Editing the talks query, then querying the playground's own data](docs/runnable-queries.gif)
+
+## Search
+
+The search page, the photos and writing pages, each talk's "more like this", each old post's nearest posts and the 404 page all rank by meaning with `cosineDistance`. The search page and the 404 page rank by spelling too, with `ngramSearchCaseInsensitive`.
+
+- **Made by ClickHouse Cloud:** `cloud/site.sql` has the service read the live site with `url()` (pages, old posts with their text from `archive/text.json`, talks, demos, photo captions, posts on other sites) and embed each row with `aiEmbed` and Qwen3-Embedding-8B, the service's built-in model. After a push, `.github/workflows/search-refresh.yml` asks it to refresh, and only new or changed rows get embedded again. Nothing runs on my laptop.
+- **Served by the Worker:** `/api/search?q=` is the full-size search (4096 dims), done entirely in ClickHouse. `/api/embed?q=` and `/embeddings.json` give the words and every page as the first 384 dims in Int8, for the queries you can run on play. The Worker holds the password of a user that can only read the site's tables, with one model call per search.
+- **The ranking:** your browser does the same math as the SQL, so results show up right away. Press run and the exact query goes to the playground and returns the same rows. A post's nearest posts run on play when that box scrolls into view.
+
+There's a limit, though. Every search on play sends the whole `pages` table along with the query, and the playground's `max_query_size` is 256 KB. It's about 202 KB today. `run.js` checks the size before sending and says "Not sent" if a query is too big, so you get a plain message instead of an error. The full-size search on Cloud has no such limit.
+
+To try a change to the SQL before pushing it, `sh cloud/test.sh` runs `cloud/site.sql` against a local copy of the site with `clickhouse local` and Ollama (`ollama pull qwen3-embedding:0.6b`). Setup, users and secrets are in `cloud/README.md`.
+
+## Editing the data
+
+`scripts/ch` is a tiny clickhouse-client for the JSON files, so I don't hand-edit them:
 
 ```sql
 INSERT INTO talks (date, title, event, location, type, url, youtube)
 VALUES ('2026-11-04', 'Kill Your Dashboards', 'Some Conf 2026', 'Paris, FR', 'talk', 'https://someconf.io', NULL);
 
-ALTER TABLE talks UPDATE youtube = 'https://youtu.be/…' WHERE title = 'Kill Your Dashboards';
 UPDATE photos SET camera = 'Rolleiflex 2.8e' WHERE place ILIKE '%singapore%';
 DELETE FROM demos WHERE name = 'Thing';
 
 SELECT date, title FROM talks WHERE youtube IS NULL ORDER BY date DESC LIMIT 5;
 ```
 
-`INSERT`, `UPDATE` and `DELETE` rewrite `talks.json`, `demos.json` or `photos.json` in place, after checking each value against the table's schema (`DESCRIBE talks` shows it): dates, talk types, URLs, YouTube IDs (a full YouTube URL is accepted), unique highlight slots. Errors come back ClickHouse style (`Code: 16. DB::Exception: There is no column titel in table talks. Maybe you meant title?`). New rows go in date order without reshuffling the rest. `SELECT` (and anything else) runs on play.clickhouse.com with your local files sent along as tables, the same way the site's run buttons work, so you can check an edit before pushing. Photos are `UPDATE` only: add them with `scripts/add-photo.sh`. Nothing is committed; review with `git diff`, then commit and push.
+Edits are checked against the schema (`DESCRIBE talks`) and rewrite the JSON in place. `SELECT` runs on the playground with your local files sent along, like the run buttons, so you can check an edit before pushing. Run it with no arguments for a `:)` prompt.
 
-## Runnable queries
+- **Talks** (`public/talks.json`): `date`, `title`, `event`, `location`, `type` (keynote, talk, webinar, video, interview or host), `url`, `youtube` (the video ID or `null`), and optionally `note`, `mc`, `repo` and `highlight` (1–6, for the home page's highlighted videos).
+- **Demos** (`public/demos.json`): `date`, `name`, `about`, `event` (or `null`) and `repo`.
+- **Writing** (`public/writing.json`): posts on other sites, with `date`, `title`, `venue`, `url` and optional `coauthors`.
 
-The query boxes on the home, photos, archive, post and 404 pages run on real ClickHouse. Click **▶ run** to execute the query, or **edit** to change it first (⌘/Ctrl+Enter runs it while editing).
+## Photos
 
-![Editing the talks query to add a date range, then querying the playground's UK house prices dataset](docs/runnable-queries.gif)
+Export from Lightroom as sRGB JPEG, long edge 2000 px or more, with Remove Location Info ticked. Then:
 
-ClickHouse accepts SQL over plain HTTP, so `public/run.js` sends each query from the browser with a single `fetch()`: a POST to `https://play.clickhouse.com/?user=play` with the SQL as the body. `play` is the public [ClickHouse playground](https://play.clickhouse.com)'s read-only user and needs no password. The playground allows requests from any website (`Access-Control-Allow-Origin: *`), so there is no server of our own in between. Before sending a query, `run.js` does this:
+```
+scripts/add-photo.sh ~/Pictures/Export/IMG_1234.jpg "Title" "Place" "YYYY-MM"
+```
 
-- The site's data is sent along with each query as inline tables, so `talks`, `photos`, `posts` and `pages` work like real tables. For example, a query that mentions `talks` is sent as `WITH talks AS (SELECT * FROM values(...)) <your query>`.
-- Anything else on the playground works too, such as `SHOW TABLES` or its demo datasets like `uk_price_paid`.
-- Each query is wrapped in `SELECT * FROM (...) LIMIT 501 FORMAT JSONCompact`, and at most 500 rows are shown.
-- Errors come back from ClickHouse as they are, minus the long list of expected tokens on syntax errors.
+It shrinks the photo to 2000 px (never enlarging), makes a 600 px thumbnail, strips the metadata, and adds it to `public/photos.json`. `scripts/strip_metadata.py` keeps only the pixels, the colour profile and the orientation: no GPS, no place names, no serial numbers. Write a sentence of `alt` text for each photo, because photo search only knows what's in the alt text. If the grid's crop cuts off the subject, add `"focus": "top"` (or `bottom`, `left`, `right`).
 
-The `play` user can't change settings, read from URLs, use `format()`, or create temporary tables, so the inline data uses `values()`. Every query shown on the site has to be valid ClickHouse SQL, which is why the grouped talks views use `groupArray()`. To make a new query box runnable, give it `data-run` (`<div class="query" data-run>`) and load `/run.js` on the page. `DESCRIBE tyler` stays decorative.
+## The old blog
 
-## Embeddings
+The old WordPress posts live at their original addresses (`/2012/04/…/`), so old links still work. They were converted from a WordPress export once, by a script I've since deleted: the old database had been hacked, and keeping a parser for a hacked database around was more trouble than it was worth. The pages are plain static HTML now, and their text for search is in `archive/text.json`.
 
-`/search/` searches everything (linked from the home page nav), the photos and archive pages search their own rows, each talk has a "more like this" link (`/search/?like=<path>`), the 404 page finds pages by meaning as well as spelling, and every old post ends with its nearest posts. All of them are `cosineDistance` queries over embeddings, made like this:
+## License
 
-- **Made by ClickHouse Cloud:** `cloud/site.sql` has the service read the site with `url()` (home, photos and archive pages, posts with their text from `archive/text.json`, talks, demos, and every photo from its title, alt text and place) and embed each row with [`aiEmbed`](https://clickhouse.com/docs/sql-reference/functions/ai-functions) and Qwen3-Embedding-8B, the service's built-in model. After a push that changes any of those files, `.github/workflows/search-refresh.yml` tells it to refresh, and only new or changed rows are embedded again. Nothing runs on a laptop. Setup, users and secrets: `cloud/README.md`.
-- **Served by the Worker:** `src/worker.js` answers `/embeddings.json` (every vector, the first 384 of 4096 dimensions as Int8 in base64, about 150 KB, cached for an hour), `/api/embed?q=<words>` (the words embedded the same way, cached for a day, capped at 200 characters) and `/api/search?q=<words>` (the full-size search, done entirely in ClickHouse). It holds the password of a user that may only read the site's tables, with one model call per query.
-- **The query:** `run.js` sends the vectors as base64 strings and unpacks them into an `embedding Array(Float32)` column on `posts`, `photos` and `pages`, so the whole site's vectors stay inside the playground's 256 KB query limit. The live vector is a one-row `request` table. Each page shows the result computed the same way in the browser, so it appears without a round trip, and ▶ run gets the same rows from ClickHouse. A post's nearest posts run on play when that box scrolls into view. `?q=some+words` on any page with a search box searches on load. Talks and demos have no pages of their own, so in `pages` their `path` is their row on the home page (`/#talk-<date>-<event>`, `/#demo-<name>`, made by `siteAnchor` in `site.js`), which opens and highlights that row; results never send people off the site. A talk's "more like this" uses its stored vector, so it needs no live embedding. Photo search works only as well as the alt text in `photos.json`, so write a sentence about what's in each new photo.
+The code (HTML, CSS, JavaScript, `scripts/`, `src/`) is [MIT](LICENSE). Borrow whatever's useful.
 
-To try a change to the SQL before pushing it, `sh cloud/test.sh` runs `cloud/site.sql` against a local copy of the site with `clickhouse local` and Ollama (`ollama pull qwen3-embedding:0.6b`; ClickHouse via [clickhousectl](https://clickhouse.com/docs/concepts/features/interfaces/cli), `clickhousectl local use latest`).
+The content isn't: the photos, the posts, and the talks, demos and writing data are © Tyler Hannan, all rights reserved. Images in old posts that came from elsewhere belong to their owners. Colours are [Selenized](https://github.com/jan-warchol/selenized) by Jan Warchoł (MIT).

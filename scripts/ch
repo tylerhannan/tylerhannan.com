@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
 """ch: edit the site's data with SQL, clickhouse-client style.
 
-    scripts/ch                          interactive: a :) prompt, end each statement with ;
-    scripts/ch "INSERT INTO ..."        one-off (several statements separated by ; work too)
+    scripts/ch                          a :) prompt; end each statement with ;
+    scripts/ch "INSERT INTO ..."        one-off (several statements work too)
     scripts/ch < changes.sql            from a file
 
-Local tables, backed by the JSON files the site reads:
-    talks   public/talks.json
-    demos   public/demos.json
-    photos  public/photos.json   (UPDATE only: add photos with scripts/add-photo.sh)
-
-INSERT, ALTER TABLE ... UPDATE / DELETE, UPDATE ... SET and DELETE FROM rewrite the JSON in place, after
-checking every value against the table's schema (DESCRIBE talks shows it). SELECT runs on real ClickHouse
-(play.clickhouse.com, public and read-only) with your local files sent along as tables, the same way the
-site's run buttons work, so you can check an edit before you push it. Type help at the prompt for examples.
-
-Stdlib only. Nothing is committed or pushed: review with git diff, then commit as usual.
+talks, demos and photos are the JSON files in public/ (photos is UPDATE only; add them with
+scripts/add-photo.sh). Edits are checked against the schema (DESCRIBE talks) and rewrite the JSON.
+SELECT runs on play.clickhouse.com with the files sent along, like the site's run buttons.
+Nothing is committed: check git diff, then commit. Type help for examples.
 """
 import base64
 import datetime
@@ -25,7 +18,9 @@ import os
 import re
 import sys
 import time
+import unicodedata
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -52,9 +47,8 @@ def err(code, name, msg):
 
 
 # ---- schemas ----------------------------------------------------------------------------------------
-# mode: req = must have a value; null = always written, may be null; opt = left out of the JSON when
-# null/false; empty = written as "" when unset (photos.json style).
-TALK_TYPES = ("keynote", "talk", "webinar", "video", "podcast", "host")
+# req: must have a value; null: written, may be null; opt: left out when null/false; empty: "" when unset
+TALK_TYPES = ("keynote", "talk", "webinar", "video", "interview", "host")
 FOCUS = ("top", "bottom", "left", "right")
 
 
@@ -304,7 +298,7 @@ def done(msg, t0, hint=None):
 def lit(v):
     if isinstance(v, bool):
         return "true" if v else "false"
-    if v is None or v == "":
+    if v is None:
         return "NULL"
     if isinstance(v, (int, float)):
         return str(v)
@@ -328,12 +322,39 @@ REMOTE = {
     "posts": ("date Date, title String, path String, e String",
               lambda: [dict(date=day(p["date"]), title=p["title"], path=p["path"], e=vector(p["path"]))
                        for p in json.loads((ROOT / "public/archive/posts.json").read_text(encoding="utf-8"))["posts"]]),
+    "writing": ("date Date, title String, venue String, url String, coauthors Nullable(String), e String",
+                lambda: [dict(date=day(w["date"]), title=w["title"], venue=w["venue"], url=w["url"], coauthors=w.get("coauthors"), e=vector(w["url"]))
+                         for w in json.loads((ROOT / "public/writing.json").read_text(encoding="utf-8"))["writing"]]),
 }
-# Tables whose rows carry a base64 embedding (made by ClickHouse Cloud, cloud/site.sql; the site serves them as
-# /embeddings.json), unpacked into `embedding` as in run.js
+def slug(s):
+    s = "".join(c for c in unicodedata.normalize("NFD", str(s or "")) if not "\u0300" <= c <= "\u036f")
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
+
+def pages():  # same rows as run.js and search.js
+    pub = lambda f: json.loads((ROOT / "public" / f).read_text(encoding="utf-8"))
+    rows = [dict(path=urllib.parse.unquote(p["path"]), title=p["title"], event=None, e=vector(p["path"]))
+            for p in [{"path": "/", "title": "Home"}, {"path": "/photos/", "title": "Photos"},
+                      {"path": "/archive/", "title": "Writing archive"}] + pub("archive/posts.json")["posts"]]
+    for t in pub("talks.json")["talks"]:
+        rows.append(dict(path="/#talk-" + slug(t["date"] + " " + t["event"]), title=t["title"] + " · " + t["event"],
+                         event=t["event"], e=vector(t.get("url") or "https://www.youtube.com/watch?v=" + t["youtube"])))
+    for d in pub("demos.json")["demos"]:
+        rows.append(dict(path="/#demo-" + slug(d["name"]), title=d["name"] + " · demo", event=None, e=vector(d["repo"])))
+    for p in pub("photos.json")["photos"]:
+        if p.get("file"):
+            rows.append(dict(path="/photos/#" + re.sub(r"\.[^.]+$", "", p["file"]), title=p["title"] + " · photo",
+                             event=None, e=vector("/photos/" + p["file"])))
+    for w in pub("writing.json")["writing"]:
+        rows.append(dict(path=w["url"], title=w["title"] + " · " + w["venue"], event=None, e=vector(w["url"])))
+    return rows
+
+
+REMOTE["pages"] = ("path String, title String, event Nullable(String), e String", pages)
+# tables whose rows carry a base64 embedding (made by ClickHouse Cloud, served as /embeddings.json), unpacked as in run.js
 _UNPACK = ("* EXCEPT (e), arrayMap(i -> toFloat32(reinterpretAsInt8(substring(base64Decode(e), i, 1))), "
            "range(1, length(base64Decode(e)) + 1)) AS embedding")
-VEC = {"posts": _UNPACK, "photos": _UNPACK}
+VEC = {"posts": _UNPACK, "photos": _UNPACK, "writing": _UNPACK, "pages": _UNPACK}
 
 
 EMBEDDINGS = os.environ.get("EMBEDDINGS_URL", "https://tylerhannan.com/embeddings.json")
@@ -353,7 +374,7 @@ def vector(path, _cache={}):
 
 def remote(q, t0):
     q = re.sub(r";\s*$", "", q.strip())
-    q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts)\b", r"\1", q, flags=re.I)  # as in local statements
+    q = re.sub(r"\b(?:site|default)\.(talks|demos|photos|posts|writing|pages)\b", r"\1", q, flags=re.I)  # as in local statements
     ctes = []
     for name, (schema, rows) in REMOTE.items():
         if re.search(rf"\b{name}\b", q, re.I):
@@ -361,8 +382,16 @@ def remote(q, t0):
             vals = ", ".join("(" + ", ".join(lit(r.get(c)) for c in cols) + ")" for r in rows())
             ctes.append(f"{name} AS (SELECT {VEC.get(name, '*')} FROM values({lit(schema)}, {vals}))")
     if ctes:
-        q = ("WITH " + ", ".join(ctes) + ", " + re.sub(r"^WITH\s+", "", q, flags=re.I) if re.match(r"WITH\b", q, re.I)
-             else "WITH " + ", ".join(ctes) + " " + q) if re.match(r"(SELECT|WITH)\b", q, re.I) else q
+        w = lambda sel: ("WITH " + ", ".join(ctes) + ", " + re.sub(r"^WITH\s+", "", sel, flags=re.I)
+                         if re.match(r"WITH\b", sel, re.I) else "WITH " + ", ".join(ctes) + " " + sel)
+        m = re.match(r"(EXPLAIN(?:\s+(?:AST|SYNTAX|QUERY\s+TREE|PLAN|PIPELINE|ESTIMATE))?)\s+((?:SELECT|WITH)\b.*)$", q, re.I | re.S)
+        d = re.match(r"(DESC(?:RIBE)?)(?:\s+TABLE)?\s+(\w+)\s*(FORMAT\s+\w+)?\s*$", q, re.I)
+        if re.match(r"(SELECT|WITH)\b", q, re.I):
+            q = w(q)
+        elif m:
+            q = m.group(1) + " " + w(m.group(2))
+        elif d and d.group(2).lower() in REMOTE:
+            q = f"{d.group(1)} ({w('SELECT * FROM ' + d.group(2).lower())}) {d.group(3) or ''}".strip()
     mine = not re.search(r"\bFORMAT\s+\w+\s*$", q, re.I)
     if mine:
         q += "\nFORMAT PrettyCompactMonoBlock"
@@ -388,7 +417,7 @@ def remote(q, t0):
 
 # ---- parser ------------------------------------------------------------------------------------------
 TOK = re.compile(r"""(?P<str>'(?:[^'\\]|\\.|'')*')|(?P<num>\d+(?:\.\d+)?)|(?P<id>[A-Za-z_][A-Za-z0-9_]*)"""
-                 r"""|(?P<q>`[^`]*`|"[^"]*")|(?P<op><>|!=|[(),=;*.<>-])""", re.S)
+                 r"""|(?P<q>`[^`]*`|"[^"]*")|(?P<op><>|!=|\|\||::|[^\sA-Za-z0-9_'"`])""", re.S)
 SKIP = re.compile(r"(?:\s+|--[^\n]*|/\*.*?\*/)*", re.S)
 
 
@@ -593,7 +622,7 @@ class Session:
         if w == "SHOW":
             if p.kw("TABLES"):
                 p.end()
-                rows = [[n, s["file"]] for n, s in TABLES.items()] + [["posts", "public/archive/posts.json (SELECT only)"]]
+                rows = [[n, s["file"]] for n, s in TABLES.items()] + [["posts", "public/archive/posts.json (SELECT only)"], ["writing", "public/writing.json (SELECT only)"], ["pages", "every page, talk, demo, photo and post (SELECT only)"]]
                 pretty(["name", "file"], rows)
                 return done(f"{len(rows)} rows in set.", t0)
             return remote(p.s[start:p.i] + " " + p.rest_of_statement(p.i), t0)

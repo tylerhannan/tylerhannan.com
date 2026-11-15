@@ -1,7 +1,6 @@
 #!/bin/sh
-# The local half of the comparison (cloud/README.md has the Cloud half). Runs cloud/site.sql end to end on this machine: clickhouse local reads public/ from a local web server
-# (instead of https://tylerhannan.com) and embeds through Ollama with qwen3-embedding:0.6b. Then it checks that
-# site.pages has one row for everything in the site's JSON, and runs a search and a "nearest posts" query.
+# Runs cloud/site.sql on this machine: clickhouse local reads public/ from a local server and embeds through
+# Ollama (qwen3-embedding:0.6b). Checks there's one row for everything in the site's JSON, then searches.
 #
 #   sh cloud/test.sh ["search words"]
 #
@@ -41,7 +40,8 @@ import json, sys
 load = lambda f: json.load(open("public/" + f, encoding="utf-8"))
 talks = {t.get("url") or "https://www.youtube.com/watch?v=" + t["youtube"] for t in load("talks.json")["talks"]}
 want = {"page": 3, "post": len(load("archive/posts.json")["posts"]), "talk": len(talks),
-        "demo": len(load("demos.json")["demos"]), "photo": sum(1 for p in load("photos.json")["photos"] if p.get("file"))}
+        "demo": len(load("demos.json")["demos"]), "photo": sum(1 for p in load("photos.json")["photos"] if p.get("file")),
+        "writing": len(load("writing.json")["writing"])}
 rows = [json.loads(line) for line in open(sys.argv[1], encoding="utf-8")]
 got = {k: sum(r["kind"] == k for r in rows) for k in want}
 empty = [r["path"] for r in rows if r["kind"] == "post" and not r["text"]]

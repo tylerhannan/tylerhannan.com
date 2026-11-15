@@ -1,12 +1,7 @@
 #!/bin/sh
-# Re-reads the site into ClickHouse and embeds whatever is new or changed (cloud/site.sql). Run by
-# .github/workflows/search-refresh.yml after a push that changes what the search reads.
-#
-# It first waits until the site serves exactly the files in this checkout (the deploy, or GitHub's raw cache, can
-# lag the push by a few minutes), then refreshes. The site's address comes from site.sql (SITE_BASE overrides it).
-#
-# Needs CLICKHOUSE_URL (https://<host>:8443) and CLICKHOUSE_PASSWORD for the site_refresher user; without them it
-# says so and exits 0. That user can only refresh the views and count their rows (cloud/README.md).
+# Re-reads the site into ClickHouse and embeds what's new or changed (site.sql), once the site serves this
+# checkout's files. Run by the search-refresh workflow. Needs CLICKHOUSE_URL and CLICKHOUSE_PASSWORD (site_refresher);
+# without them it says so and exits 0.
 set -eu
 cd "$(dirname "$0")/.."
 if [ -z "${CLICKHOUSE_URL:-}" ] || [ -z "${CLICKHOUSE_PASSWORD+set}" ]; then

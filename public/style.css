@@ -1,6 +1,4 @@
-/* Colours: Selenized black (dark) and Selenized white (light) by Jan Warchoł, with ClickHouse yellow from Click UI as the accent
-   (brand.300 #faff69 in dark; brand.700 #686b00 in light, since yellow on white is unreadable). Light colours tuned for AA contrast.
-   Layout: one column "query console" — a header, then each section is a query and its result set. */
+/* Selenized black and white by Jan Warchoł, with ClickHouse yellow as the accent (darker in light mode so it's readable). */
 :root{
   --bg:#181818; --panel:#252525; --line:#3b3b3b; --fg:#dedede; --muted:#9a9a9a;
   --accent:#faff69; --kw:#3fc5b7; --str:#70b433; --num:#eb6eb7; --err:#ff665c; --on-accent:#181818;
@@ -37,12 +35,12 @@ section{padding-top:48px}
 .query{font:14px/1.7 var(--mono);font-variant-ligatures:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre}
 .query .p{color:var(--accent);user-select:none}
 .qwrap{position:relative}
-.qwrap>.query{padding-right:110px}
+.qwrap>.query{padding-right:130px}
 .runbar{position:absolute;top:9px;right:12px;display:flex;gap:10px;font:12px var(--mono);background:var(--panel);padding-left:10px}
-.runbar button{all:unset;cursor:pointer;color:var(--muted);padding:2px 0}
-.runbar button:hover,.runbar button:focus-visible{color:var(--accent)}
+.runbar button{all:unset;cursor:pointer;color:var(--muted);padding:1px 8px;border:1px solid var(--line);border-radius:3px}
+.runbar button:hover,.runbar button:focus-visible{color:var(--accent);border-color:var(--accent)}
 .runbar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
-.runbar .run:disabled{cursor:progress;color:var(--accent)}
+.runbar .run:disabled{cursor:progress;color:var(--accent);border-color:var(--accent)}
 @media (max-width:600px){.qwrap{display:flex;flex-direction:column}.qwrap>.query{padding-right:14px}.runbar{position:static;order:-1;justify-content:flex-end;background:none;padding:0 2px 6px}}
 .result{margin-top:8px;border-left:2px solid var(--line);padding-left:12px}
 .result .tbl{border-top:0;max-height:300px;overflow:auto}
@@ -97,7 +95,10 @@ th.v,td.v{width:2.5em;text-align:right;padding-right:0}
 .t:hover{color:var(--accent)}
 .t:focus-visible{outline:2px solid var(--accent)}
 .k{display:inline-block;margin-left:8px;font:11px var(--mono);color:var(--accent);border:1px solid var(--line);border-radius:4px;padding:0 5px;vertical-align:2px}
-.play{text-decoration:none;color:var(--accent);font-size:13px}
+.play{text-decoration:none;color:var(--accent);font-size:13px;display:inline-block;transition:transform .15s}
+/* the row's video is open below it: ▶ points down at it */
+tr:has(+ tr.x iframe) .play{transform:rotate(90deg)}
+@media (prefers-reduced-motion:reduce){.play{transition:none}}
 tr.hit>td{background:var(--panel)}
 tr>td{transition:background .6s}
 tr.x td{padding:4px 0 18px;color:var(--muted);font-family:var(--body);font-size:14px}
@@ -169,6 +170,7 @@ footer .fl{display:flex;gap:16px}
 .posts li{display:grid;grid-template-columns:5.5em minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .posts .d{font:14px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
 .posts a{text-decoration:none}
+.posts .v{font:12px var(--mono);color:var(--muted);white-space:nowrap}
 .empty-state{border:1px dashed var(--line);border-radius:8px;padding:20px;color:var(--muted);margin-top:16px}
 .empty-state code{font-family:var(--mono);color:var(--fg)}
 article{max-width:68ch}

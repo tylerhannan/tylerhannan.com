@@ -1,31 +1,28 @@
-// Search by meaning, for the search boxes (home, photos, archive) and the 404 page.
-// The words are embedded just now by ClickHouse Cloud (/api/embed, src/worker.js, cloud/site.sql) and compared
-// with the vectors in /embeddings.json, which the same service made with the same model, Qwen3-Embedding-8B,
-// cut to 384 Int8 dimensions so they fit in a query to play.clickhouse.com. The words also
-// become the one-row `request` table that run.js sends to ClickHouse, so the query shown next to the results
-// returns the same rows; the rows on the page are computed here, the same way, without the round trip.
+// Search by meaning and spelling for the search, photos, archive and 404 pages. ClickHouse Cloud embeds the words
+// (/api/embed) and every page (/embeddings.json) with Qwen3-Embedding-8B, cut to 384 Int8 dims to fit a query to
+// play. The browser ranks the rows the same way the SQL does, so run gets the same answer from ClickHouse.
 (function(){
   var cache={};
   var get=function(u){ return cache[u]||(cache[u]=fetch(u).then(function(r){ if(!r.ok) throw new Error(u+': HTTP '+r.status); return r.json(); })
     .catch(function(e){ delete cache[u]; throw e; })); };
   var dec=function(v){ try{ return decodeURIComponent(v); }catch(_){ return v; } };
-  // 384 Int8, base64 (the same unpacking run.js does in SQL)
+  // base64 Int8, unpacked like run.js does in SQL
   var vec=function(b){ var s=atob(b), v=new Float32Array(s.length); for(var i=0;i<s.length;i++) v[i]=(s.charCodeAt(i)<<24)>>24; return v; };
   function cosine(a,b){ var d=0,x=0,y=0; for(var i=0;i<a.length;i++){ d+=a[i]*b[i]; x+=a[i]*a[i]; y+=b[i]*b[i]; } return d/Math.sqrt(x*y); }
   var vectors=function(){ return get('/embeddings.json').then(function(d){ return d.vectors||{}; },function(){ return {}; }); };
 
-  // The rows of run.js's tables, each with its vector (v is null for anything ClickHouse hasn't embedded yet)
-  // and `key`, the column the SQL breaks ties on (path, or file for photos).
+  // run.js's tables, each row with its vector (null if not embedded yet) and the key the SQL breaks ties on
   var TABLES={
-    pages:function(){ return Promise.all([get('/archive/posts.json'),get('/talks.json'),get('/demos.json'),vectors(),get('/photos.json')]).then(function(r){
+    pages:function(){ return Promise.all([get('/archive/posts.json'),get('/talks.json'),get('/demos.json'),vectors(),get('/photos.json'),get('/writing.json')]).then(function(r){
       var row=function(path,title,k,event){ return {key:path,path:path,title:title,event:event||null,v:r[3][k]?vec(r[3][k]):null}; };
       return [{path:'/',title:'Home'},{path:'/photos/',title:'Photos'},{path:'/archive/',title:'Writing archive'}].concat(r[0].posts||[])
         .map(function(p){ return row(dec(p.path),p.title,p.path); })
-        // talks and demos: path is their row on the home page (site.js); vectors are keyed by their own link
+        // talks and demos live on the home page; their vectors are keyed by their own link
         .concat((r[1].talks||[]).map(function(t){ return row(siteAnchor.talk(t),t.title+' · '+t.event,t.url||'https://www.youtube.com/watch?v='+t.youtube,t.event); }))
         .concat((r[2].demos||[]).map(function(d){ return row(siteAnchor.demo(d),d.name+' · demo',d.repo); }))
-        // photos: path opens the photo in the gallery's viewer
-        .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return row('/photos/#'+p.file.replace(/\.[^.]+$/,''),p.title+' · photo','/photos/'+p.file); }));
+        // opens the photo in the viewer
+        .concat((r[4].photos||[]).filter(function(p){ return p.file; }).map(function(p){ return row('/photos/#'+p.file.replace(/\.[^.]+$/,''),p.title+' · photo','/photos/'+p.file); }))
+        .concat((r[5].writing||[]).map(function(w){ return row(w.url,w.title+' · '+w.venue,w.url); }));
     }); },
     posts:function(){ return Promise.all([get('/archive/posts.json'),vectors()]).then(function(r){
       return (r[0].posts||[]).map(function(p){ return {key:p.path,path:p.path,title:p.title,date:p.date,v:r[1][p.path]?vec(r[1][p.path]):null}; });
@@ -34,10 +31,10 @@
       return (r[0].photos||[]).filter(function(p){ return p.file; }).map(function(p){ var k='/photos/'+p.file; return {key:p.file,title:p.title,photo:p,v:r[1][k]?vec(r[1][k]):null}; });
     }); }
   };
-  window.sitePages=TABLES.pages;  // the 404 page's spelling query uses the same rows
+  window.sitePages=TABLES.pages;
 
-  // ORDER BY similarity DESC (rounded to 2 places, as the SQL does), key; rows without a vector go last.
-  // byEvent: LIMIT 1 BY ifNull(event, path), so a run of talks at one event (release calls) shows once.
+  // same order as the SQL: similarity rounded to 2 places, then key; no vector sorts last
+  // byEvent is LIMIT 1 BY ifNull(event, path), so the release calls show once
   function rank(rows,q,limit,skip,byEvent){
     var seen={};
     return rows.filter(function(p){ return p.key!==skip; })
@@ -46,14 +43,14 @@
       .filter(function(p){ if(!byEvent) return true; var g=p.event==null?'path:'+p.key:'event:'+p.event; return seen[g]?false:(seen[g]=true); })
       .slice(0,limit||rows.length);
   }
-  // Embed the words, make them the `request` table, and rank a table's rows against them.
+  // embed the words, make them the request table, rank against them
   window.siteSearch=function(words,limit,table,byEvent){
-    // d= matches src/worker.js's DIMS, so a browser never reuses an answer cached at another size
-    var req=get('/api/embed?d=384&q='+encodeURIComponent(words)).then(function(r){ return {words:words,e:r.embedding}; });
+    // v= and d= change with the model and size, so a browser never reuses an old answer
+    var req=get('/api/embed?v=2&d=384&q='+encodeURIComponent(words)).then(function(r){ return {words:words,e:r.embedding}; });
     window.siteRequest=req;
     return Promise.all([req,TABLES[table||'pages']()]).then(function(r){ return rank(r[1],vec(r[0].e),limit,null,byEvent); });
   };
-  // Rank a table's rows against one of its own rows (no live embedding needed).
+  // rank against one of the table's own rows (no live embedding)
   window.siteSimilar=function(key,limit,table,byEvent){
     return TABLES[table||'pages']().then(function(rows){
       var me=rows.filter(function(p){ return p.key===key&&p.v; })[0];
@@ -62,10 +59,25 @@
     });
   };
 
-  // A search box: o.form holds o.input, o.box is the runnable query showing the SQL, and the page draws the rows.
-  // o.start(words) as a search begins, o.done(rows, words) with the ranked rows, o.fail(words) if it can't.
-  // ?q= in the URL searches on load; a new search makes any ▶ run result for the old one go away.
-  // run(words, x) searches from code; x can replace o's start/search/done/fail for that one run.
+// Search by spelling, like the SQL's round(ngramSearchCaseInsensitive(title, words), 2): the share of the
+// words' 4-byte grams, lowercased, that also appear in the title.
+  var utf8=function(s){ return unescape(encodeURIComponent(s.toLowerCase())); };
+  function grams(s){ var m={},n=0; for(var i=0;i+4<=s.length;i++){ var g=s.substr(i,4); m[g]=(m[g]||0)+1; n++; } return {m:m,n:n}; }
+  function ngramSearch(hay,needle){
+    var N=grams(utf8(needle)), H=grams(utf8(hay)), hit=0, k;
+    if(!N.n) return 1;  // as in ClickHouse, too short to have 4-grams matches everything
+    for(k in N.m) hit+=Math.min(N.m[k],H.m[k]||0);
+    return hit/N.n;
+  }
+  window.siteSpelling=function(words,limit,table){
+    return TABLES[table||'pages']().then(function(rows){
+      return rows.map(function(p){ return {path:p.path,title:p.title,match:Math.round(ngramSearch(p.title,words)*100)/100}; })
+        .sort(function(a,b){ return b.match-a.match || (a.path<b.path?-1:a.path>b.path?1:0); }).slice(0,limit||rows.length);
+    });
+  };
+
+// A search box: o.start, o.done(rows, words) and o.fail draw the results; ?q= searches on load.
+  // run(words, x) searches from code, with x overriding o's callbacks for that run
   window.siteSearchBox=function(o){
     var n=0;
     function run(words,x){

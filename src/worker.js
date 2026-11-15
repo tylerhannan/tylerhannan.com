@@ -1,24 +1,19 @@
-// tylerhannan.com: the static site in public/ (Workers static assets) plus three endpoints, all answered by
-// ClickHouse Cloud (cloud/site.sql). The service embeds and ranks; this Worker holds the password of site_searcher
-// (a user that may only read the site's tables, one model call of one text per query) and caches the answers.
-//
-// GET /api/search?q=words  the search: site.search embeds the words and ranks every page, at full size (4096 dims)
-// GET /api/embed?q=words   the words embedded and packed for play.clickhouse.com (site.query_vector): the first 384
-//                          dimensions as Int8, base64. search.js turns them into the `request` table
-// GET /embeddings.json     every page's vector packed the same way (site.compact), for the queries anyone can run
-//                          on play: photos, archive, the 404 page, each post's nearest posts (run.js, search.js)
-//
-// Not configured (no CLICKHOUSE_URL / CLICKHOUSE_SEARCH_PASSWORD, e.g. wrangler dev without .dev.vars): 503.
+// The static site in public/, plus three endpoints answered by ClickHouse Cloud (cloud/site.sql). The service
+// embeds and ranks; this Worker holds site_searcher's password and caches the answers.
+//   /api/search?q=   full-size search (site.search)
+//   /api/embed?q=    the words as 384 Int8 dims in base64, for the request table on play (site.query_vector)
+//   /embeddings.json every page's vector packed the same way, for the queries on play (site.compact)
+// Without CLICKHOUSE_URL and CLICKHOUSE_SEARCH_PASSWORD (wrangler dev without .dev.vars) it answers 503.
 const MODEL = 'qwen3-embedding-8b';
 const DIMS = 384;
-const MAX_CHARS = 200;  // a URL's worth of words
+const MAX_CHARS = 200;  // keeps this from being a free embedding API
 const DAY = 86400;
 
 const json = (body, status, headers) => new Response(JSON.stringify(body) + '\n', {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff', ...headers },
 });
 
-// Answers are cached at the edge; the key names the model and size, so a change of either never serves old ones
+// cached at the edge; the key names the model and size, so a change never serves old answers
 async function cached(key, ctx, make) {
   const hit = await caches.default.match(key);
   if (hit) return hit;
@@ -27,8 +22,7 @@ async function cached(key, ctx, make) {
   return res;
 }
 
-// One query as site_searcher. The words travel as a query parameter, never inside the SQL. Parameters are read in
-// ClickHouse's escaped format, so backslashes are doubled (q has no tabs or newlines: whitespace is collapsed).
+// one query as site_searcher; the words go as a parameter, never into the SQL (escaped format, so backslashes are doubled)
 async function clickhouse(env, sql, q) {
   const r = await fetch(env.CLICKHOUSE_URL + '/' + (q == null ? '' : '?param_q=' + encodeURIComponent(q.replace(/\\/g, '\\\\'))), {
     method: 'POST',
@@ -78,7 +72,8 @@ export default {
       try {
         return json(await route.answer(env, q), 200, { 'Cache-Control': 'public, max-age=' + route.ttl });
       } catch (e) {
-        return json({ error: String(e && e.message || e) }, 502);
+        console.error(e);  // details stay in the logs, not in the answer
+        return json({ error: 'search failed' }, 502);
       }
     });
   },

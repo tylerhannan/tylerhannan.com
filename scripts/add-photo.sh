@@ -1,12 +1,10 @@
 #!/bin/sh
-# Resize a photo for the web, strip its metadata, and add it to public/photos.json.
+# Resize a photo, strip its metadata, and add it to public/photos.json.
 #
 #   scripts/add-photo.sh ~/Pictures/Export/IMG_1234.jpg "Title" "Place" "2026-09"
 #
-# Uses macOS's built-in `sips`: longest side at most 2000px (never enlarged), JPEG quality 82, plus a
-# 600px thumbnail for the grid. scripts/strip_metadata.py then removes everything but the pixels, colour
-# profile and orientation (no GPS, place names, camera serials). The photo is built in a temp file and
-# only moved into public/ once it's clean, so an unstripped copy can never end up published.
+# 2000px max (never enlarged) plus a 600px thumbnail, then strip_metadata.py. Built in a temp file and only
+# moved into public/ once clean.
 set -eu
 src="${1:-}"; title="${2:-}"; place="${3:-}"; date="${4:-}"
 usage() { echo "usage: $0 <photo> \"Title\" \"Place\" \"YYYY-MM\"" >&2; exit 1; }
@@ -22,7 +20,7 @@ name="$name.jpg"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-# Only shrink: sips -Z would also enlarge smaller photos, which just makes them blurry.
+# only shrink: sips -Z would also enlarge small photos
 w=$(sips -g pixelWidth "$src" | awk '/pixelWidth/{print $2}'); h=$(sips -g pixelHeight "$src" | awk '/pixelHeight/{print $2}')
 [ -n "$w" ] && [ -n "$h" ] || { echo "sips can't read $src as an image" >&2; exit 1; }
 if [ "$w" -gt 2000 ] || [ "$h" -gt 2000 ]; then resize="-Z 2000"; else resize=""; fi

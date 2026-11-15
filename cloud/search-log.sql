@@ -1,7 +1,5 @@
--- What people searched for on tylerhannan.com: the Cloud search logs itself. Run it as an admin (the default
--- user, or clickhousectl cloud service query); site_searcher can't read the query log, by design.
--- Private: these are words visitors typed. Repeat searches are answered from the Worker's cache for a day, so
--- each distinct search shows up about once a day, however often it was run.
+-- What people searched for, from the Cloud query log. Run it as an admin; site_searcher can't read the log.
+-- Private: these are words visitors typed. Cached repeats don't reach the service, so each search shows about once a day.
 --
 --   clickhousectl cloud service query --name tylerhannan-search --queries-file cloud/search-log.sql --format PrettyCompact
 

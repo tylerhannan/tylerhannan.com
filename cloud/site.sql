@@ -1,27 +1,15 @@
--- Semantic search for tylerhannan.com, all in SQL: ClickHouse reads the site, embeds it, keeps it up to date
--- and answers searches. The Worker (src/worker.js) only holds a password and caches; play.clickhouse.com still
--- runs the queries anyone can edit, over the compact vectors below.
+-- Search for tylerhannan.com, all in SQL: ClickHouse reads the site, embeds it with aiEmbed, keeps it current
+-- and answers searches. Written for ClickHouse Cloud (Qwen3-Embedding-8B, no credentials needed); cloud/test.sh
+-- runs it on OSS with Ollama and qwen3-embedding:0.6b.
 --
--- Written for ClickHouse Cloud's AI functions (private preview), whose default embedding model there is
--- Qwen3-Embedding-8B (as of Nov 2026; could change before GA). Cloud provides the model, so this file has no
--- credentials or endpoint. Tested on ClickHouse 26.11 OSS by cloud/test.sh, which adds a named collection for
--- Ollama and swaps in the small qwen3-embedding:0.6b (same family and prompt format).
---
---   site.docs      a view over the live site: every page, post, talk, demo and photo, as title + text
---   site.pages     a snapshot of site.docs, with a hash of each row's text; cloud/refresh.sh refreshes it
---                  after every deploy (weekly too, in case a deploy's refresh failed)
---   site.vectors   embeddings; site.embed adds one only for a row that is new or whose text changed
---   site.search    parameterized view: SELECT * FROM site.search(q = 'some words')
---   site.related   parameterized view: SELECT * FROM site.related(path = '/2012/04/geektool/')
---
--- Vectors are Qwen3-Embedding-8B, all 4096 dimensions as Float32, for site.search; site.compact serves the first
--- 384 as Int8 for play, whose 256 KB query limit can't carry more. (Until Nov 2026 the site used EmbeddingGemma
--- through a Python script on a laptop; this replaced it.)
+--   site.docs     the live site as rows: pages, posts, talks, demos, photos, posts elsewhere
+--   site.pages    a snapshot of site.docs; cloud/refresh.sh refreshes it after a deploy (weekly as a backstop)
+--   site.vectors  4096-dim vectors; site.embed adds one only for a new or changed row
+--   site.search, site.related, site.compact, site.query_vector  what the Worker serves
 
 CREATE DATABASE IF NOT EXISTS site;
 
--- Everything the site is, read from the site itself. While this is being tested, that's the cloud-ai-functions
--- branch on GitHub (main and the live site don't have archive/text.json); 'https://tylerhannan.com' once merged.
+-- read from the cloud-ai-functions branch on GitHub until it's merged; then 'https://tylerhannan.com'
 CREATE OR REPLACE VIEW site.docs AS
 WITH
     'https://raw.githubusercontent.com/tylerhannan/tylerhannan.com/cloud-ai-functions/public' AS base,
@@ -38,7 +26,7 @@ FROM
     UNION ALL
     SELECT 0, 3, '/archive/', 'page', 'Writing archive', NULL, description(raw_blob) FROM url(base || '/archive/index.html', RawBLOB)
     UNION ALL
-    -- posts: titles from posts.json, text from text.json (both written by scripts/import_wordpress.py)
+    -- posts: titles from posts.json, text from text.json (made once from the old WordPress posts)
     SELECT 1, i, JSONExtractString(p, 'path'), 'post', JSONExtractString(p, 'title'), NULL,
            texts[JSONExtractString(p, 'path')]
     FROM url(base || '/archive/posts.json', RawBLOB)
@@ -69,6 +57,13 @@ FROM
     FROM url(base || '/photos.json', RawBLOB)
     ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'photos') AS ph, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'photos')) AS i
     WHERE JSONExtractString(ph, 'file') != ''
+    UNION ALL
+    -- posts on other sites: only the title is ours to embed, keyed by the post's url
+    SELECT 5, i, JSONExtractString(w, 'url'), 'writing', JSONExtractString(w, 'title'), NULL,
+           joined(['A post on ' || JSONExtractString(w, 'venue'),
+                   if(JSONExtractString(w, 'coauthors') != '', 'with ' || JSONExtractString(w, 'coauthors'), '')])
+    FROM url(base || '/writing.json', RawBLOB)
+    ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'writing') AS w, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'writing')) AS i
 )
 ORDER BY src, i
 LIMIT 1 BY path
@@ -89,8 +84,7 @@ CREATE TABLE IF NOT EXISTS site.vectors
 )
 ENGINE = ReplacingMergeTree ORDER BY (path, h);
 
--- After each snapshot, embed only what's new or changed (a refresh with no changes makes no model calls).
--- Qwen3-Embedding takes documents as they are; only queries get an instruction (site.search).
+-- embed only what's new or changed; documents go in as they are, only queries get an instruction
 CREATE MATERIALIZED VIEW IF NOT EXISTS site.embed
 REFRESH EVERY 1 WEEK DEPENDS ON site.pages APPEND
 TO site.vectors
@@ -98,9 +92,7 @@ AS SELECT path, h, aiEmbed(title || '\n' || text, 'qwen3-embedding-8b') AS v
 FROM site.pages
 WHERE (path, h) NOT IN (SELECT path, h FROM site.vectors);
 
--- The search: Qwen3-Embedding's query format, one row per event (a series like the release calls shows once).
--- The search words are embedded once, in a scalar subquery: written inline, aiEmbed would run once per row of
--- site.vectors (it isn't constant-folded), 269 embeddings of the same words per search.
+-- the words are embedded once, in a scalar subquery: inline, aiEmbed runs once per row (it isn't constant-folded)
 CREATE OR REPLACE VIEW site.search AS
 WITH (SELECT aiEmbed('Instruct: Given a search query, find the pages, posts, talks, demos and photos on a personal '
                      || 'website that match it\nQuery: ' || {q:String}, 'qwen3-embedding-8b')) AS query_vector
@@ -112,7 +104,7 @@ ORDER BY similarity DESC, path
 LIMIT 1 BY ifNull(event, path)
 LIMIT 10;
 
--- Nearest posts to a post: no model call at all, just the stored vectors.
+-- nearest posts: stored vectors only, no model call
 CREATE OR REPLACE VIEW site.related AS
 WITH (SELECT any(v) FROM site.vectors INNER JOIN site.pages USING (path, h) WHERE path = {path:String}) AS me
 SELECT round(1 - cosineDistance(v, me), 2) AS similarity, title, path
@@ -122,10 +114,7 @@ WHERE kind = 'post' AND path != {path:String}
 ORDER BY similarity DESC, path
 LIMIT 5;
 
--- The same vectors, small enough for play.clickhouse.com: the first 384 of 4096 dimensions (Qwen3-Embedding is
--- trained so a prefix still works), scaled to Int8 and base64-encoded. The Worker serves this as /embeddings.json
--- for the pages whose queries anyone can run on play (photos, archive, 404, each post's nearest posts).
--- 384 keeps play's 256 KB limit with room for ~160 more pages; tested against the full size, it keeps the results.
+-- the first 384 of 4096 dims as Int8 base64, small enough for play's 256 KB queries (/embeddings.json)
 CREATE OR REPLACE VIEW site.compact AS
 SELECT path, base64Encode(arrayStringConcat(arrayMap(x -> char(if(x < 0, toInt16(x) + 256, x)), q))) AS e
 FROM
@@ -134,20 +123,16 @@ FROM
     FROM (SELECT path, arraySlice(v, 1, 384) AS s FROM site.vectors INNER JOIN site.pages USING (path, h))
 );
 
--- Search words, embedded as site.search does and packed as site.compact is, for play-side searches (/api/embed)
+-- the search words packed the same way, for /api/embed
 CREATE OR REPLACE VIEW site.query_vector AS
 WITH (SELECT arraySlice(aiEmbed('Instruct: Given a search query, find the pages, posts, talks, demos and photos on '
                                 || 'a personal website that match it\nQuery: ' || {q:String}, 'qwen3-embedding-8b'), 1, 384)) AS s
 SELECT base64Encode(arrayStringConcat(arrayMap(x -> char(if(x < 0, toInt16(x) + 256, x)),
                                                arrayMap(x -> toInt8(round(x * 127 / arrayMax(arrayMap(abs, s)))), s)))) AS e;
 
--- Who may do what. The Worker searches (src/worker.js, /api/search); the GitHub Action refreshes after a push
--- (.github/workflows/search-refresh.yml). The users (site_searcher, site_refresher) and their passwords are made
--- at setup: cloud/README.md. Users and roles get different names: GRANT site_search TO site_search is ambiguous.
--- The searcher reads the views and the tables under them (the site's own public content). There's no separate
--- privilege for AI functions yet, and aiEmbed fails inside SQL SECURITY DEFINER views (26.8 Cloud, 26.11 OSS), so
--- instead its profile makes it read-only with one model call of one text per query: enough for a search, useless
--- as a free embedding API. (The calls cap alone isn't enough: one call can carry a whole batch of texts.)
+-- Users are made at setup (cloud/README.md), with names that differ from the roles (GRANT x TO x is ambiguous).
+-- There's no AI privilege yet and aiEmbed fails in SQL SECURITY DEFINER views (#130746), so the searcher is
+-- read-only with one model call of one text per query: enough for a search, useless as a free embedding API.
 CREATE ROLE IF NOT EXISTS site_search;
 GRANT SELECT ON site.search TO site_search;
 GRANT SELECT ON site.related TO site_search;
@@ -155,7 +140,7 @@ GRANT SELECT ON site.vectors TO site_search;
 GRANT SELECT ON site.pages TO site_search;
 GRANT SELECT ON site.compact TO site_search;
 GRANT SELECT ON site.query_vector TO site_search;
--- Cloud's built-in model is reached through this named collection; a user other than default needs the grant
+-- a user other than default needs this grant to reach Cloud's built-in model
 GRANT NAMED COLLECTION ON clickhouse_inference_embeddings TO site_search;
 CREATE SETTINGS PROFILE IF NOT EXISTS site_search
     SETTINGS readonly = 1, ai_function_max_api_calls_per_query = 1, ai_function_embedding_max_batch_size = 1,
