@@ -171,6 +171,7 @@ footer .fl{display:flex;gap:16px}
 .posts .d{font:14px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
 .posts a{text-decoration:none;margin-right:.35em}  /* room before the venue, and none when it wraps */
 .posts .v{font:12px var(--mono);color:var(--muted);white-space:nowrap;margin-right:.6em}
+.posts a.v:hover{color:var(--fg)}
 /* AI summaries start folded into a small button after the venue */
 .posts .ai{display:inline}
 .posts .ai summary{display:inline;cursor:pointer;list-style:none;font:11px var(--mono);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px;white-space:nowrap}
