@@ -15,19 +15,22 @@ WITH
     'https://raw.githubusercontent.com/tylerhannan/tylerhannan.com/cloud-ai-functions/public' AS base,
     -- " · ".join(x for x in (...) if x)
     (parts) -> arrayStringConcat(arrayFilter(x -> x != '', parts), ' · ') AS joined,
-    (html) -> decodeHTMLComponent(extract(html, '<meta name="description" content="([^"]*)"')) AS description
-SELECT path, kind, title, event, topic, text
+    (html) -> decodeHTMLComponent(extract(html, '<meta name="description" content="([^"]*)"')) AS description,
+    -- the home page's row anchors, as siteAnchor in site.js makes them
+    (s) -> trim(BOTH '-' FROM replaceRegexpAll(lowerUTF8(replaceRegexpAll(normalizeUTF8NFD(s), '[\\x{0300}-\\x{036f}]', '')), '[^a-z0-9]+', '-')) AS slug
+-- href: where the row lives on the site (search links there; path keys the vectors)
+SELECT path, kind, title, event, topic, href, text
 FROM
 (
-    SELECT 0 AS src, 1 AS i, '/' AS path, 'page' AS kind, 'Home' AS title, NULL AS event, NULL AS topic,
+    SELECT 0 AS src, 1 AS i, '/' AS path, 'page' AS kind, 'Home' AS title, NULL AS event, NULL AS topic, '/' AS href,
            description(raw_blob) AS text FROM url(base || '/index.html', RawBLOB)
     UNION ALL
-    SELECT 0, 2, '/photos/', 'page', 'Photos', NULL, NULL, description(raw_blob) FROM url(base || '/photos/index.html', RawBLOB)
+    SELECT 0, 2, '/photos/', 'page', 'Photos', NULL, NULL, '/photos/', description(raw_blob) FROM url(base || '/photos/index.html', RawBLOB)
     UNION ALL
-    SELECT 0, 3, '/archive/', 'page', 'Writing', NULL, NULL, description(raw_blob) FROM url(base || '/archive/index.html', RawBLOB)
+    SELECT 0, 3, '/archive/', 'page', 'Writing', NULL, NULL, '/archive/', description(raw_blob) FROM url(base || '/archive/index.html', RawBLOB)
     UNION ALL
     -- posts: titles from posts.json, the whole text from text.json; topic (here and below) is from aiClassify, for GROUP BY, not embedded
-    SELECT 1, i, JSONExtractString(p, 'path'), 'post', JSONExtractString(p, 'title'), NULL, JSONExtract(p, 'topic', 'Nullable(String)'),
+    SELECT 1, i, JSONExtractString(p, 'path'), 'post', JSONExtractString(p, 'title'), NULL, JSONExtract(p, 'topic', 'Nullable(String)'), JSONExtractString(p, 'path'),
            texts[JSONExtractString(p, 'path')]
     FROM url(base || '/archive/posts.json', RawBLOB)
     ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'posts') AS p, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'posts')) AS i
@@ -41,17 +44,18 @@ FROM
     SELECT 2, i,
            ifNull(nullIf(JSONExtract(t, 'url', 'Nullable(String)'), ''), 'https://www.youtube.com/watch?v=' || JSONExtractString(t, 'youtube')),
            'talk', JSONExtractString(t, 'title'), JSONExtractString(t, 'event'), JSONExtract(t, 'topic', 'Nullable(String)'),
+           '/#talk-' || slug(JSONExtractString(t, 'date') || ' ' || JSONExtractString(t, 'event')),
            joined([JSONExtractString(t, 'event'), JSONExtractString(t, 'location'), JSONExtractString(t, 'note')])
     FROM url(base || '/talks.json', RawBLOB)
     ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'talks') AS t, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'talks')) AS i
     UNION ALL
-    SELECT 3, i, JSONExtractString(d, 'repo'), 'demo', JSONExtractString(d, 'name'), NULL, JSONExtract(d, 'topic', 'Nullable(String)'),
+    SELECT 3, i, JSONExtractString(d, 'repo'), 'demo', JSONExtractString(d, 'name'), NULL, JSONExtract(d, 'topic', 'Nullable(String)'), '/#demo-' || slug(JSONExtractString(d, 'name')),
            joined(['A demo: ' || JSONExtractString(d, 'about'), JSONExtractString(d, 'event')])
     FROM url(base || '/demos.json', RawBLOB)
     ARRAY JOIN JSONExtractArrayRaw(raw_blob, 'demos') AS d, arrayEnumerate(JSONExtractArrayRaw(raw_blob, 'demos')) AS i
     UNION ALL
     -- photos: embedded from their captions (title, alt text, place), keyed by the image's URL
-    SELECT 4, i, '/photos/' || JSONExtractString(ph, 'file'), 'photo', JSONExtractString(ph, 'title'), NULL, NULL,
+    SELECT 4, i, '/photos/' || JSONExtractString(ph, 'file'), 'photo', JSONExtractString(ph, 'title'), NULL, NULL, '/photos/#' || replaceRegexpOne(JSONExtractString(ph, 'file'), '\\.[^.]+$', ''),
            joined(['A photo: ' || if(JSONExtractString(ph, 'alt') != '', JSONExtractString(ph, 'alt'), JSONExtractString(ph, 'title')),
                    JSONExtractString(ph, 'place')])
     FROM url(base || '/photos.json', RawBLOB)
@@ -59,7 +63,7 @@ FROM
     WHERE JSONExtractString(ph, 'file') != ''
     UNION ALL
     -- posts on other sites, keyed by the post's url: the title, plus the AI summary made from the post with aiGenerate
-    SELECT 5, i, JSONExtractString(w, 'url'), 'writing', JSONExtractString(w, 'title'), NULL, JSONExtract(w, 'topic', 'Nullable(String)'),
+    SELECT 5, i, JSONExtractString(w, 'url'), 'writing', JSONExtractString(w, 'title'), NULL, JSONExtract(w, 'topic', 'Nullable(String)'), JSONExtractString(w, 'url'),
            joined(['A post on ' || JSONExtractString(w, 'venue'),
                    if(JSONExtractString(w, 'coauthors') != '', 'with ' || JSONExtractString(w, 'coauthors'), ''),
                    JSONExtractString(w, 'ai_summary')])
@@ -74,7 +78,7 @@ SETTINGS max_http_get_redirects = 1;  -- the live site redirects /index.html to 
 CREATE MATERIALIZED VIEW IF NOT EXISTS site.pages
 REFRESH EVERY 1 WEEK
 ENGINE = MergeTree ORDER BY path
-AS SELECT path, kind, title, event, topic, text, cityHash64(title, text) AS h FROM site.docs;
+AS SELECT path, kind, title, event, topic, href, text, cityHash64(title, text) AS h FROM site.docs;
 
 -- One vector per version of a row's text; the search only uses the current one
 CREATE TABLE IF NOT EXISTS site.vectors
@@ -98,7 +102,7 @@ CREATE OR REPLACE VIEW site.search AS
 WITH (SELECT aiEmbed('Instruct: Given a search query, find the pages, posts, talks, demos and photos on a personal '
                      || 'website that match it\nQuery: ' || {q:String}, 'qwen3-embedding-8b')) AS query_vector
 SELECT round(1 - cosineDistance(v, query_vector), 2) AS similarity,
-       kind, title, path
+       kind, title, href AS path
 FROM site.vectors
 INNER JOIN site.pages USING (path, h)
 ORDER BY similarity DESC, path
