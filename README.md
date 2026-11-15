@@ -50,7 +50,7 @@ Export from Lightroom as sRGB JPEG, 2000 px or more, with Remove Location Info t
 scripts/add-photo.sh ~/Pictures/Export/IMG_1234.jpg "Title" "Place" "YYYY-MM"
 ```
 
-It resizes, makes a thumbnail and strips the metadata (no GPS, no serial numbers). Write the `alt` text yourself: photo search only knows what it says.
+It resizes, makes a thumbnail, and strips the metadata (no GPS, no serial numbers). Write the `alt` text yourself: photo search only knows what it says.
 
 ## The old blog
 
@@ -58,4 +58,4 @@ The WordPress posts still live at their old addresses, as plain HTML. I converte
 
 ## License
 
-The code is [MIT](LICENSE). Borrow whatever's useful. The photos, posts and data are mine, all rights reserved, and images in old posts that came from elsewhere belong to their owners. Colours are [Selenized](https://github.com/jan-warchol/selenized) by Jan Warchoł.
+The code is [MIT](LICENSE). Borrow whatever's useful. The photos, posts, and data are mine, all rights reserved, and images in old posts that came from elsewhere belong to their owners. Colours are [Selenized](https://github.com/jan-warchol/selenized) by Jan Warchoł.

@@ -189,6 +189,9 @@ article nav.toc li{display:list-item}
 article .footnotes{margin-top:40px;padding-top:12px;border-top:1px solid var(--line);font-size:14px;line-height:1.6;color:var(--muted)}
 article .footnotes p{margin:6px 0}
 article .fnref,article .fnback{text-decoration:none;color:var(--accent)}
+article sup.fnmark{font:600 .72em var(--mono);line-height:0;margin-left:1px}  /* readable, and a little room from the word */
+article sup.fnmark a{padding:0 1px}
+article .footnotes .fnback{font:600 13px var(--mono);display:inline-block;min-width:1.2em}
 article .content iframe{max-width:100%}
 .lost{display:block;margin:12px 0;font:13px var(--mono);color:var(--muted)}
 article .content pre{font:13px/1.6 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
