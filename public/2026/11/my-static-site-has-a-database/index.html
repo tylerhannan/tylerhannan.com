@@ -65,7 +65,7 @@ SELECT toYear(date) AS year, count() AS talks
 FROM talks
 GROUP BY year
 ORDER BY year DESC</code></pre>
-<p>On the site, a little script called run.js<sup class="fnmark"><a class="fnref" href="#fn1" id="ref1" aria-label="Footnote 1">1</a></sup> does that for every query box. It looks at which tables your query mentions. It loads that JSON. It turns each one into a CTE and sticks it on the front of your SQL. Then it sends the lot to the playground.</p>
+<p>On the site, a little script called <code>run.js</code><sup class="fnmark"><a class="fnref" href="#fn1" id="ref1" aria-label="Footnote 1">1</a></sup> does that for every query box. It looks at which tables your query mentions. It loads that JSON. It turns each one into a CTE and sticks it on the front of your SQL. Then it sends the lot to the playground.</p>
 <p>It also caps every result at 501 rows, because I know myself, and sooner or later I'd try to pull a million rows into a browser tab.</p>
 <p>And because the boxes are real SQL, you can edit them. Group my talks by year, or ignore my data completely and query the playground's own datasets instead. <code>SELECT count() FROM github_events</code> counts about 11.2 billion rows. Go ahead, try it on the home page, I'll wait. Back? Beauty. That's 11 billion rows, counted from what is basically a folder of HTML files, and I'm still a little amazed that works.</p>
 <p><img src="/blog/play/run-on-play.png" alt="The talks query edited to count the playground&#x27;s github_events table, with the result underneath: about 11.2 billion rows, run on play.clickhouse.com." class="shot"></p>
