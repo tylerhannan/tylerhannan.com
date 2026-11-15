@@ -2,6 +2,7 @@
   "writing": [
     { "date": "2026-08-13", "title": "Large Data Volumes Are Not Your Performance Problem", "venue": "rtinsights.com", "url": "https://www.rtinsights.com/large-data-volumes-are-not-your-performance-problem/" },
     { "date": "2026-06-19", "title": "Ten years of open source: a stained-glass view", "venue": "clickhouse.com", "url": "https://clickhouse.com/blog/ten-years-of-open-source-a-stained-glass-view" },
+    { "date": "2026-06-18", "title": "Agentic AI – The Cambrian Moment for Data Architectures", "venue": "aijourn.com", "url": "https://aijourn.com/agentic-ai-the-cambrian-moment-for-data-architectures/" },
     { "date": "2026-04-08", "title": "ClickHouse at FOSDEM 2026", "venue": "clickhouse.com", "url": "https://clickhouse.com/blog/clickhouse-at-fosdem-2026" },
     { "date": "2025-02-25", "title": "ClickHouse at FOSDEM 2025: talks, tech, and a community dinner", "venue": "clickhouse.com", "url": "https://clickhouse.com/blog/clickhouse-at-fosdem-2025" },
     { "date": "2022-06-30", "title": "ClickHouse + Deepnote: Data Notebooks & Collaborative Analytics", "venue": "clickhouse.com", "url": "https://clickhouse.com/blog/clickhouse-deepnote-data-notebooks-collaborative-analytics" },

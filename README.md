@@ -54,7 +54,7 @@ DELETE FROM demos WHERE name = 'Thing';
 SELECT date, title FROM talks WHERE youtube IS NULL ORDER BY date DESC LIMIT 5;
 ```
 
-Edits are checked against the schema (`DESCRIBE talks`) and rewrite the JSON in place. `SELECT` runs on the playground with your local files sent along, like the run buttons, so you can check an edit before pushing. Run it with no arguments for a `:)` prompt.
+Edits are checked against the schema (`DESCRIBE talks`) and rewrite the JSON in place. `SELECT` runs on the playground with your local files sent along, like the run buttons, so you can check an edit before pushing. Run it with no arguments for a `:)` prompt. `node scripts/check-pages.mjs` checks that it builds the same `pages` table as the browser does.
 
 - **Talks** (`public/talks.json`): `date`, `title`, `event`, `location`, `type` (keynote, talk, webinar, video, interview or host), `url`, `youtube` (the video ID or `null`), and optionally `note`, `mc`, `repo` and `highlight` (1–6, for the home page's highlighted videos).
 - **Demos** (`public/demos.json`): `date`, `name`, `about`, `event` (or `null`) and `repo`.
@@ -73,6 +73,8 @@ It shrinks the photo to 2000 px (never enlarging), makes a 600 px thumbnail, str
 ## The old blog
 
 The old WordPress posts live at their original addresses (`/2012/04/…/`), so old links still work. They were converted from a WordPress export once, by a script I've since deleted: the old database had been hacked, and keeping a parser for a hacked database around was more trouble than it was worth. The pages are plain static HTML now, and their text for search is in `archive/text.json`.
+
+Every page ends with the same contact section and footer. It lives in `scripts/footer.html`; edit that, then run `python3 scripts/footer.py` to copy it into all 198 pages (`--check` only lists the ones that differ).
 
 ## License
 
