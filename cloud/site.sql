@@ -151,3 +151,12 @@ CREATE SETTINGS PROFILE IF NOT EXISTS site_search
 CREATE ROLE IF NOT EXISTS site_refresh;
 GRANT SYSTEM VIEWS ON site.* TO site_refresh;
 GRANT SELECT ON site.pages TO site_refresh;
+
+-- cloud/enrich.sh: url() and the text model only. Table functions don't run under readonly, so the caps are CONST
+CREATE ROLE IF NOT EXISTS site_enrich;
+GRANT READ ON URL TO site_enrich;
+GRANT CREATE TEMPORARY TABLE ON *.* TO site_enrich;
+GRANT NAMED COLLECTION ON clickhouse_inference_completions TO site_enrich;
+CREATE SETTINGS PROFILE IF NOT EXISTS site_enrich
+    SETTINGS ai_function_max_api_calls_per_query = 100 CONST, max_execution_time = 600 CONST, max_http_get_redirects = 5
+    TO site_enrich;

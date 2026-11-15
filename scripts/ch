@@ -86,6 +86,28 @@ TABLES = {
             col("topic", "str", "opt", "Nullable(String)", "set by aiClassify; not shown on the page"),
         ],
     },
+    # the old posts and my posts elsewhere: UPDATE only, for the fields cloud/enrich.sh fills in
+    "posts": {
+        "file": "public/archive/posts.json", "key": "posts", "style": "indent", "insert": False, "delete": False,
+        "cols": [
+            col("date", "date", "req", "Date"),
+            col("title", "str", "req", "String"),
+            col("path", "str", "req", "String"),
+            col("topic", "str", "opt", "Nullable(String)", "set by aiClassify; not shown on the page"),
+        ],
+    },
+    "writing": {
+        "file": "public/writing.json", "key": "writing", "style": "rows", "insert": False, "delete": False,
+        "cols": [
+            col("date", "date", "req", "Date"),
+            col("title", "str", "req", "String"),
+            col("venue", "str", "req", "String"),
+            col("url", "url", "req", "String"),
+            col("coauthors", "str", "opt", "Nullable(String)"),
+            col("ai_summary", "str", "opt", "Nullable(String)", "written by aiGenerate from the post; shown as AI summary"),
+            col("topic", "str", "opt", "Nullable(String)", "set by aiClassify; not shown on the page"),
+        ],
+    },
     "photos": {
         "file": "public/photos.json", "key": "photos", "style": "indent", "insert": False, "delete": False,
         "cols": [
@@ -625,7 +647,7 @@ class Session:
         if w == "SHOW":
             if p.kw("TABLES"):
                 p.end()
-                rows = [[n, s["file"]] for n, s in TABLES.items()] + [["posts", "public/archive/posts.json (SELECT only)"], ["writing", "public/writing.json (SELECT only)"], ["pages", "every page, talk, demo, photo and post (SELECT only)"]]
+                rows = [[n, s["file"]] for n, s in TABLES.items()] + [["pages", "every page, talk, demo, photo and post (SELECT only)"]]
                 pretty(["name", "file"], rows)
                 return done(f"{len(rows)} rows in set.", t0)
             return remote(p.s[start:p.i] + " " + p.rest_of_statement(p.i), t0)

@@ -13,7 +13,7 @@ BASE=${SITE_BASE:-$(sed -n "s/^ *'\([^']*\)' AS base,.*/\1/p" cloud/site.sql)}
 echo "Waiting for $BASE to serve this commit's files…"
 for i in $(seq 60); do
   stale=""
-  for f in index.html photos/index.html archive/index.html archive/posts.json archive/text.json talks.json demos.json photos.json; do
+  for f in index.html photos/index.html archive/index.html archive/posts.json archive/text.json talks.json demos.json photos.json writing.json; do
     curl -sfL "$BASE/$f" | cmp -s - "public/$f" || stale="$stale $f"
   done
   [ -z "$stale" ] && break

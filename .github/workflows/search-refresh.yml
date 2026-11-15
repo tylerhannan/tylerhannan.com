@@ -15,6 +15,7 @@ on:
       - public/talks.json
       - public/demos.json
       - public/photos.json
+      - public/writing.json
       - cloud/site.sql
   workflow_dispatch:
 permissions:

@@ -1,0 +1,57 @@
+# New rows get AI summaries and topics (cloud/enrich.sh) in a pull request, for review. Secrets: cloud/README.md.
+name: Enrich with AI functions
+on:
+  push:
+    branches: [main, cloud-ai-functions]
+    paths:
+      - public/writing.json
+      - public/archive/posts.json
+      - public/talks.json
+      - public/demos.json
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: enrich
+  cancel-in-progress: false
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLICKHOUSE_URL: ${{ secrets.CLICKHOUSE_URL }}
+      CLICKHOUSE_USER: site_enricher
+      CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_ENRICH_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Summaries, then topics, then a pull request
+        run: |
+          [ -n "$CLICKHOUSE_URL" ] || { echo "No secrets, skipping"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          branch="enrich/${GITHUB_SHA::7}"
+          git switch -c "$branch"
+          # topics read the JSON from GitHub, so push the summaries first
+          sh cloud/enrich.sh summaries > "$RUNNER_TEMP/summaries.sql"
+          if [ -s "$RUNNER_TEMP/summaries.sql" ]; then
+            scripts/ch < "$RUNNER_TEMP/summaries.sql"
+            git commit -qam "AI summaries for new posts elsewhere (aiGenerate)"
+            git push -q origin "$branch"
+          fi
+          SITE_BASE="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$(git rev-parse HEAD)/public" \
+            sh cloud/enrich.sh topics > "$RUNNER_TEMP/topics.sql"
+          if [ -s "$RUNNER_TEMP/topics.sql" ]; then
+            scripts/ch < "$RUNNER_TEMP/topics.sql"
+            git commit -qam "Topics for new rows (aiClassify)"
+          fi
+          if [ "$(git rev-parse HEAD)" = "$GITHUB_SHA" ]; then echo "Nothing to fill in"; exit 0; fi
+          git push -q origin "$branch"
+          cat "$RUNNER_TEMP/summaries.sql" "$RUNNER_TEMP/topics.sql" > "$RUNNER_TEMP/all.sql"
+          {
+            echo "Made by \`cloud/enrich.sh\` on ClickHouse Cloud: aiGenerate wrote the summaries from each post, aiClassify picked the topics."
+            echo "Edit anything that's wrong in this branch, then merge. The statements it ran:"
+            echo; echo '```sql'; cat "$RUNNER_TEMP/all.sql"; echo '```'
+          } > "$RUNNER_TEMP/body.md"
+          gh pr create --base "$GITHUB_REF_NAME" --head "$branch" --title "AI-made fields for new rows" --body-file "$RUNNER_TEMP/body.md"

@@ -41,29 +41,29 @@ HOST=<host>
 clickhouse client --secure --host $HOST --password <password> --queries-file cloud/site.sql
 ```
 
-Or without the password, through the Query API, which takes one statement at a time. `clickhouse format` splits the
-file; it needs `--show_secrets`, or it quietly writes every `url()` argument as `'[HIDDEN]'`:
+Or through the Query API, one statement at a time (without `--show_secrets`, every `url()` becomes `'[HIDDEN]'`):
 
 ```sh
 clickhouse format --multiquery --oneline --show_secrets < cloud/site.sql | grep -v '^$' |
   while IFS= read -r q; do clickhousectl cloud service query --name tylerhannan-search --query "$q" < /dev/null; done
 ```
 
-The service runs the first refresh by itself, and later ones on a schedule and after each push (below). From an
-empty service to a working search took 34 s on 2026-11-15: 26 s to load the 21 statements, 0.5 s to read the site
-(324 rows) and 5.7 s to embed them.
+The service runs the first refresh by itself, and later ones on a schedule and after each push (below). Empty to
+searchable took 34 s (2026-11-15).
 
 Two users, each allowed one job. `site.sql` made their roles: `site_search` reads the views and their tables, one
 model call of one text per query; `site_refresh` refreshes the views. Cloud wants passwords with an uppercase
 letter and a special character. The passwords go straight from here into the places that use them:
 
 ```sh
-SEARCH_PW=Q_$(openssl rand -hex 24); REFRESH_PW=Q_$(openssl rand -hex 24)
+SEARCH_PW=Q_$(openssl rand -hex 24); REFRESH_PW=Q_$(openssl rand -hex 24); ENRICH_PW=Q_$(openssl rand -hex 24)
 clickhouse client --secure --host $HOST --password <password> --multiquery --query "
   CREATE USER IF NOT EXISTS site_searcher IDENTIFIED BY '$SEARCH_PW';
   GRANT site_search TO site_searcher;  ALTER USER site_searcher DEFAULT ROLE site_search;
   CREATE USER IF NOT EXISTS site_refresher IDENTIFIED BY '$REFRESH_PW';
-  GRANT site_refresh TO site_refresher;  ALTER USER site_refresher DEFAULT ROLE site_refresh;"
+  GRANT site_refresh TO site_refresher;  ALTER USER site_refresher DEFAULT ROLE site_refresh;
+  CREATE USER IF NOT EXISTS site_enricher IDENTIFIED BY '$ENRICH_PW';
+  GRANT site_enrich TO site_enricher;  ALTER USER site_enricher DEFAULT ROLE site_enrich;"
 
 # the Worker's /api/search (src/worker.js); takes effect on the next deploy of main
 echo "https://$HOST:8443" | npx wrangler secret put CLICKHOUSE_URL
@@ -72,7 +72,11 @@ echo "$SEARCH_PW" | npx wrangler secret put CLICKHOUSE_SEARCH_PASSWORD
 # the GitHub Action that refreshes after a push (.github/workflows/search-refresh.yml)
 gh secret set CLICKHOUSE_URL --body "https://$HOST:8443"
 gh secret set CLICKHOUSE_REFRESH_PASSWORD --body "$REFRESH_PW"
-unset SEARCH_PW REFRESH_PW
+
+# the GitHub Action that fills in AI summaries and topics (.github/workflows/enrich.yml), and lets it open pull requests
+gh secret set CLICKHOUSE_ENRICH_PASSWORD --body "$ENRICH_PW"
+gh api -X PUT repos/tylerhannan/tylerhannan.com/actions/permissions/workflow -F can_approve_pull_request_reviews=true
+unset SEARCH_PW REFRESH_PW ENRICH_PW
 ```
 
 Try it as the search user, the way the Worker calls it:
@@ -106,6 +110,12 @@ On Cloud, read the system tables through `clusterAllReplicas(default, system.…
 It waits until the site serves the pushed files, then sends `SYSTEM REFRESH VIEW` over the HTTP interface as
 `site_refresher`. Only new or changed rows are embedded. Without the secrets it skips.
 
+## New rows
+
+`.github/workflows/enrich.yml` runs `cloud/enrich.sh` after a push to the JSON. Posts elsewhere without an `ai_summary`
+get one (aiGenerate, from the post), and rows without a `topic` get one (aiClassify), as a pull request to review.
+Rows that have them are never sent again. Try it by hand: `sh cloud/enrich.sh summaries` or `topics`.
+
 ## Things found while testing (26.8 Cloud, 26.11 OSS)
 
 - Written inline, `aiEmbed` on the search words ran once per row of `site.vectors`: 269 embeddings of the same
@@ -119,8 +129,7 @@ It waits until the site serves the pushed files, then sends `SYSTEM REFRESH VIEW
 
 ## Start over
 
-Everything in `site` comes from the site and `site.sql`, so it can be dropped and rebuilt. The roles, users and
-settings profile live outside the database and survive.
+Everything in `site` comes from the site and `site.sql`; users and roles survive a drop.
 
 ```sh
 clickhousectl cloud service query --name tylerhannan-search --query "DROP DATABASE site SYNC"
