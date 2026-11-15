@@ -24,13 +24,13 @@ The tables are `talks`, `demos`, `photos`, `posts` (the old blog), `writing` (po
 
 ## Search
 
-ClickHouse Cloud reads the site with `url()`, embeds every page, post, talk, demo and photo caption with [`aiEmbed`](https://clickhouse.com/docs/reference/functions/regular-functions/ai-functions) and Qwen3-Embedding-8B, and answers searches with `cosineDistance`. After a push, `.github/workflows/search-refresh.yml` asks it to refresh, and only new or changed rows get embedded again. Nothing runs on my laptop.
+ClickHouse Cloud reads the site with `url()`, embeds every page, post, talk, demo, and photo caption with [`aiEmbed`](https://clickhouse.com/docs/reference/functions/regular-functions/ai-functions) and Qwen3-Embedding-8B, and answers searches with `cosineDistance`. After a push, `.github/workflows/search-refresh.yml` asks it to refresh, and only new or changed rows get embedded again. Nothing runs on my laptop.
 
 The Worker's `/api/search` is the full-size search. `/api/embed` and `/embeddings.json` give the same vectors cut to 384 Int8 dims, so the boxes can run on play too, and when you press run, the playground returns the same rows. That still means sending the whole `pages` table, about 208 KB of play's 256 KB per query, and `run.js` says so instead of sending one that's too big.
 
 Posts I wrote elsewhere carry an AI summary (aiGenerate, from the post itself), and everything has a topic (aiClassify) for the writing page's `GROUP BY`. New rows get both from `.github/workflows/enrich.yml`, as a pull request I review first.
 
-`sh cloud/test.sh` runs the same SQL on `clickhouse local` with Ollama, to try a change before pushing. Setup, users and secrets are in `cloud/README.md`.
+`sh cloud/test.sh` runs the same SQL on `clickhouse local` with Ollama, to try a change before pushing. Setup, users, and secrets are in `cloud/README.md`.
 
 ## Editing the data
 
@@ -52,7 +52,7 @@ Export from Lightroom as sRGB JPEG, 2000 px or more, with Remove Location Info t
 scripts/add-photo.sh ~/Pictures/Export/IMG_1234.jpg "Title" "Place" "YYYY-MM"
 ```
 
-It resizes, makes a thumbnail and strips the metadata (no GPS, no serial numbers). Write the `alt` text yourself: photo search only knows what it says.
+It resizes, makes a thumbnail, and strips the metadata (no GPS, no serial numbers). Write the `alt` text yourself: photo search only knows what it says.
 
 ## The old blog
 
@@ -60,4 +60,4 @@ The WordPress posts still live at their old addresses, as plain HTML, with their
 
 ## License
 
-The code is [MIT](LICENSE). Borrow whatever's useful. The photos, posts and data are mine, all rights reserved, and images in old posts that came from elsewhere belong to their owners. Colours are [Selenized](https://github.com/jan-warchol/selenized) by Jan Warchoł.
+The code is [MIT](LICENSE). Borrow whatever's useful. The photos, posts, and data are mine, all rights reserved, and images in old posts that came from elsewhere belong to their owners. Colours are [Selenized](https://github.com/jan-warchol/selenized) by Jan Warchoł.
