@@ -179,6 +179,8 @@ article h1{font-size:clamp(30px,5vw,44px);line-height:1.1;margin:20px 0 8px}
 article .meta{font:13px var(--mono);color:var(--muted);margin:0 0 28px}
 article .content{font-size:17px;line-height:1.7}
 article .content img{max-width:100%;height:auto;border-radius:6px}
+article .content img.shot,article .content .clip video{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px}  /* screenshots shouldn't read as part of the page */
+article .content .clip{margin:24px 0}
 article .content iframe{max-width:100%}
 .lost{display:block;margin:12px 0;font:13px var(--mono);color:var(--muted)}
 article .content pre{font:13px/1.6 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
