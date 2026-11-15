@@ -74,6 +74,8 @@ It shrinks the photo to 2000 px (never enlarging), makes a 600 px thumbnail, str
 
 The old WordPress posts live at their original addresses (`/2012/04/…/`), so old links still work. They were converted from a WordPress export once, by a script I've since deleted: the old database had been hacked, and keeping a parser for a hacked database around was more trouble than it was worth. The pages are plain static HTML now, and `scripts/embed.py` updates their "Nearest posts" boxes.
 
+Every page ends with the same contact section and footer. It lives in `scripts/footer.html`; edit that, then run `python3 scripts/footer.py` to copy it into all 198 pages (`--check` only lists the ones that differ).
+
 ## License
 
 The code (HTML, CSS, JavaScript, `scripts/`, `src/`) is [MIT](LICENSE). Borrow whatever's useful.
