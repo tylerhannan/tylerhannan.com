@@ -161,6 +161,12 @@ footer .fl{display:flex;gap:16px}
 
 /* archive + posts */
 .back{font:14px var(--mono);color:var(--muted);text-decoration:none}
+.top .home{font:14px var(--mono);color:var(--fg);text-decoration:none}
+.top .fl{display:flex;gap:16px;margin-left:auto}
+.top .fl a{font:14px var(--mono);color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--accent)}
+.top .theme{margin-left:0}
+@media (max-width:560px){.top{flex-wrap:wrap;row-gap:6px}.top .fl{order:3;width:100%;margin-left:0}.top .theme{margin-left:auto}}  /* phones: links on their own line */
 .top{display:flex;justify-content:space-between;align-items:center;gap:16px}
 .theme{font:14px var(--mono);background:none;border:0;padding:0;color:var(--muted);cursor:pointer;margin-left:auto}
 .top+header{margin-top:12px}

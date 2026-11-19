@@ -29,7 +29,9 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <!-- header: edit scripts/header.html, then run scripts/header_footer.py -->
+  <div class="top"><a class="home" href="/">tylerhannan.com</a><nav class="fl" aria-label="Site"><a href="/search/">search</a><a href="/photos/">photos</a><a href="/archive/">writing</a></nav><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <!-- /header -->
   <section style="padding-top:24px">
     <p class="label">Writing</p>
     <form class="query search" id="search-form" role="search" style="margin-bottom:16px"><span class="p">:) </span><input id="search-q" type="search" name="q" maxlength="200" autocomplete="off" spellcheck="false" placeholder="search the posts by meaning: credit card fees, developer communities…" aria-label="Search the posts by meaning"></form>
@@ -58,7 +60,7 @@
     <div id="list"></div>
     <p class="foot" id="foot"></p>
   </section>
-  <!-- footer: edit scripts/footer.html, then run scripts/footer.py -->
+  <!-- footer: edit scripts/footer.html, then run scripts/header_footer.py -->
   <section id="contact" aria-labelledby="contact-h">
     <p class="label" id="contact-h">Contact</p>
     <div class="contact">

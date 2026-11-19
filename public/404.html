@@ -18,7 +18,9 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><a class="back" href="/">← tylerhannan.com</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <!-- header: edit scripts/header.html, then run scripts/header_footer.py -->
+  <div class="top"><a class="home" href="/">tylerhannan.com</a><nav class="fl" aria-label="Site"><a href="/search/">search</a><a href="/photos/">photos</a><a href="/archive/">writing</a></nav><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <!-- /header -->
   <section style="padding-top:24px">
     <h1 class="label">404 · Not found</h1>
     <div class="query" data-run id="q404"><span class="p">:) </span><span class="kw">SELECT</span> *
@@ -56,7 +58,7 @@ Code: 404. DB::Exception: There is no page at <span id="req2">'/'</span>. It may
 
   </section>
 
-  <!-- footer: edit scripts/footer.html, then run scripts/footer.py -->
+  <!-- footer: edit scripts/footer.html, then run scripts/header_footer.py -->
   <section id="contact" aria-labelledby="contact-h">
     <p class="label" id="contact-h">Contact</p>
     <div class="contact">
