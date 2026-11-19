@@ -16,7 +16,7 @@ OSS needs a named collection for the model and a setting that points `aiEmbed` a
 ```sh
 clickhouse local --path ./db --ai_function_embedding_default_credentials site_embed --multiquery --query "
   CREATE NAMED COLLECTION site_embed AS provider = 'openai', endpoint = 'http://localhost:11434/v1/embeddings'"
-sed "s/'qwen3-embedding-8b'/'qwen3-embedding:0.6b'/" cloud/site.sql |
+sed "s/'text-embedding-3-large'/'qwen3-embedding:0.6b'/" cloud/site.sql |
   clickhouse local --path ./db --ai_function_embedding_default_credentials site_embed --multiquery
 
 # clickhouse local isn't a server: refreshes run only while it does, so run one and wait for it

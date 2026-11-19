@@ -5,7 +5,7 @@
 //   /api/embed?q=    the words as 384 Int8 dims in base64, for the request table on play (site.query_vector)
 //   /embeddings.json every page's vector packed the same way, for the queries on play (site.compact)
 // Without CLICKHOUSE_URL and CLICKHOUSE_SEARCH_PASSWORD (wrangler dev without .dev.vars) it answers 503.
-const MODEL = 'qwen3-embedding-8b';
+const MODEL = 'text-embedding-3-large';
 const DIMS = 384;
 const MAX_CHARS = 200;  // keeps this from being a free embedding API
 const DAY = 86400;

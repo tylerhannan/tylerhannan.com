@@ -24,7 +24,7 @@ The tables are `talks`, `demos`, `photos`, `posts` (the old blog), `writing` (po
 
 ## Search
 
-ClickHouse Cloud reads the site with `url()`, embeds every page, post, talk, demo, and photo caption with [`aiEmbed`](https://clickhouse.com/docs/reference/functions/regular-functions/ai-functions) and Qwen3-Embedding-8B, and answers searches with `cosineDistance`. After a push, `.github/workflows/search-refresh.yml` asks it to refresh, and only new or changed rows get embedded again. Nothing runs on my laptop.
+ClickHouse Cloud reads the site with `url()`, embeds every page, post, talk, demo, and photo caption with [`aiEmbed`](https://clickhouse.com/docs/reference/functions/regular-functions/ai-functions) and OpenAI's text-embedding-3-large, and answers searches with `cosineDistance`. After a push, `.github/workflows/search-refresh.yml` asks it to refresh, and only new or changed rows get embedded again. Nothing runs on my laptop.
 
 The Worker's `/api/search` is the full-size search. `/api/embed` and `/embeddings.json` give the same vectors cut to 384 Int8 dims, so the boxes can run on play too, and when you press run, the playground returns the same rows. That still means sending the whole `pages` table, about 208 KB of play's 256 KB per query, and `run.js` says so instead of sending one that's too big.
 

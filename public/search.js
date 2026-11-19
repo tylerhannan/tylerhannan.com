@@ -1,5 +1,5 @@
 // Search by meaning and spelling for the search, photos, archive and 404 pages. ClickHouse Cloud embeds the words
-// (/api/embed) and every page (/embeddings.json) with Qwen3-Embedding-8B, cut to 384 Int8 dims to fit a query to
+// (/api/embed) and every page (/embeddings.json) with OpenAI's text-embedding-3-large, cut to 384 Int8 dims to fit a query to
 // play. The browser ranks the rows the same way the SQL does, so run gets the same answer from ClickHouse.
 (function(){
   var cache={};

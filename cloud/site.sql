@@ -1,10 +1,10 @@
 -- Search for tylerhannan.com, all in SQL: ClickHouse reads the site, embeds it with aiEmbed, keeps it current
--- and answers searches. Written for ClickHouse Cloud (Qwen3-Embedding-8B, no credentials needed); cloud/test.sh
+-- and answers searches. Written for ClickHouse Cloud (OpenAI text-embedding-3-large, no credentials needed); cloud/test.sh
 -- runs it on OSS with Ollama and qwen3-embedding:0.6b.
 --
 --   site.docs     the live site as rows: pages, posts, talks, demos, photos, posts elsewhere
 --   site.pages    a snapshot of site.docs; cloud/refresh.sh refreshes it after a deploy (weekly as a backstop)
---   site.vectors  4096-dim vectors; site.embed adds one only for a new or changed row
+--   site.vectors  3072-dim vectors; site.embed adds one only for a new or changed row
 --   site.search, site.related, site.compact, site.query_vector  what the Worker serves
 
 CREATE DATABASE IF NOT EXISTS site;
@@ -89,18 +89,17 @@ CREATE TABLE IF NOT EXISTS site.vectors
 )
 ENGINE = ReplacingMergeTree ORDER BY (path, h);
 
--- embed only what's new or changed; documents go in as they are, only queries get an instruction
+-- embed only what's new or changed
 CREATE MATERIALIZED VIEW IF NOT EXISTS site.embed
 REFRESH EVERY 1 WEEK DEPENDS ON site.pages APPEND
 TO site.vectors
-AS SELECT path, h, aiEmbed(title || '\n' || text, 'qwen3-embedding-8b') AS v
+AS SELECT path, h, aiEmbed(title || '\n' || text, 'text-embedding-3-large') AS v
 FROM site.pages
 WHERE (path, h) NOT IN (SELECT path, h FROM site.vectors);
 
 -- the words are embedded once, in a scalar subquery: inline, aiEmbed runs once per row (it isn't constant-folded)
 CREATE OR REPLACE VIEW site.search AS
-WITH (SELECT aiEmbed('Instruct: Given a search query, find the pages, posts, talks, demos and photos on a personal '
-                     || 'website that match it\nQuery: ' || {q:String}, 'qwen3-embedding-8b')) AS query_vector
+WITH (SELECT aiEmbed({q:String}, 'text-embedding-3-large')) AS query_vector
 SELECT round(1 - cosineDistance(v, query_vector), 2) AS similarity,
        kind, title, href AS path
 FROM site.vectors
@@ -123,7 +122,7 @@ LIMIT 5;
 CREATE OR REPLACE VIEW site.version AS
 SELECT toString(sum(cityHash64(path, h, href))) AS v FROM site.vectors INNER JOIN site.pages USING (path, h);
 
--- the first 384 of 4096 dims as Int8 base64, small enough for play's 256 KB queries (/embeddings.json)
+-- the first 384 of 3072 dims as Int8 base64, small enough for play's 256 KB queries (/embeddings.json)
 CREATE OR REPLACE VIEW site.compact AS
 SELECT path, base64Encode(arrayStringConcat(arrayMap(x -> char(if(x < 0, toInt16(x) + 256, x)), q))) AS e
 FROM
@@ -134,13 +133,12 @@ FROM
 
 -- the search words packed the same way, for /api/embed
 CREATE OR REPLACE VIEW site.query_vector AS
-WITH (SELECT arraySlice(aiEmbed('Instruct: Given a search query, find the pages, posts, talks, demos and photos on '
-                                || 'a personal website that match it\nQuery: ' || {q:String}, 'qwen3-embedding-8b'), 1, 384)) AS s
+WITH (SELECT arraySlice(aiEmbed({q:String}, 'text-embedding-3-large'), 1, 384)) AS s
 SELECT base64Encode(arrayStringConcat(arrayMap(x -> char(if(x < 0, toInt16(x) + 256, x)),
                                                arrayMap(x -> toInt8(round(x * 127 / arrayMax(arrayMap(abs, s)))), s)))) AS e;
 
 -- Users are made at setup (cloud/README.md), with names that differ from the roles (GRANT x TO x is ambiguous).
--- There's no AI privilege yet and aiEmbed fails in SQL SECURITY DEFINER views (#130746), so the searcher is
+-- Cloud can't grant the AI privileges yet and aiEmbed fails in SQL SECURITY DEFINER views (#130746), so the searcher is
 -- read-only with one model call of one text per query: enough for a search, useless as a free embedding API.
 CREATE ROLE IF NOT EXISTS site_search;
 GRANT SELECT ON site.search TO site_search;
