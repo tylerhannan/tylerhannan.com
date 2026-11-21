@@ -71,7 +71,7 @@ TABLES = {
             col("note", "str", "opt", "Nullable(String)", "shown when the row is expanded"),
             col("repo", "url", "opt", "Nullable(String)", "demo code; adds a 'code' tag"),
             col("highlight", "highlight", "opt", "Nullable(UInt8)", "1-6: position in Highlighted videos (needs youtube)"),
-            col("mc", "bool", "opt", "Bool", "true adds an 'mc' tag"),
+            col("mc", "bool", "opt", "Bool", "true when Tyler was also MC (data only)"),
         ],
     },
     "demos": {
