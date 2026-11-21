@@ -1,6 +1,6 @@
 {
   "talks": [
-    { "date": "2026-11-17", "title": "Is the observability UI as we know it dead? And what happens next?", "event": "ClickHouse webinar", "type": "webinar", "url": "https://www.youtube.com/watch?v=sTBPDeWLiBk", "youtube": "sTBPDeWLiBk", "note": "With Kelsey Hightower and Mike Shi (ClickHouse)." },
+    { "date": "2026-11-16", "title": "Is the observability UI as we know it dead? And what happens next?", "event": "ClickHouse webinar", "type": "host", "url": "https://www.youtube.com/watch?v=sTBPDeWLiBk", "youtube": "sTBPDeWLiBk", "note": "With Kelsey Hightower and Mike Shi (ClickHouse)." },
     { "date": "2026-11-09", "title": "Something big is coming", "event": "ClickHouse launch livestream", "type": "host", "url": "https://www.youtube.com/watch?v=eikP4v7lqMg", "youtube": "eikP4v7lqMg" },
     { "date": "2026-10-09", "title": "DevRel, and Building Product Demos Faster with AI", "event": "The DevRel Show, episode 57 (Frédéric Harper)", "type": "interview", "url": "https://www.youtube.com/watch?v=i6Z7V_G-BO4", "youtube": "i6Z7V_G-BO4" },
     { "date": "2026-10-08", "title": "From Humans to Agents", "event": "World Summit AI Amsterdam 2026", "location": "Amsterdam, NL", "type": "talk", "url": "https://worldsummit.ai/", "youtube": null, "repo": "https://github.com/tylerhannan/world-summit-ai-from-humans-to-agents" },

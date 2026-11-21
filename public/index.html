@@ -169,8 +169,8 @@
     if(g){
       rows.sort(function(a,b){return g.key(b).localeCompare(g.key(a))||String(b.date).localeCompare(String(a.date))});
       rows.forEach(function(t){var k=g.key(t); counts[k]=(counts[k]||0)+1});
-      if(!folded[state.group]){  // first time: open the two newest groups
-        folded[state.group]={}; Object.keys(counts).sort().reverse().forEach(function(k,n){ if(state.group==='year'&&n>=2) folded[state.group][k]=true; });
+      if(!folded[state.group]){  // first time: open only the newest group
+        folded[state.group]={}; Object.keys(counts).sort().reverse().forEach(function(k,n){ if(state.group==='year'&&n>=1) folded[state.group][k]=true; });
       }
     }
     var shut=g?folded[state.group]:{};
