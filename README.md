@@ -56,7 +56,7 @@ It resizes, makes a thumbnail, and strips the metadata (no GPS, no serial number
 
 ## The old blog
 
-The WordPress posts still live at their old addresses, as plain HTML, with their text for search in `archive/text.json`. I converted them once and deleted the importer, since keeping a parser for a hacked database around seemed like more trouble than it was worth. The footer on every page comes from `scripts/footer.html`: edit it, then run `python3 scripts/footer.py`.
+The WordPress posts still live at their old addresses, as plain HTML, with their text for search in `archive/text.json`. I converted them once and deleted the importer, since keeping a parser for a hacked database around seemed like more trouble than it was worth. The header and footer on every page come from `scripts/header.html` and `scripts/footer.html`: edit one, then run `python3 scripts/header_footer.py`.
 
 ## License
 

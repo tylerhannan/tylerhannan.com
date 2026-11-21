@@ -6,14 +6,18 @@
 <title>My static site has a database. It’s ClickHouse’s · Tyler Hannan</title>
 <meta name="description" content="The ClickHouse playground takes SQL over HTTP from any website. I send my static site&#x27;s JSON along with each query, and with vectors from aiEmbed that gets me search by meaning, as long as it all fits in 256 KB.">
 <link rel="canonical" href="https://tylerhannan.com/2026/11/my-static-site-has-a-database/">
-<meta name="robots" content="noindex">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Tyler Hannan">
 <meta property="og:title" content="My static site has a database. It’s ClickHouse’s">
 <meta property="og:description" content="The ClickHouse playground takes SQL over HTTP from any website. I send my static site&#x27;s JSON along with each query, and with vectors from aiEmbed that gets me search by meaning, as long as it all fits in 256 KB.">
 <meta property="og:url" content="https://tylerhannan.com/2026/11/my-static-site-has-a-database/">
-<meta property="og:image" content="https://tylerhannan.com/blog/play/search-clip-poster.jpg">
+<meta property="og:image" content="https://tylerhannan.com/blog/play/og-1200x630.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The search page for &quot;streaming data into clickhouse&quot;: the ranking query and the closest results.">
 <meta property="article:published_time" content="2026-11-15">
+<meta name="author" content="Tyler Hannan">
+<meta property="article:author" content="Tyler Hannan">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:creator" content="@tylerhannan">
 <meta name="theme-color" content="#181818">
@@ -28,7 +32,9 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><a class="back" href="/archive/">← writing</a><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <!-- header: edit scripts/header.html, then run scripts/header_footer.py -->
+  <div class="top"><a class="home" href="/">tylerhannan.com</a><nav class="fl" aria-label="Site"><a href="/search/">search</a><a href="/photos/">photos</a><a href="/archive/">writing</a></nav><button type="button" class="theme" aria-label="Switch to light mode">☀ light</button></div>
+  <!-- /header -->
   <article>
     <h1>My static site has a database. It’s ClickHouse’s</h1>
     <p class="sub">Or…spelling, meaning, and a 256 KB budget…oh my!</p>
@@ -41,9 +47,9 @@
 <li>Add vectors from <code>aiEmbed</code>. Hey presto, you get semantic search.</li>
 <li>Iff<sup class="fnmark"><a class="fnref" href="#fn0" id="ref0" aria-label="Footnote 0">0</a></sup> the whole query fits in 256 KB.</li>
 </ul>
-<nav class="toc" aria-label="In this post"><p>In this post</p><ol><li><a href="#i-work-for-clickhouse-so">I work for ClickHouse, so…</a></li><li><a href="#yes-i-wrote-about-geektool">Yes, I wrote about GeekTool</a></li><li><a href="#ideas-aren-t-titles">Ideas aren't titles</a></li><li><a href="#256-kb-is-a-budget">256 KB is a budget</a></li><li><a href="#things-i-learned-the-hard-way">Things I learned the hard way</a></li><li><a href="#one-small-worker">One small Worker</a></li></ol></nav>
+<nav class="toc" aria-label="In this post"><p>In this post</p><ol><li><a href="#i-work-for-clickhouse-so">I work for ClickHouse, so…</a></li><li><a href="#yes-i-wrote-about-geektool">Yes, I wrote about GeekTool</a></li><li><a href="#ideas-aren-t-titles-clickhouse-ai-functions">Ideas aren't titles: ClickHouse AI functions</a></li><li><a href="#256-kb-is-a-budget">256 KB is a budget</a></li><li><a href="#things-i-learned-the-hard-way">Things I learned the hard way</a></li><li><a href="#one-small-worker">One small Worker</a></li></ol></nav>
 <p>I've ignored my blog for years. It ran on WordPress and mattered back when I was an evangelist in the payments industry. Not surprisingly, it went the way most old WordPress sites do. One day the page was blank, probably some broken PHP. And when I finally looked in the database, it was full of spam.</p>
-<p>I rebuilt tylerhannan.com as a folder of HTML and JSON files: no backend, no database. Then I was looking for a talk that I had given, and I couldn't find it. </p>
+<p>So I started again, this time as a folder of HTML and JSON files: no backend, no database. Then I was looking for a talk that I had given, and I couldn't find it. </p>
 <p>Well, now I need search. Yay? How do I build search on a static site?</p>
 <h2 id="i-work-for-clickhouse-so">I work for ClickHouse, so…</h2>
 <p>This began an exploration that ended up with every query box on this site being real SQL, and you can run it. The <a href="https://clickhouse.com/docs/get-started/sample-datasets/playground">ClickHouse playground</a> takes <a href="https://clickhouse.com/docs/concepts/features/interfaces/http">SQL over HTTP</a> from any website, with a read-only user and no password. I send my site's JSON along with each query using the <a href="https://clickhouse.com/docs/reference/functions/table-functions/values"><code>values()</code> table function</a>, and ClickHouse treats that data as tables.</p>
@@ -80,7 +86,7 @@ LIMIT 3</div>
 <p>Old WordPress links tend to show up with slightly wrong paths. So when one lands on the 404 page, the page turns the missing path into words and asks <a href="https://clickhouse.com/docs/reference/functions/regular-functions/string-search-functions#ngramSearchCaseInsensitive"><code>ngramSearchCaseInsensitive</code></a> which titles look closest. Try <code>/2012/04/geektool-implementation/</code> and it finds "GeekTool: Implementation Detail" at 0.85.<sup class="fnmark"><a class="fnref" href="#fn2" id="ref2" aria-label="Footnote 2">2</a></sup></p>
 <p><img src="/blog/play/404-spelling-geektool.png" alt="The 404 page for /2012/04/geektool-implementation/: the spelling query, and its top result, &quot;GeekTool: Implementation Detail&quot;, at 0.85." class="shot"></p>
 <p>And that's fine for most broken links. It's no help at all when someone types an idea instead of a title.</p>
-<h2 id="ideas-aren-t-titles">Ideas aren't titles</h2>
+<h2 id="ideas-aren-t-titles-clickhouse-ai-functions">Ideas aren't titles: ClickHouse AI functions</h2>
 <p>ClickHouse has released AI functions, so I was interested in <a href="https://clickhouse.com/docs/reference/functions/regular-functions/ai-functions"><code>aiEmbed</code></a>. I wanted semantic search on my website, and for that I needed three things: a vector for every page, a vector for whatever someone types, and a way to compare them. ClickHouse handles the first one and the last one. </p>
 <p><img src="/blog/play/404-spelling-and-meaning.png" alt="The 404 page for /credit-card-fees, with the spelling query and results on top and the meaning query and results below, including &quot;Cost of Accepting Credit Cards&quot;." class="shot"></p>
 <p>Here's what that looks like on the 404 for <code>/credit-card-fees</code>. Spelling finds the titles with "credit card" in them, which is fine. Meaning also finds Cost of Accepting Credit Cards, and that one doesn't say "fees" anywhere in the title. That's the bit I wanted.</p>
@@ -93,7 +99,7 @@ SELECT path,
        arraySlice(aiEmbed('title: ' || title || ' | text: ' || text, 'embeddinggemma-2:270m-bf16-text',
                           map('credentials', 'site_embed')), 1, 384) AS v
 FROM file('docs.jsonl', JSONEachRow)</code></pre>
-<p>On my laptop that does all 324 pages, talks, demos, photo captions, and posts I wrote for other sites in about 8 seconds. The <code>'title: … | text: …'</code> bit is the prompt EmbeddingGemma expects for documents. Then the script squashes each vector down to <code>Int8</code>, base64-encodes it, and saves the lot as <code>embeddings.json</code>, right alongside the rest of the site's JSON.</p>
+<p>On my laptop that does all 325 pages, talks, demos, photo captions, and posts I wrote for other sites in about 8 seconds. The <code>'title: … | text: …'</code> bit is the prompt EmbeddingGemma expects for documents. Then the script squashes each vector down to <code>Int8</code>, base64-encodes it, and saves the lot as <code>embeddings.json</code>, right alongside the rest of the site's JSON.</p>
 <h3>Embedding whatever you type</h3>
 <p>The playground can't help with this one. <code>aiEmbed</code> needs a named collection on the server, and the play user, very reasonably, doesn't get one. So I wrote a small Cloudflare Worker that runs the same EmbeddingGemma 2 model on Workers AI and hands back the same <code>Int8</code> format.</p>
 <p>You may be thinking, Tyler, who cares which model does the embedding? Fair question. It matters a lot, because vectors from two different models don't line up, and then search gives you nonsense. So I use the same model on both sides, and I checked: for identical text, the vectors from Ollama and from Workers AI come out at 0.9995 cosine similarity or better. Pages embedded on my laptop and words embedded by Cloudflare really can be compared.</p>
@@ -155,8 +161,15 @@ FROM values('path String, title String, e String', ...)</code></pre>
     <p class="note">Published 2026-11-15. The code as this post describes it is the <a href="https://github.com/tylerhannan/tylerhannan.com/tree/playground-search">playground-search</a> tag.</p>
   </article>
   <!-- related -->
+  <section aria-labelledby="related-h">
+    <p class="label" id="related-h">Nearest posts</p>
+    <div class="query" data-run="cloud" data-auto data-api="/api/related?path=%2F2026%2F11%2Fmy-static-site-has-a-database%2F"><span class="p">:) </span><span class="kw">SELECT</span> similarity, title, path
+   <span class="kw">FROM</span> site.related(path = <span class="s">&#x27;/2026/11/my-static-site-has-a-database/&#x27;</span>);</div>
+    <p class="foot">Each post's embedding is from OpenAI's text-embedding-3-large, made in ClickHouse Cloud with aiEmbed.</p>
+  </section>
+  <script src="/run.js" defer></script>
   <!-- /related -->
-  <!-- footer: edit scripts/footer.html, then run scripts/footer.py -->
+  <!-- footer: edit scripts/footer.html, then run scripts/header_footer.py -->
   <section id="contact" aria-labelledby="contact-h">
     <p class="label" id="contact-h">Contact</p>
     <div class="contact">
