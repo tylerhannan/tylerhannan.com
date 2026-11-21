@@ -48,7 +48,7 @@ def err(code, name, msg):
 
 # ---- schemas ----------------------------------------------------------------------------------------
 # req: must have a value; null: written, may be null; opt: left out when null/false; empty: "" when unset
-TALK_TYPES = ("keynote", "talk", "webinar", "video", "interview", "host")
+TALK_TYPES = ("keynote", "talk", "video", "interview", "host")
 FOCUS = ("top", "bottom", "left", "right")
 
 
@@ -65,13 +65,12 @@ TABLES = {
             col("event", "str", "req", "String"),
             col("location", "str", "opt", "Nullable(String)", "City, CC (e.g. 'Munich, DE'); NULL for online"),
             col("type", "talktype", "req", "Enum(" + ", ".join(f"'{t}'" for t in TALK_TYPES) + ")",
-                "host = MC/host slots; video = standalone, not tied to an event"),
+                "host = Tyler ran it (MC, release calls, hosted webinars); a webinar he spoke at is a talk; video = standalone, not tied to an event"),
             col("url", "url", "null", "Nullable(String)", "event or talk page"),
             col("youtube", "youtube", "null", "Nullable(FixedString(11))", "video ID; a YouTube URL works too"),
             col("note", "str", "opt", "Nullable(String)", "shown when the row is expanded"),
             col("repo", "url", "opt", "Nullable(String)", "demo code; adds a 'code' tag"),
             col("highlight", "highlight", "opt", "Nullable(UInt8)", "1-6: position in Highlighted videos (needs youtube)"),
-            col("mc", "bool", "opt", "Bool", "true when Tyler was also MC (data only)"),
         ],
     },
     "demos": {
@@ -312,8 +311,8 @@ def day(d):
 
 REMOTE = {
     "talks": ("date Date, title String, event String, location Nullable(String), type String, url Nullable(String), "
-              "youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String), mc Bool",
-              lambda: [dict(t, date=day(t.get("date")), mc=bool(t.get("mc"))) for t in load(TABLES["talks"])["talks"]]),
+              "youtube Nullable(String), repo Nullable(String), highlight Nullable(UInt8), note Nullable(String)",
+              lambda: [dict(t, date=day(t.get("date"))) for t in load(TABLES["talks"])["talks"]]),
     "demos": ("date Date, name String, about String, event Nullable(String), repo String",
               lambda: [dict(x, date=day(x.get("date"))) for x in load(TABLES["demos"])["demos"]]),
     "photos": ("date Date, file String, title String, place Nullable(String), camera Nullable(String), "
